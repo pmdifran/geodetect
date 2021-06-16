@@ -1,7 +1,7 @@
 #pragma once
 #include <pcl/point_types.h>
 #include <pcl\kdtree\kdtree_flann.h>
-#include <pcl/features/fpfh.h>
+
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -28,7 +28,10 @@ public:
 	PclProcessing(std::string& name, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud)
 		:m_name(name),
 		m_cloud(cloud)
-	{}
+	{
+		m_kdtreeFLANN->setInputCloud(m_cloud);
+		pcl::PointCloud<pcl::Normal>::Ptr m_normals(new pcl::PointCloud<pcl::Normal>);
+	}
 
 	//Constructor for stealing the smart_ptr
 	PclProcessing(std::string name, pcl::PointCloud<pcl::PointXYZ>::Ptr&& cloud)
@@ -62,46 +65,38 @@ public:
 
 //methods
 public:
-    /** \brief Method for computing the average local point cloud resolution (i.e. spacing).
- * \param[in] k: the number of neighbors to use for determining average resolution (default=3).
- * * \param[out] resolution: the average point cloud resolution.
- */
-	double getResolution(int k = 3);
-
 	/** \brief Method for computing the local point cloud resolution (i.e. spacing).
 	* \param[in] k: the number of neighbors to use for determining local resolution (default=3).
 	* \param[out] vector containing local point resolution with matching indices. 
 	*/
-	std::vector<double> getLocalResolution(int k = 3);
+	std::vector<float> getResolution(const int& k = 3);
 
-	/** \brief Method for computing the local scale normals. 
-	* \param[in] rad: the spherical neighborhood for normals.
-	*/
-	void getNormals();
+	pcl::PointCloud<pcl::PointXYZ>::Ptr getVoxelDownSample(const float& voxelsize);
 
-	pcl::PointCloud<pcl::PointXYZ>::Ptr downSample();
-	pcl::PointCloud<pcl::Normal>::Ptr getNormals();
+	/** \brief Method for subsampling the cloud object using a minimum distance (similar to CloudCompare).
+* \param[in] distance: minimum distance between points. 
+*/
+	void DistanceDownSample(const float& distance);
+
+
+	/** \brief Method for generating a new, subsampled cloud, using a minimum distance (similar to CloudCompare).
+* \param[in] distance: minimum distance between points
+* \param[out] new, subsampled, pointcloud object (pointer).
+*/
+	pcl::PointCloud<pcl::PointXYZ>::Ptr getDistanceDownSample(const float& distance);
+
+	/** \brief Method for computing normals.
+* \param[in] nrad: Radius for spherical neighbour search used for principle component analysis.
+* \param[in] normals (optional): object for which the results are written to. Otherwise, normals are written to m_normals member.
+*/
+	void getNormals(const float& nrad);
+	void getNormals(const float& nrad, pcl::PointCloud<pcl::Normal>::Ptr& normals);
 	
+	void getKeyPoints();
+
+	void globalRegistration(PclProcessing reference);
 
 };
 
 
 
-
-/** \brief Search for k-nearest neighbors for the given query point (zero-copy).
-  *
-  * \attention This method does not do any bounds checking for the input index
-  * (i.e., index >= cloud.size () || index < 0), and assumes valid (i.e., finite) data.
-  *
-  * \param[in] index a \a valid index representing a \a valid query point in the dataset given
-  * by \a setInputCloud. If indices were given in setInputCloud, index will be the position in
-  * the indices vector.
-  *
-  * \param[in] k the number of neighbors to search for
-  * \param[out] k_indices the resultant indices of the neighboring points (must be resized to \a k a priori!)
-  * \param[out] k_sqr_distances the resultant squared distances to the neighboring points (must be resized to \a k
-  * a priori!)
-  * \return number of neighbors found
-  *
-  * \exception asserts in debug mode if the index is not between 0 and the maximum number of points
-  */
