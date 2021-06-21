@@ -1,9 +1,8 @@
 #pragma once
 #include <pcl/point_types.h>
 #include <pcl\kdtree\kdtree_flann.h>
-
-
-pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+#include <cmath>
+#include <limits>
 
 // \brief Custom pointcloud object for geocomputation of LiDAR point clouds
 class PclProcessing
@@ -14,6 +13,8 @@ public:
 	pcl::PointCloud<pcl::Normal>::Ptr m_normals = nullptr;
 
 	pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr m_kdtreeFLANN = nullptr;
+	double* m_resolution = nullptr; 
+
 
 //Object creation
 public:
@@ -92,7 +93,9 @@ public:
 	void getNormals(const float& nrad);
 	void getNormals(const float& nrad, pcl::PointCloud<pcl::Normal>::Ptr& normals);
 	
-	void getKeyPoints();
+	pcl::PointCloud<pcl::PointXYZ>::Ptr getKeyPoints();
+	pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints);
+
 
 	void globalRegistration(PclProcessing reference);
 

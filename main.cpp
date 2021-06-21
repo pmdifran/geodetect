@@ -1,5 +1,5 @@
 #include "importAscii.h"
-#include "dbscan.h"
+#include "PclProcessing.h"
 
 int main (int argc, char* argv[])
 {
@@ -12,7 +12,6 @@ int main (int argc, char* argv[])
 //Data containers declaration
 	std::vector<XYZ> xyzpoints;  
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudptr(new pcl::PointCloud<pcl::PointXYZ>); //smart pointer declaration to heap. 
-	pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
 
 //Usage: Expect 7 arguments; (1)dbscan.exe; (2)-i; (3)<filename>; (4)-m; (5)<min points>; (6)-d; (7)<min distance>
 //OR (1)dbscan.exe (2) test (must have test.txt file in directory)
@@ -54,28 +53,10 @@ int main (int argc, char* argv[])
 	}
 
 //Import data into xyzpoints
-	std::cout << "File: " << filename << '\n' << std::endl;
-	readXYZ(filename, xyzpoints); //read file and store into fullpoints
-	unsigned int num_points = xyzpoints.size();
+	//std::cout << "File: " << filename << '\n' << std::endl;
+	//readXYZ(filename, xyzpoints); //read file and store into fullpoints
+	//unsigned int num_points = xyzpoints.size();
 
-//Convert data to a pcl pointcloud object
-	std::cout << "Converting to a pcl cloud" << std::endl;
-	convert_toPCL(xyzpoints, cloudptr,num_points); //create a pcl::pointcloud pointer object; give it all our xyz data
-	std::cout << ":: Pcl pointcloud created" << std::endl;
 
-	kdtree.setInputCloud(cloudptr); //create kdtree from cloud.
-	std::cout << ":: KDtree built\n" << std::endl;
-
-// Create DBSCAN object
-	std::cout << "Beginning DBSCAN \n" << std::endl;
-
-	DBSCAN dbscan(cloudptr, kdtree, min_points, searchradius);
-	dbscan.run(); //dbscan main run function
-	std::cout << "\nDBSCAN Complete \n" << std::endl;
-
-	dbscan.writeResult(filename);
-	printf("File Written \n");
-
-	std::cout << "-------------------Finished------------------- \n" << std::endl;
 	return 0;
 }
