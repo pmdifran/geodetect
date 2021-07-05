@@ -1,24 +1,18 @@
 #include "PCLreadASCII.h"
 #include "GeoDetection.h"
+#include <iomanip>
 
 int main (int argc, char* argv[])
 {
-	const char* file = "ttt.txt";
-	std::cout << file << std::endl;
-	//pcl::PointCloud<pcl::PointXYZ>::Ptr cloudptr(new pcl::PointCloud<pcl::PointXYZ>);
+	const char* fname = "test - Cloud.txt";
+	std::cout << fname << std::endl;
 
-	static uintmax_t lines = getLineCount(file);
-	std::cout << lines << std::endl;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudptr(new pcl::PointCloud<pcl::PointXYZ>());
 
-	bool hasheader = hasHeader(file);
-	std::cout << "Header: " << hasheader << std::endl;
+	int count = PCLreadASCIIxyz(fname, cloudptr);
+	std::cout << "count: " << count << std::endl;
 
-	size_t columns = getNumColumns(file);
-	std::cout << "delimeter: " << columns << std::endl;
+	std::cout << "size: " << cloudptr->size() << std::endl;
 
-	char delimeter = getDelimeter(file);
-	std::cout << "delimeter: " << delimeter << std::endl;
-
-
-	std::cin.get();
+	PCLwriteASCIIxyz("output.txt", cloudptr);
 }

@@ -2,13 +2,15 @@
 
 #include "PCLreadASCII.h" //includes our custom point cloud structures, and those from pcl.
 #include <cstring> //for memchr
+#include <cstdlib> //for strtod
 #include "fast_float.h"
 
 
 #include <limits>
 #include <cstdio>
 
-uintmax_t getLineCount(char const* fname)
+uintmax_t 
+getLineCount(char const* fname)
 {
 	FILE* file = fopen(fname, "r");
 
@@ -160,17 +162,11 @@ getDelimeter(const char* fname)
 void 
 PCLreadASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr)
 {
-	//Determine number of points and reserve space for the pcl pointcloud object
-	size_t num_points = getLineCount(fname);
-	if (num_points < 2) {
-		std::cout << "Needs more than 2 points to create a point cloud object.\n Exiting the program..." << std::endl;
-		std::exit(EXIT_FAILURE);
-	}
-	if (hasHeader(fname)) { num_points--; }
+	auto start = std::chrono::steady_clock::now();
+	std::cout << "Importing XYZ Data.." << std::endl;
 
-	cloudptr->points.reserve(num_points);
-	std::cout << ":: Number of points: " << num_points << '\n' << std::endl;
-
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//Check that there is XYZ data
 	size_t num_columns = getNumColumns(fname);
 	if (num_columns < 3) {
 		std::cout << ":: Number of columns detected: " << num_columns << "\nThe inputted file must contain XYZ coordinates."
@@ -178,11 +174,24 @@ PCLreadASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr
 		std::exit(EXIT_FAILURE);
 	}
 
-	//Read a file stream and import into pcl::PointCloud
-	std::cout << "Reading data..." << std::endl;
-	auto start = getTime();
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//Determine number of points and reserve space for the pcl pointcloud object
+	size_t num_points = getLineCount(fname);
+	if (num_points < 2) {
+		std::cout << "Needs more than 2 points to create a point cloud object.\n Exiting the program..." << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+	bool hasheader = hasHeader(fname);
+	if (hasheader) { num_points--; }
 
-	FILE* file = fopen(fname, "r");
+	cloudptr->points.reserve(num_points);
+	std::cout << ":: Number of points: " << num_points << '\n' << std::endl;
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//Read file into buffer (c-style because its faster) and import into pcl::PointCloud
+	std::cout << ":: Reading data..." << std::endl;
+
+	FILE* file = fopen(fname, "rb");
 
 	if (file == NULL) {
 		std::cout << "Failed to find or open the file\nExiting the program..." << std::endl;
@@ -191,60 +200,103 @@ PCLreadASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr
 
 	static const auto BUFFER_SIZE = 16 * 1024;
 	char buf[BUFFER_SIZE + 1];
-	float value;
+	pcl::PointXYZ mypoint;
+
+	//FOR CROSS PLATFORM: check for crlf; cr; lf, and use memchr accordingly.
+	
+	//If there's a header, skip the first line.
+	if (hasheader) {
+		char* str = fgets(buf, BUFFER_SIZE, file);
+	}
 
 	while (size_t bytes_read = fread(&buf, 1, BUFFER_SIZE, file)) {
+		
+		char* p = buf; //pointer to the beginning of the line that we'll read
+		char* p_end; //pointer which lands on the delimeters.
 
 		if (bytes_read == std::numeric_limits<size_t>::max())
 			std::cout << "read failed" << std::endl;
 		if (!bytes_read) //not sure if this is neccessary
 			break;
 
+		for (char* p_next = buf; (p_next = (char*)memchr(p_next, '\n', (buf + bytes_read) - p_next)); p_next++) {
+			mypoint.x = strtod(p, &p_end);
+			mypoint.y = strtod(p_end+1, &p_end);
+			mypoint.z = strtod(p_end+1, NULL);
 
-		for (char* p = buf; (p = (char*)memchr(p, '\n', (buf + bytes_read) - p)); p++) {
-																			//if bytes_read < buffer_size
-			//get location of the next \n ... make sure this works for special case of no \n at the eof.
-			//If the xyz point is cutoff by the end of the buffer, then reset the buffer location so we get it 100% with the next iteration.
+			cloudptr->points.push_back(mypoint);
 
-			//Create three substrings separated by the delimiter.
+			p = p_next + 1;
+		}
+			// CASE: The xyz point is split across the buffer. Reset the file location to include it at the beginning of the next buffer fill.
+		if (bytes_read == BUFFER_SIZE) {
+			size_t offset = (buf + bytes_read) - p; //number of bytes from the end of the buffer, to just before the last \n. 
+			fseek(file, (long)-offset, SEEK_CUR); //offset the stream back that many bytes, so we're at the \n next memchr.
+			continue;
+		}
+			// CASE: End of the file is in the buffer && the last line doesn't terminate with \n
+		else if (cloudptr->points.size() < cloudptr->points.capacity()) {
+			mypoint.x = strtod(p, &p_end);
+			mypoint.y = strtod(p_end + 1, &p_end);
+			mypoint.z = strtod(p_end + 1, NULL);
+			cloudptr->points.push_back(mypoint);
 
-			//Use fast_float to convert into floats.
-
-			//Push into the pointcloud
 		}
 	}
 
 	fclose(file);
+	auto timer = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
+	std::cout << "--> Data import time: "<< timer.count() << " seconds\n" << std::endl;
 }
 
-	
+//Good for now... Write a c-style buffer code to write.
+void
+PCLwriteASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr)
+{
+	auto start = std::chrono::steady_clock::now();
+	std::cout << "Exporting XYZ data..." << std::endl;
 
+	static const auto BUFFER_SIZE = 16 * 1024;
+	char buf[BUFFER_SIZE + 1];
 
+	std::fstream fstream;
+	fstream.open(fname, std::ios::out | std::ios::binary | std::ios::trunc);
 
-	//	while (in >> xyz.x >> xyz.y >> xyz.z) {
-	//		cloudptr->points.push_back(xyz);
-	//	}
-	//else {
-	//	while (getline(in, line)) {
-	//		std::istringstream iss(line);
-	//		in.imbue(std::locale(std::locale(), new csv_reader())); //for the rest of stream, treat commas as whitespace
+	size_t i = 0;
 
-	//		iss >> xyz.x >> xyz.y >> xyz.z;
-	//		cloudptr->points.push_back(xyz);
-	//	}
-	//}
-	//auto stop = getTime();
-	//auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
-	//std::cout << "--> Import duration: " << duration.count() << " seconds" << std::endl;
+	while (i < cloudptr->size()) {
+		size_t cx = 0;
+		size_t cx_increment = 0;
 
-	//in.close();
+		while (true)
+		{
+			cx_increment = snprintf(buf + cx, BUFFER_SIZE - cx, "%.8f %.8f %.8f\n", cloudptr->points[i].x,
+				cloudptr->points[i].y, cloudptr->points[i].z);
+			
+			cx += cx_increment;
+			i++;
 
-	//std::cout << ":: Data imported a PCL xyz pointcloud \n" << std::endl;
+			if (cx >= BUFFER_SIZE) {
+				i--; //Last point is inbetween the buffer; redo at the beginning of new buffer.
+				break;
+			}
+
+			if (i == cloudptr->size()) { 
+				cx_increment = 0;
+				break;	
+			}
+				
+		}
+
+		fstream.write(buf, cx - cx_increment );
+	}
+	fstream.close();
+
+	auto timer = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
+	std::cout << "--> Data export time: " << timer.count() << " seconds\n" << std::endl;
 }
 
-
-
-
+//read file into a vector of custom point types
 template <typename point_t>
 void 
 ASCIIreadXYZ(std::string& filename, std::vector<point_t>& xyzpoints)

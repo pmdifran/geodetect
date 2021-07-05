@@ -14,6 +14,7 @@ public:
 	pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr m_kdtreeFLANN = nullptr;
 	Eigen::Matrix4d m_RT = Eigen::Matrix4d::Identity();
 
+	float m_view[3] = { 0, 0, 0 };
 	double m_resolution = 0.0; //average resolution of the point cloud.
 	double m_scale = 0.0; //subsampled resolution of the point cloud by means of voxel filtering or minimuim distance. 
 
@@ -75,8 +76,15 @@ public:
 	*/
 	inline bool hasNormals() { return  m_normals == nullptr; }
 
+	inline void setView(float& x, float& y, float& z) { m_view[0] = x; m_view[1] = y; m_view[2] = z; }
+
 //Methods
 public: 
+
+	void removeNaN();
+
+	void writeRT(const char* fname);
+
 	/** \brief Method for computing the local point cloud resolution (i.e. spacing).
 	* \param[in] k: the number of neighbors to use for determining local resolution (default=3).
 	* \param[out] vector containing local point resolution with matching indices. 
@@ -108,6 +116,7 @@ public:
 	pcl::PointCloud<pcl::PointXYZ>::Ptr getDistanceDownSample(const float& distance);
 
 	/** \brief Method for computing normals.
+	* //View point is set as 0,0,0 as default unless set with setView
 * \param[in] nrad: Radius for spherical neighbour search used for principle component analysis.
 * \param[in] normals (optional): object for which the results are written to. Otherwise, normals are written to m_normals member.
 */

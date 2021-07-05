@@ -1,5 +1,7 @@
 #include "GeoDetection.h"
 #include <chrono>
+#include <fstream>
+#include <iomanip>
 #include <pcl/common/impl/transforms.hpp>
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/search/flann_search.h>
@@ -14,6 +16,28 @@
 //auto timer = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
 //std::cout << "--> calculation time: "<< timer.count() << " seconds\n" << std::endl;
 
+void 
+GeoDetection::removeNaN()
+{
+	m_cloud->is_dense = false;
+	std::vector<int> indices;
+	pcl::removeNaNFromPointCloud(*m_cloud, *m_cloud, indices);
+	m_cloud->is_dense = true;
+}
+
+void
+GeoDetection::writeRT(const char* fname)
+{
+	std::cout << "Writing RT file\n" << std::endl;
+
+	std::ofstream ofs;
+	ofs.open(fname, std::ios::out | std::ios::binary | std::ios::trunc);
+	ofs << std::fixed << std::setprecision(16) << m_RT << '\n';
+	ofs.close();
+
+}
+
+
 std::vector<float> GeoDetection::getResolution(const int& k)
 {
 	std::cout << "Computing cloud resolution..." << std::endl;
@@ -24,7 +48,7 @@ std::vector<float> GeoDetection::getResolution(const int& k)
 	double temp = 0;
 	double newresolution = 0;
 
-	for (size_t i; i < m_cloud->size(); i++)
+	for (size_t i = 0; i < m_cloud->size(); i++)
 	{
 		std::vector<int> indices(k);
 		std::vector<float> sq_distances(k);
@@ -48,7 +72,8 @@ std::vector<float> GeoDetection::getResolution(const int& k)
 	return resolution;	
 }
 
-void GeoDetection::computeNormals(const float& nrad)
+void 
+GeoDetection::computeNormals(const float& nrad)
 {
 	std::cout << "Computing point cloud normals..." << std::endl;
 	std::cout << ":: normal scale:  " << nrad << std::endl;
@@ -58,9 +83,8 @@ void GeoDetection::computeNormals(const float& nrad)
 	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
 
 	calcnormals.setInputCloud(m_cloud);
+	calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
 	calcnormals.setSearchMethod(tree);
-
-	calcnormals.setViewPoint(0, 0, 0); //Explicit code. Its 0,0,0 by default.
 	calcnormals.setRadiusSearch(nrad);
 	//calcnormals.setNumberOfThreads();
 
@@ -71,7 +95,8 @@ void GeoDetection::computeNormals(const float& nrad)
 	std::cout << "--> calculation time: " << timer.count() << " seconds\n" << std::endl;
 }
 
-void GeoDetection::computeNormals(const float& nrad, pcl::PointCloud<pcl::Normal>::Ptr& normals)
+void 
+GeoDetection::computeNormals(const float& nrad, pcl::PointCloud<pcl::Normal>::Ptr& normals)
 {
 	std::cout << "Computing point cloud normals..." << std::endl;
 	std::cout << ":: normal scale:  " << nrad << std::endl;
@@ -82,7 +107,7 @@ void GeoDetection::computeNormals(const float& nrad, pcl::PointCloud<pcl::Normal
 
 	calcnormals.setInputCloud(m_cloud);
 	calcnormals.setSearchMethod(tree);
-	calcnormals.setViewPoint(0, 0, 0); //Explicit code. Its 0,0,0 by default.
+	calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
 	calcnormals.setRadiusSearch(nrad);
 	//calcnormals.setNumberOfThreads(); //set number of openmp threads
 
@@ -93,7 +118,8 @@ void GeoDetection::computeNormals(const float& nrad, pcl::PointCloud<pcl::Normal
 	std::cout << "--> calculation time: " << timer.count() << " seconds\n" << std::endl;
 }
 
-void GeoDetection::VoxelDownSample(const float& voxelsize)
+void 
+GeoDetection::VoxelDownSample(const float& voxelsize)
 {
 	std::cout << "Creating new downsampled cloud with voxels..." << std::endl;
 	std::cout << ":: voxel fitler size : " << voxelsize << std::endl;
@@ -122,7 +148,8 @@ void GeoDetection::VoxelDownSample(const float& voxelsize)
 		}
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr GeoDetection::getVoxelDownSample(const float& voxelsize)
+pcl::PointCloud<pcl::PointXYZ>::Ptr 
+GeoDetection::getVoxelDownSample(const float& voxelsize)
 {
 	std::cout << "Creating new downsampled cloud with voxels..." << std::endl;
 	std::cout << ":: voxel fitler size : " << voxelsize << std::endl;
@@ -141,7 +168,8 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr GeoDetection::getVoxelDownSample(const float
 	return cloud_down;
 }
 
-void GeoDetection::DistanceDownSample(const float& distance)
+void 
+GeoDetection::DistanceDownSample(const float& distance)
 {
 	std::cout << "Subsampling cloud by distance..." << std::endl;
 	std::cout << ":: subsampling distance: " << std::endl;
@@ -191,7 +219,8 @@ void GeoDetection::DistanceDownSample(const float& distance)
 	}
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr GeoDetection::getDistanceDownSample(const float& distance)
+pcl::PointCloud<pcl::PointXYZ>::Ptr 
+GeoDetection::getDistanceDownSample(const float& distance)
 {
 	std::cout << "Creating new downsampled cloud by distance..." << std::endl;
 	std::cout << ":: minimum distance: " << distance << std::endl;
@@ -233,7 +262,8 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr GeoDetection::getDistanceDownSample(const fl
 	return cloud_down;
 }
 
-void GeoDetection::applyTransformation(Eigen::Matrix4f& transformation)
+void 
+GeoDetection::applyTransformation(Eigen::Matrix4f& transformation)
 {
 	std::cout << "Applying transformation..." << std::endl;
 	auto start = std::chrono::steady_clock::now();
@@ -246,7 +276,8 @@ void GeoDetection::applyTransformation(Eigen::Matrix4f& transformation)
 	std::cout << "--> calculation time: " << timer.count() << " seconds\n" << std::endl;
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr GeoDetection::getKeyPoints()
+pcl::PointCloud<pcl::PointXYZ>::Ptr 
+GeoDetection::getKeyPoints()
 {
 	std::cout << "Computing intrinsic shape signature keypoints..." << std::endl;
 	auto start = std::chrono::steady_clock::now();
@@ -275,7 +306,8 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr GeoDetection::getKeyPoints()
 	return keypoints;
 }
 
-pcl::PointCloud<pcl::FPFHSignature33>::Ptr GeoDetection::getFPFH(pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints)
+pcl::PointCloud<pcl::FPFHSignature33>::Ptr 
+GeoDetection::getFPFH(pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints)
 {
 	std::cout << "Computing fast point feature histograms..." << std::endl;
 	auto start = std::chrono::steady_clock::now();

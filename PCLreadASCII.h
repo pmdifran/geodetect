@@ -31,6 +31,9 @@ getDelimeter(const char* fname);
 void 
 PCLreadASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr);
 
+void
+PCLwriteASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr);
+
 //Custom input data type xyz. You can modify this to add more fields. 
 typedef struct _XYZ
 {
