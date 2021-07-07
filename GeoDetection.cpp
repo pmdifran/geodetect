@@ -4,12 +4,13 @@
 #include <iomanip>
 #include <pcl/common/impl/transforms.hpp>
 #include <pcl/features/normal_3d_omp.h>
-#include <pcl/search/flann_search.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/keypoints/iss_3d.h>
 #include <pcl/features/fpfh_omp.h>
+
+#include <omp.h>
 
 
 //auto start = std::chrono::steady_clock::now();
@@ -37,19 +38,21 @@ GeoDetection::writeRT(const char* fname)
 
 }
 
-
-std::vector<float> GeoDetection::getResolution(const int& k)
+std::vector<float> GeoDetection::getResolution(int nbrs)
 {
 	std::cout << "Computing cloud resolution..." << std::endl;
-	std::cout << ":: k-nearest neighbors used for distances: " << k << std::endl;
+	std::cout << ":: k-nearest neighbors used for distances: " << nbrs << std::endl;
 	auto start = std::chrono::steady_clock::now();
 
 	std::vector<float> resolution(m_cloud->size());
-	double temp = 0;
-	double newresolution = 0;
+	unsigned int k = nbrs + 1; //The first nearest neighbor is the query point itself. 
+	
+	double avgres = 0;
 
-	for (size_t i = 0; i < m_cloud->size(); i++)
+#pragma omp parallel for reduction(+: avgres)
+	for (__int64 i = 0; i < m_cloud->size(); i++)
 	{
+		double temp = 0.0;
 		std::vector<int> indices(k);
 		std::vector<float> sq_distances(k);
 
@@ -57,16 +60,17 @@ std::vector<float> GeoDetection::getResolution(const int& k)
 		for (int j = 1; j < k; j++)
 			temp += sq_distances[j];
 
-		temp /= k;
+		temp /= nbrs;
 		resolution[i] = temp;
-		newresolution += temp;
+		avgres += temp;
 
-		temp = 0;
 	}
-	m_resolution = newresolution;
+
+	avgres = sqrt(avgres / m_cloud->size());
+	m_resolution = avgres;
 	auto timer = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
 
-	std::cout << "Point cloud resolution: " << m_resolution << std::endl;
+	std::cout << "Point cloud resolution: " << m_resolution << " meters" << std::endl;
 	std::cout << "--> calculation time: "<< timer.count() << " seconds\n" << std::endl;
 
 	return resolution;	
@@ -80,11 +84,10 @@ GeoDetection::computeNormals(const float& nrad)
 	auto start = std::chrono::steady_clock::now();
 
 	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> calcnormals;
-	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
 
 	calcnormals.setInputCloud(m_cloud);
 	calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
-	calcnormals.setSearchMethod(tree);
+	calcnormals.setSearchMethod(m_kdtree);
 	calcnormals.setRadiusSearch(nrad);
 	//calcnormals.setNumberOfThreads();
 
@@ -101,12 +104,11 @@ GeoDetection::computeNormals(const float& nrad, pcl::PointCloud<pcl::Normal>::Pt
 	std::cout << "Computing point cloud normals..." << std::endl;
 	std::cout << ":: normal scale:  " << nrad << std::endl;
 	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> calcnormals;
-	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
+
 	auto start = std::chrono::steady_clock::now();
 
-
 	calcnormals.setInputCloud(m_cloud);
-	calcnormals.setSearchMethod(tree);
+	calcnormals.setSearchMethod(m_kdtree);
 	calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
 	calcnormals.setRadiusSearch(nrad);
 	//calcnormals.setNumberOfThreads(); //set number of openmp threads
@@ -171,8 +173,7 @@ GeoDetection::getVoxelDownSample(const float& voxelsize)
 void 
 GeoDetection::DistanceDownSample(const float& distance)
 {
-	std::cout << "Subsampling cloud by distance..." << std::endl;
-	std::cout << ":: subsampling distance: " << std::endl;
+	std::cout << "Subsampling cloud by distance: " << distance << " meters..." << std::endl;
 	auto start = std::chrono::steady_clock::now();
 
 	size_t isize = m_cloud->size();
@@ -182,6 +183,7 @@ GeoDetection::DistanceDownSample(const float& distance)
 	size_t i = 0, n = m_cloud->size();
 
 	while (i < n) {
+		std::cout << i << std::endl;
 		pcl::PointIndices::Ptr outliers(new pcl::PointIndices());
 		std::vector<int> IDRadiusSearch;
 		std::vector<float> DistanceRadiusSearch;
@@ -189,6 +191,7 @@ GeoDetection::DistanceDownSample(const float& distance)
 		m_kdtreeFLANN->radiusSearch(m_cloud->points[i], distance, IDRadiusSearch, DistanceRadiusSearch);
 
 		if (IDRadiusSearch.size() < 2) {
+			i++;
 			continue;
 		}
 
@@ -285,9 +288,7 @@ GeoDetection::getKeyPoints()
 	pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints(new pcl::PointCloud<pcl::PointXYZ>);
 	pcl::ISSKeypoint3D<pcl::PointXYZ, pcl::PointXYZ> iss_detector;
 
-
-	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
-	iss_detector.setSearchMethod(tree);
+	iss_detector.setSearchMethod(m_kdtree);
 
 	//Use point cloud resoltion, or subsample size, to determine the parameters
 	iss_detector.setSalientRadius(0.5); //***************************************************************************
@@ -317,8 +318,7 @@ GeoDetection::getFPFH(pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints)
 	computefpfh.setInputCloud(keypoints);
 	computefpfh.setInputNormals(m_normals);
 
-	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
-	computefpfh.setSearchMethod(tree);
+	computefpfh.setSearchMethod(m_kdtree);
 	computefpfh.setRadiusSearch(1.0); //function of voxel subsample? ***************************************************************************
 	computefpfh.setSearchSurface(m_cloud);//subsample? ******************************************************************
 

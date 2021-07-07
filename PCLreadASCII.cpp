@@ -68,7 +68,6 @@ hasHeader(char const* fname)
 	pcl::PointXYZ xyz; // temporary point
 	std::string line; //string object for getline
 
-	in.imbue(std::locale(std::locale(), new csv_reader())); //for the rest of stream, treat commas as whitespace
 	if (!in.is_open()) {
 		std::cout << "Failed to find or open the file\nExiting the program..." << std::endl;
 		std::exit(EXIT_FAILURE);
@@ -77,6 +76,8 @@ hasHeader(char const* fname)
 	//Check if the file has a header
 	std::getline(in, line);
 	std::istringstream iss(line); //construct into stringstream object
+	iss.imbue(std::locale(std::locale(), new csv_reader())); //using locale that treats CSV delimiters as whitesapce.
+
 	if (iss >> xyz.x >> xyz.y >> xyz.z) { // stream extraction returns false if a non-numeric value is entered
 		hasheader = false;
 		std::cout << ":: No header detected." << std::endl;
@@ -103,8 +104,6 @@ getNumColumns(const char* fname)
 	float temp = 0;
 	std::string line; //string object for getline
 
-
-	in.imbue(std::locale(std::locale(), new csv_reader())); //for the rest of stream, treat commas as whitespace
 	if (!in.is_open()) {
 		std::cout << "Failed to find or open the file\nExiting the program..." << std::endl;
 		std::exit(EXIT_FAILURE);
@@ -113,6 +112,7 @@ getNumColumns(const char* fname)
 	std::getline(in, line);
 	std::getline(in, line); //take second line incase of header
 	std::istringstream iss(line);
+	iss.imbue(std::locale(std::locale(), new csv_reader())); //treat CSV delimiters as whitespace
 	
 	while (iss >> temp) num_columns++;
 
@@ -163,7 +163,7 @@ void
 PCLreadASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr)
 {
 	auto start = std::chrono::steady_clock::now();
-	std::cout << "Importing XYZ Data.." << std::endl;
+	std::cout << "\n\nImporting XYZ Data.." << std::endl;
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//Check that there is XYZ data
@@ -185,7 +185,7 @@ PCLreadASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr
 	if (hasheader) { num_points--; }
 
 	cloudptr->points.reserve(num_points);
-	std::cout << ":: Number of points: " << num_points << '\n' << std::endl;
+	std::cout << ":: Number of points: " << num_points << std::endl;
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//Read file into buffer (c-style because its faster) and import into pcl::PointCloud

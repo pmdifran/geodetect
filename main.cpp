@@ -1,18 +1,43 @@
 #include "PCLreadASCII.h"
 #include "GeoDetection.h"
+#include "autoRegistration.h"
 #include <iomanip>
 
 int main (int argc, char* argv[])
 {
-	const char* fname = "test - Cloud.txt";
-	std::cout << fname << std::endl;
+	const char* sname = "testxyz.txt";
+	//const char* rname = "2017-09-02_SEC2.txt";
 
-	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudptr(new pcl::PointCloud<pcl::PointXYZ>());
+	std::cout << "Source name: "  << sname << std::endl;
+	//std::cout << "Reference name: " << rname << std::endl;
 
-	int count = PCLreadASCIIxyz(fname, cloudptr);
-	std::cout << "count: " << count << std::endl;
 
-	std::cout << "size: " << cloudptr->size() << std::endl;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr src(new pcl::PointCloud<pcl::PointXYZ>());
+	//pcl::PointCloud<pcl::PointXYZ>::Ptr ref(new pcl::PointCloud<pcl::PointXYZ>());
 
-	PCLwriteASCIIxyz("output.txt", cloudptr);
+	PCLreadASCIIxyz(sname, src);
+	//PCLreadASCIIxyz(rname, ref);
+
+	GeoDetection source(src);
+	//GeoDetection reference(ref);
+
+	std::vector<float> sres = source.getResolution(2);
+	//std::vector<float> rres = reference.getResolution(2);
+
+	source.DistanceDownSample(0.2);
+
+	//source.m_scale = source.m_resolution * 5;
+	//reference.m_scale = reference.m_resolution * 5;
+
+	//GeoDetection src_down = source.getDistanceDownSample(0.2);
+	//PCLwriteASCIIxyz("DDownsample.txt", src_down.m_cloud);
+
+	//float scale = source.m_resolution
+
+	//source.computeNormals(1.0);
+	//reference.computeNormals(1.0);
+
+	//Eigen::Matrix4f transformation = globalRegistration(reference, source);
+	//std::cout << "Transformation: \n\n" << transformation << std::endl;
+	std::cin.get();
 }
