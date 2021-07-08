@@ -5,7 +5,7 @@
 
 int main (int argc, char* argv[])
 {
-	const char* sname = "testxyz.txt";
+	const char* sname = "2020-11-23_S1-5.txt";
 	//const char* rname = "2017-09-02_SEC2.txt";
 
 	std::cout << "Source name: "  << sname << std::endl;

@@ -176,50 +176,57 @@ GeoDetection::DistanceDownSample(const float& distance)
 	std::cout << "Subsampling cloud by distance: " << distance << " meters..." << std::endl;
 	auto start = std::chrono::steady_clock::now();
 
-	size_t isize = m_cloud->size();
-	pcl::ExtractIndices<pcl::PointXYZ> extract;
-	extract.setNegative(true); //to remove the outliers
+	pcl::PointIndices::Ptr inliers(new pcl::PointIndices());
+	inliers->indices.reserve(m_cloud->size()); //conservatively reserve space for entire cloud indices. 
 
-	size_t i = 0, n = m_cloud->size();
+	std::vector<char> markers;
+	markers.resize(m_cloud->size(), 1); //set to 1 by default
 
-	while (i < n) {
-		std::cout << i << std::endl;
-		pcl::PointIndices::Ptr outliers(new pcl::PointIndices());
-		std::vector<int> IDRadiusSearch;
-		std::vector<float> DistanceRadiusSearch;
+	for (__int64 i = 0; i < m_cloud->size(); i++)
+	{
+		if (markers[i]) {
+			std::vector<int> IDRadiusSearch;
+			std::vector<float> DistanceRadiusSearch;
 
-		m_kdtreeFLANN->radiusSearch(m_cloud->points[i], distance, IDRadiusSearch, DistanceRadiusSearch);
+			m_kdtreeFLANN->radiusSearch(m_cloud->points[i], distance, IDRadiusSearch, DistanceRadiusSearch);
 
-		if (IDRadiusSearch.size() < 2) {
-			i++;
-			continue;
+			if (IDRadiusSearch.size() > 1) {
+				for (std::vector<int>::iterator it = IDRadiusSearch.begin() + 1; it != IDRadiusSearch.end(); ++it) {
+					markers[*it] = 0;
+				}
+			}
+
+			inliers->indices.push_back(i);
 		}
-
-		IDRadiusSearch.erase(IDRadiusSearch.begin()); //remove first point from the list (its the query point)
-		outliers->indices = std::move(IDRadiusSearch);
-
-		extract.setInputCloud(m_cloud);
-		extract.setIndices(outliers);
-		extract.filter(*m_cloud);
-
-		i++;
-		n = m_cloud->size();
 	}
+
+	std::cout << inliers->indices.size() << std::endl;
+
+	inliers->indices.swap(inliers->indices); //reduce reserved space. 
+
+	size_t size_original = m_cloud->size();
+	pcl::ExtractIndices<pcl::PointXYZ> extract;
+	extract.setInputCloud(m_cloud);
+	extract.setIndices(inliers);
+	extract.filter(*m_cloud);
+
 	auto timer = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
-	std::cout << ":: Initial cloud size: " << m_cloud->size() << std::endl;
-	std::cout << "::   Downsampled size: " << isize << std::endl;
+	std::cout << ":: Initial cloud size: " << size_original << std::endl;
+	std::cout << "::   Downsampled size: " << m_cloud->size() << std::endl;
+	float temp = 100 - (size_original - m_cloud->size()) / (float)size_original * 100;
+	std::cout << std::fixed << std::setprecision(2) << "Cloud has been reduced to " << temp << "% of its original size." << std::endl;
 	std::cout << "--> calculation time: " << timer.count() << " seconds\n" << std::endl;
 
-	if (m_resolution == 0) {
-		std::cout << "Average cloud resolution variable remains uninitialized" << std::endl;
-		std::cout << "--> ** Run GeoDetection::getResolution() prior to any resolution-based parameter selection\n" << std::endl;
-	}
-	else {
-		float temp = (isize - m_cloud->size()) / isize * 100;
-		std::cout << "Cloud has been reduced by " << temp << "%" << std::endl;
-		std::cout << "--> The average cloud resolution may have changed" << std::endl;
-		std::cout << "--> Its recommended to run GeoDetection::getResolution() prior to any further resolution-based parameter selection ** \n" << std::endl;
-	}
+	//if (m_resolution == 0) {
+	//	std::cout << "Average cloud resolution variable remains uninitialized" << std::endl;
+	//	std::cout << "--> ** Run GeoDetection::getResolution() prior to any resolution-based parameter selection\n" << std::endl;
+	//}
+	//else {
+
+	//	std::cout << "--> The cloud resolution may have changed" << std::endl;
+	//	std::cout << "--> Its recommended to run GeoDetection::getResolution() prior to any further resolution-based parameter selection\n"
+	//				"     ...Unless a rather uniform sampling has been achieved (i.e. subsample distance ~= resolution  * *\n" << std::endl;
+	//}
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr 
