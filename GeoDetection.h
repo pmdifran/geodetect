@@ -38,14 +38,7 @@ public:
 
 	{
 		std::cout << "Creating GeoDetection Object...\n" << ":: Constructing KdTrees...\n";
-		auto start = std::chrono::steady_clock::now();
-
-		m_kdtreeFLANN->setInputCloud(m_cloud);
-		m_kdtree->setInputCloud(m_cloud);
-
-		auto timer = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
-		std::cout << "--> KdTree construction time: " << timer.count() << " seconds\n" << std::endl;
-
+		computeKdTrees();
 		std::cout << "GeoDetection Object Created with: " << m_cloud->size() << " points.\n" << std::endl;
 	}
 
@@ -93,6 +86,8 @@ public:
 
 //Methods
 public: 
+
+	void computeKdTrees();
 
 	void removeNaN();
 

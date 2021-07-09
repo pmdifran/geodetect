@@ -24,7 +24,9 @@ int main (int argc, char* argv[])
 	std::vector<float> sres = source.getResolution(2);
 	//std::vector<float> rres = reference.getResolution(2);
 
-	source.DistanceDownSample(0.2);
+	source.DistanceDownSample(0.1);
+
+ 	source.computeNormals(1.5);
 
 	//source.m_scale = source.m_resolution * 5;
 	//reference.m_scale = reference.m_resolution * 5;
@@ -39,5 +41,7 @@ int main (int argc, char* argv[])
 
 	//Eigen::Matrix4f transformation = globalRegistration(reference, source);
 	//std::cout << "Transformation: \n\n" << transformation << std::endl;
+
+	std::cout << "Done - waiting for user to close launch window" << std::endl;
 	std::cin.get();
 }

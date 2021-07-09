@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <pcl/common/impl/transforms.hpp>
 #include <pcl/features/normal_3d_omp.h>
+#include <pcl/features/normal_3d.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/radius_outlier_removal.h>
@@ -36,6 +37,19 @@ GeoDetection::writeRT(const char* fname)
 	ofs << std::fixed << std::setprecision(16) << m_RT << '\n';
 	ofs.close();
 
+}
+
+void
+GeoDetection::computeKdTrees()
+{
+	std::cout << ":: Computing KdTrees..." << std::endl;
+	auto start = std::chrono::steady_clock::now();
+
+	m_kdtreeFLANN->setInputCloud(m_cloud);
+	m_kdtree->setInputCloud(m_cloud);
+
+	auto timer = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
+	std::cout << "--> KdTree construction time: " << timer.count() << " seconds\n" << std::endl;
 }
 
 std::vector<float> GeoDetection::getResolution(int nbrs)
@@ -79,9 +93,13 @@ std::vector<float> GeoDetection::getResolution(int nbrs)
 void 
 GeoDetection::computeNormals(const float& nrad)
 {
+	m_normals->clear();
 	std::cout << "Computing point cloud normals..." << std::endl;
-	std::cout << ":: normal scale:  " << nrad << std::endl;
+	std::cout << ":: Normal scale:  " << nrad << std::endl;
 	auto start = std::chrono::steady_clock::now();
+
+	//Reserve size for normals. 
+	m_normals->reserve(m_cloud->size());
 
 	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> calcnormals;
 
@@ -89,7 +107,9 @@ GeoDetection::computeNormals(const float& nrad)
 	calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
 	calcnormals.setSearchMethod(m_kdtree);
 	calcnormals.setRadiusSearch(nrad);
-	//calcnormals.setNumberOfThreads();
+
+	std::cout << ":: Threads automatically set to number of cores.\n" << ":: --> Number of threads: " << omp_get_num_procs() << std::endl;
+	//calcnormals.setNumberOfThreads(); //use this to manually set your own number of threads
 
 	calcnormals.compute(*m_normals);
 	auto timer = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
@@ -101,17 +121,21 @@ GeoDetection::computeNormals(const float& nrad)
 void 
 GeoDetection::computeNormals(const float& nrad, pcl::PointCloud<pcl::Normal>::Ptr& normals)
 {
-	std::cout << "Computing point cloud normals..." << std::endl;
-	std::cout << ":: normal scale:  " << nrad << std::endl;
-	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> calcnormals;
+	normals->reserve(m_cloud->size());
 
+	std::cout << "Computing point cloud normals..." << std::endl;
+	std::cout << ":: Normal scale:  " << nrad << std::endl;
 	auto start = std::chrono::steady_clock::now();
+
+	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> calcnormals;
 
 	calcnormals.setInputCloud(m_cloud);
 	calcnormals.setSearchMethod(m_kdtree);
 	calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
 	calcnormals.setRadiusSearch(nrad);
-	//calcnormals.setNumberOfThreads(); //set number of openmp threads
+	
+	std::cout << ":: Threads automatically set to number of cores.\n" << ":: --> Number of threads: " << omp_get_num_procs() << std::endl;
+	//calcnormals.setNumberOfThreads(); //use this to manually set your own number of threads
 
 	calcnormals.compute(*normals);
 	auto timer = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
@@ -217,16 +241,8 @@ GeoDetection::DistanceDownSample(const float& distance)
 	std::cout << std::fixed << std::setprecision(2) << "Cloud has been reduced to " << temp << "% of its original size." << std::endl;
 	std::cout << "--> calculation time: " << timer.count() << " seconds\n" << std::endl;
 
-	//if (m_resolution == 0) {
-	//	std::cout << "Average cloud resolution variable remains uninitialized" << std::endl;
-	//	std::cout << "--> ** Run GeoDetection::getResolution() prior to any resolution-based parameter selection\n" << std::endl;
-	//}
-	//else {
-
-	//	std::cout << "--> The cloud resolution may have changed" << std::endl;
-	//	std::cout << "--> Its recommended to run GeoDetection::getResolution() prior to any further resolution-based parameter selection\n"
-	//				"     ...Unless a rather uniform sampling has been achieved (i.e. subsample distance ~= resolution  * *\n" << std::endl;
-	//}
+	std::cout << "Updating search trees..." << std::endl;
+	computeKdTrees();
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr 
