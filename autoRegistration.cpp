@@ -8,17 +8,17 @@ Eigen::Matrix4f globalRegistration(GeoDetection& reference, GeoDetection& source
 	std::cout << "----------------------------------------------" << std::endl;
 	std::cout << "Auto Registration --Global...\n" << std::endl;
 
-	//Construct subsampled GeoDetection objects from the inputs
-	GeoDetection ref_down = reference.getDistanceDownSample(subres);
-	GeoDetection src_down = source.getDistanceDownSample(subres);
+	////Construct subsampled GeoDetection objects from the inputs
+	//GeoDetection ref_down = reference.getDistanceDownSample(subres);
+	//GeoDetection src_down = source.getDistanceDownSample(subres);
 
 	//Compute ISS keypoints
-	pcl::PointCloud<pcl::PointXYZ>::Ptr ref_keypoints = ref_down.getKeyPoints();
-	pcl::PointCloud<pcl::PointXYZ>::Ptr src_keypoints = src_down.getKeyPoints();
+	pcl::PointCloud<pcl::PointXYZ>::Ptr ref_keypoints = reference.getKeyPoints();
+	pcl::PointCloud<pcl::PointXYZ>::Ptr src_keypoints = source.getKeyPoints();
 
 	//Compute fast point feature histograms at keypoints
-	pcl::PointCloud<pcl::FPFHSignature33>::Ptr ref_fpfh = ref_down.getFPFH(ref_keypoints);
-	pcl::PointCloud<pcl::FPFHSignature33>::Ptr src_fpfh = src_down.getFPFH(src_keypoints);
+	pcl::PointCloud<pcl::FPFHSignature33>::Ptr ref_fpfh = reference.getFPFH(ref_keypoints);
+	pcl::PointCloud<pcl::FPFHSignature33>::Ptr src_fpfh = source.getFPFH(src_keypoints);
 
 	//Compute keypoint correspondences
 	pcl::CorrespondencesPtr correspondences (new pcl::Correspondences);
