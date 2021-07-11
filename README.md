@@ -16,7 +16,7 @@ Currently only for Windows 10.
 \
 **Working towards:**
 -  _IO_: Templated c-style ascii IO for custom point clouds with numerous scalar features.
--  _IO_: Implenting LibLAS libary for importing .las pointclouds.
+-  _IO_: Implementing LibLAS libary for importing .las pointclouds.
 -  _IO_: Implementing RIEGL laser intruments' SDK for IO
 -  _Method_: User-input with viz (i.e. selection camera position for orienting normals [m_view])
 -  _Method_: Feature extraction (trees from lidar)
