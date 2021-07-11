@@ -30,7 +30,7 @@ Currently only for Windows 10.
 ### Windows
 I do not want to learn how to use cmake - but at some point I'll do it so that this doesn't suck...
 
-1. Get pcl library and integrate with MSVS:
+1. Get pcl library using vcpkg and integrate the library with MSVS:
 ```
 vcpkg clone https://github.com/microsoft/vcpkg
 cd vcpkg
