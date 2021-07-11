@@ -3,7 +3,7 @@
 #include "PCLreadASCII.h" //includes our custom point cloud structures, and those from pcl.
 #include <cstring> //for memchr
 #include <cstdlib> //for strtod
-#include "fast_float.h"
+//#include "fast_float.h" --> look at this later for parsing
 
 
 #include <limits>
@@ -249,7 +249,6 @@ PCLreadASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr
 	std::cout << "--> Data import time: "<< timer.count() << " seconds\n" << std::endl;
 }
 
-//Good for now... Write a c-style buffer code to write.
 void
 PCLwriteASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr)
 {
