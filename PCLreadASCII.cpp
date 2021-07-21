@@ -3,8 +3,7 @@
 #include "PCLreadASCII.h" //includes our custom point cloud structures, and those from pcl.
 #include <cstring> //for memchr
 #include <cstdlib> //for strtod
-//#include "fast_float.h" --> look at this later for parsing
-
+#include "fast_float.h" //Single header library version of fast_float
 
 #include <limits>
 #include <cstdio>
@@ -201,8 +200,6 @@ PCLreadASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr
 	static const auto BUFFER_SIZE = 16 * 1024;
 	char buf[BUFFER_SIZE + 1];
 	pcl::PointXYZ mypoint;
-
-	//FOR CROSS PLATFORM: check for crlf; cr; lf, and use memchr accordingly.
 	
 	//If there's a header, skip the first line.
 	if (hasheader) {
@@ -212,7 +209,6 @@ PCLreadASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr
 	while (size_t bytes_read = fread(&buf, 1, BUFFER_SIZE, file)) {
 		
 		char* p = buf; //pointer to the beginning of the line that we'll read
-		char* p_end; //pointer which lands on the delimeters.
 
 		if (bytes_read == std::numeric_limits<size_t>::max())
 			std::cout << "read failed" << std::endl;
@@ -220,9 +216,9 @@ PCLreadASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr
 			break;
 
 		for (char* p_next = buf; (p_next = (char*)memchr(p_next, '\n', (buf + bytes_read) - p_next)); p_next++) {
-			mypoint.x = strtod(p, &p_end);
-			mypoint.y = strtod(p_end+1, &p_end);
-			mypoint.z = strtod(p_end+1, NULL);
+			auto answer = fast_float::from_chars(p, p_next, mypoint.x);
+			answer = fast_float::from_chars(answer.ptr + 1, p_next, mypoint.y);
+			fast_float::from_chars(answer.ptr + 1, p_next, mypoint.z);
 
 			cloudptr->points.push_back(mypoint);
 
@@ -230,12 +226,14 @@ PCLreadASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr
 		}
 			// CASE: The xyz point is split across the buffer. Reset the file location to include it at the beginning of the next buffer fill.
 		if (bytes_read == BUFFER_SIZE) {
-			size_t offset = (buf + bytes_read) - p; //number of bytes from the end of the buffer, to just before the last \n. 
-			fseek(file, (long)-offset, SEEK_CUR); //offset the stream back that many bytes, so we're at the \n next memchr.
+			size_t offset = (buf + bytes_read) - p; //number of bytes from the end of buffer to the preceding char to the final \n. 
+			fseek(file, (long)-offset, SEEK_CUR); //offset the stream back that many bytes, so we're at the final \n in the next memchr.
 			continue;
 		}
-			// CASE: End of the file is in the buffer && the last line doesn't terminate with \n
-		else if (cloudptr->points.size() < cloudptr->points.capacity()) {
+			// EOF CASE: The last line in the file didn't terminate with \n
+		else if (cloudptr->points.size() < cloudptr->points.capacity()) { 
+			char* p_end; //pointer which lands on the delimeters.
+
 			mypoint.x = strtod(p, &p_end);
 			mypoint.y = strtod(p_end + 1, &p_end);
 			mypoint.z = strtod(p_end + 1, NULL);
