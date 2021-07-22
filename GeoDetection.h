@@ -1,14 +1,16 @@
 #pragma once
-#include <pcl/point_types.h>
-#include <pcl/kdtree/kdtree_flann.h>
-#include <pcl/search/kdtree.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/point_types.h>
+#include <pcl/search/kdtree.h>
+
 #include <cmath>
 #include <chrono>
 
 // \brief Custom pointcloud object for geocomputation of LiDAR point clouds
 class GeoDetection
-{//ADD NORMALS + SCALAR FIELD OUTPUT METHODS. Look at CloudCompare ascii filter and scalar field library 
+{
+//Members
 public:
 	std::string m_name;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr m_cloud; 
@@ -18,121 +20,87 @@ public:
 
 	pcl::PointIndices::Ptr m_subindices;
 
-	Eigen::Matrix4d m_RT;
+	Eigen::Matrix4d m_transformation;
 
-	float m_view[3] = { 0, 0, 0 };
+	std::array<float, 3> m_view = { 0, 0, 0 };
 	double m_resolution = 0.0; //average resolution of the point cloud.
 	double m_scale = 0.0; //subsampled resolution of the point cloud by means of voxel filtering or minimuim distance. 
 
 
-//Object creation
+//Constructors and assignments
 public:
-	//Constructor copying cloud smart_ptr
-	GeoDetection(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
-		: m_name("GeoDetection Default"),
+	GeoDetection(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string name = "GeoDetection Default")
+		: m_name(name),
 		m_cloud(cloud),
 		m_kdtreeFLANN(new pcl::KdTreeFLANN<pcl::PointXYZ>),
 		m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
 		m_normals(new pcl::PointCloud<pcl::Normal>),
-		m_RT(Eigen::Matrix4d::Identity())
+		m_transformation(Eigen::Matrix4d::Identity())
 
 	{
-		std::cout << "Creating GeoDetection Object...\n" << ":: Constructing KdTrees...\n";
-		computeKdTrees();
+		std::cout << "Creating GeoDetection Object: " << m_name << '\n' << "::Constructing KdTrees..." << std::endl;
+		setKdTrees();
 		std::cout << "GeoDetection Object Created with: " << m_cloud->size() << " points.\n" << std::endl;
 	}
 
-	//Copy constructor
-	GeoDetection(GeoDetection& other)
-		:m_name(other.m_name),
-		m_cloud(other.m_cloud),
-		m_normals(other.m_normals),
-		m_kdtreeFLANN(other.m_kdtreeFLANN),
-		m_kdtree(other.m_kdtree),
-		m_RT(other.m_RT),
-		m_resolution(other.m_resolution),
-		m_scale(other.m_scale)
+	GeoDetection(const GeoDetection&) = default;
+	GeoDetection(GeoDetection&&) = default;
 
-	{
-		std::copy(std::begin(other.m_view), std::end(other.m_view), m_view);
-		std::cout << "\nCloud: " << other.m_name << "copied to " << m_name << '\n' << std::endl;
-	}
+	GeoDetection& operator=(const GeoDetection&) = default;
+	GeoDetection& operator=(GeoDetection&&) = default;
 
-	GeoDetection(GeoDetection&& other) noexcept
-		:m_name(std::move(other.m_name)),
-		m_cloud(std::move(other.m_cloud)),
-		m_normals(std::move(other.m_normals)),
-		m_kdtreeFLANN(std::move(other.m_kdtreeFLANN)),
-		m_kdtree(std::move(other.m_kdtree)),
-		m_RT(other.m_RT),
-		m_resolution(other.m_resolution),
-		m_scale(other.m_scale)
+	~GeoDetection() = default;
 
-	{
-		other.~GeoDetection();
-	}
-
-	~GeoDetection() {}
-
-//Initialization methods and checks
+//Setters and checkers
 public:
-	inline void setScale(float& scale) { m_scale = scale; }
+	//Sets the cloud to a new pcl::PointCloud, updates the KdTrees, and clears the normals. 
+	void setCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) { m_cloud = std::move(cloud); setKdTrees(); m_normals->clear(); }
+	
+	//I'm not sure if passing const lvalue reference is correct?
+	void setNormals(const pcl::PointCloud<pcl::Normal>::Ptr& normals) { m_normals = std::move(normals); }
 
-	/** \brief Check that normals have been computed.
-	*/
+	void setKdTrees();
+
+	void setScale(float& scale) { m_scale = scale; }
+
+	//Checks that normals have been computed.
 	inline bool hasNormals() { return  m_normals->size() == m_cloud->size() && m_normals->size()!=0; }
 
 	inline void setView(float& x, float& y, float& z) { m_view[0] = x; m_view[1] = y; m_view[2] = z; }
 
 //Methods
 public: 
-
-	void computeKdTrees();
-
 	void removeNaN();
 
 	void writeRT(const char* fname);
 
 	/** \brief Method for computing the local point cloud resolution (i.e. spacing).
-	* \param[in] k: the number of neighbors to use for determining local resolution (default=3).
+	* \param[in] k: the number of neighbors to use for determining local resolution (default=2).
 	* \param[out] vector containing local point resolution with matching indices. 
 	* \param[out] updated m_resolution to contain the average resolution
 	*/
-	std::vector<float> getResolution(int nbrs = 3);
-
-	/** \brief Method for subsampling the cloud object using a voxel filter. The local cloud should be dense relative to voxel size
-	{i.e. specify it based on the point cloud resolution from getResolution()}.
-* \param[in] voxelsize: cubic voxel size used to create average-point locations.
-*/
-	void VoxelDownSample(const float& voxelsize);
+	std::vector<float> getResolution(int num_neighbors = 2);
 
 	/** \brief Method for generating a new, subsampled cloud, using a voxel filter. The local cloud should be dense relative to voxel size
 	{i.e. specify it based on the point cloud resolution from getResolution()}.
-* \param[in] voxelsize: cubic voxel size used to create average-point locations.
+* \param[in] voxel_size: cubic voxel size used to create average-point locations.
 */
-	pcl::PointCloud<pcl::PointXYZ>::Ptr getVoxelDownSample(const float& voxelsize);
-
-	/** \brief Method for subsampling the cloud object using a minimum distance (similar to CloudCompare).
-* \param[in] distance: minimum distance between points. 
-*/
-	void DistanceDownSample(const float& distance);
-
+	pcl::PointCloud<pcl::PointXYZ>::Ptr getVoxelDownSample(float voxel_size);
 
 	/** \brief Method for generating a new, subsampled cloud, using a minimum distance (similar to CloudCompare).
 * \param[in] distance: minimum distance between points
 * \param[out] new, subsampled, pointcloud object (pointer).
 */
-	pcl::PointCloud<pcl::PointXYZ>::Ptr getDistanceDownSample(const float& distance);
+	pcl::PointCloud<pcl::PointXYZ>::Ptr getDistanceDownSample(float distance);
 
 	/** \brief Method for computing normals.
 	* //View point is set as 0,0,0 as default unless set with setView
 * \param[in] nrad: Radius for spherical neighbour search used for principle component analysis.
 * \param[in] normals (optional): object for which the results are written to. Otherwise, normals are written to m_normals member.
 */
-	void computeNormals(const float& nrad);
-	void computeNormals(const float& nrad, pcl::PointCloud<pcl::Normal>::Ptr& normals);
+	pcl::PointCloud<pcl::Normal>::Ptr getNormals(float nrad);
 
-	void applyTransformation(Eigen::Matrix4f& transformation);
+	void applyTransformation(const Eigen::Matrix4f& transformation);
 	
 	pcl::PointCloud<pcl::PointXYZ>::Ptr getKeyPoints();
 
