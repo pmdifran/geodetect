@@ -28,7 +28,7 @@ Currently only for Windows 10.
 
 ## Build
 ### Windows
-I do not want to learn how to use cmake - but at some point I'll do it so that this doesn't suck...
+At some point I'll learn cmake so that this doesn't suck...
 
 1. Get pcl library using vcpkg and integrate the library with MSVS:
 ```
