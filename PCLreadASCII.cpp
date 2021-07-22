@@ -57,11 +57,8 @@ getLineCount(char const* fname)
 bool
 hasHeader(char const* fname)
 {
-	bool hasheader;
-
 	//input filestream
-	std::string fnamestr(fname);
-	std::ifstream in(fnamestr);
+	std::ifstream in(fname);
 
 	//objects for parsing
 	pcl::PointXYZ xyz; // temporary point
@@ -78,16 +75,13 @@ hasHeader(char const* fname)
 	iss.imbue(std::locale(std::locale(), new csv_reader())); //using locale that treats CSV delimiters as whitesapce.
 
 	if (iss >> xyz.x >> xyz.y >> xyz.z) { // stream extraction returns false if a non-numeric value is entered
-		hasheader = false;
 		std::cout << ":: No header detected." << std::endl;
+		return false;
 	}
 	else {
-		hasheader = true;
 		std::cout << ":: Header found." << std::endl;
+		return true;
 	}
-
-	in.close();
-	return hasheader;
 }
 
 size_t
@@ -158,9 +152,11 @@ getDelimeter(const char* fname)
 }
 
 
-void 
-PCLreadASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr)
+pcl::PointCloud<pcl::PointXYZ>::Ptr
+PCLreadASCIIxyz(char const* fname)
 {
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudptr(new pcl::PointCloud<pcl::PointXYZ>);
+
 	auto start = std::chrono::steady_clock::now();
 	std::cout << "\n\nImporting XYZ Data.." << std::endl;
 
@@ -245,6 +241,7 @@ PCLreadASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr
 	fclose(file);
 	auto timer = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
 	std::cout << "--> Data import time: "<< timer.count() << " seconds\n" << std::endl;
+	return cloudptr;
 }
 
 void

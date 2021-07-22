@@ -28,8 +28,8 @@ char
 getDelimeter(const char* fname);
 
 //Reads xyz data from an ASCII file into the provided PCL xyz point cloud.
-void 
-PCLreadASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr);
+pcl::PointCloud<pcl::PointXYZ>::Ptr
+PCLreadASCIIxyz(char const* fname);
 
 void
 PCLwriteASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr);
