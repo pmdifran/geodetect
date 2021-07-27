@@ -11,10 +11,12 @@
 uintmax_t 
 getLineCount(char const* fname)
 {
-	FILE* file = fopen(fname, "r");
+	FILE* file;
+	errno_t err;
 
-	if (file == NULL) {
-		std::cout << "Failed to find or open the file\nExiting the program..." << std::endl;
+	if ((err = fopen_s(&file,fname, "r")) != 0 )
+	{
+		std::cout << "Failed to find or open the file: " << fname << "\nExiting the program..." << std::endl;
 		std::exit(EXIT_FAILURE);
 	}
 	
@@ -186,10 +188,12 @@ PCLreadASCIIxyz(char const* fname)
 	//Read file into buffer (c-style because its faster) and import into pcl::PointCloud
 	std::cout << ":: Reading data..." << std::endl;
 
-	FILE* file = fopen(fname, "rb");
+	FILE* file;
+	errno_t err;
 
-	if (file == NULL) {
-		std::cout << "Failed to find or open the file\nExiting the program..." << std::endl;
+	if ((err = fopen_s(&file, fname, "r")) != 0)
+	{
+		std::cout << "Failed to find or open the file: " << fname << "\nExiting the program..." << std::endl;
 		std::exit(EXIT_FAILURE);
 	}
 
