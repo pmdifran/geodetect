@@ -4,6 +4,7 @@
 #include <pcl/point_types.h>
 #include <pcl/search/kdtree.h>
 
+#include <array>
 #include <cmath>
 #include <chrono>
 

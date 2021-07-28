@@ -8,9 +8,15 @@ Eigen::Matrix4f globalRegistration(GeoDetection& reference, GeoDetection& source
 	std::cout << "----------------------------------------------" << std::endl;
 	std::cout << "Auto Registration --Global...\n" << std::endl;
 
-	////Construct subsampled GeoDetection objects from the inputs
-	//GeoDetection ref_down = reference.getDistanceDownSample(subres);
-	//GeoDetection src_down = source.getDistanceDownSample(subres);
+	//Hardcode subsample, or make user do it?
+
+	if (!reference.hasNormals()) {
+		reference.m_normals = reference.getNormals(1.0);
+	}
+
+	if (!source.hasNormals()) {
+		source.m_normals = source.getNormals(1.0);
+	}
 
 	//Compute ISS keypoints
 	pcl::PointCloud<pcl::PointXYZ>::Ptr ref_keypoints = reference.getKeyPoints();
@@ -46,22 +52,12 @@ Eigen::Matrix4f globalRegistration(GeoDetection& reference, GeoDetection& source
 
 	double mse = 0;
 	for (const auto& correspondence : *correspondences)
+	{
 		mse += correspondence.distance;
+	}
 	mse /= (double)(correspondences->size());
 
 	std::cout << "  --> Mean square error: " << mse << std::endl;
 
 	return transformation;
 }
-
-
-////Check that the clouds have normals
-//if (!reference.hasNormals())
-//{
-//	reference.computeNormals(1.0); //****************************************************************
-//}
-
-//if (!source.hasNormals())
-//{
-//	source.computeNormals(1.0); ////****************************************************************
-//}
