@@ -3,8 +3,7 @@ cmake_minimum_required( VERSION 3.0 )
 # Create Project
 project( GeoDetection LANGUAGES CXX)
 
-#Create dummy file for cmake and create executable with it 
-#file(WRITE null.cpp "") #--> uncomment if you have no GeoDetection source files
+#Set Geodetecton source files
 set(SOURCE
     ${SOURCE}
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
@@ -23,8 +22,10 @@ set(HEADERS
 
 add_executable( GeoDetection ${SOURCE} ${HEADERS} )
 
+#Append 'd' to debug builds.
+set_target_properties(GeoDetection PROPERTIES DEBUG_POSTFIX d)
+
 # Set StartUp Project (Option)
-# (This setting is able to enable by using CMake 3.6.0 RC1 or later.)
 set_property( DIRECTORY PROPERTY VS_STARTUP_PROJECT "GeoDetection" )
 
 #Set OpenMP
@@ -35,7 +36,7 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 # Find Packages
-find_package( PCL 1.8 REQUIRED )
+find_package( PCL 1.12 REQUIRED )
 
 if( PCL_FOUND )
   # [C/C++]>[General]>[Additional Include Directories]
@@ -70,5 +71,7 @@ if ( MSVC )
     set_target_properties( GeoDetection PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PCL_DIR}/../bin)
     set_target_properties( GeoDetection PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${PCL_DIR}/../bin)
     set_target_properties( GeoDetection PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${PCL_DIR}/../bin)
+
+    set_property(TARGET GeoDetection PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${PCL_DIR}/../bin)
 
 endif ( MSVC )

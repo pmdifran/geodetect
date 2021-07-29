@@ -27,6 +27,7 @@ public:
 	double m_resolution = 0.0; //average resolution of the point cloud.
 	double m_scale = 0.0; //subsampled resolution of the point cloud by means of voxel filtering or minimuim distance. 
 
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW //So that dynamic allocation returns aligned pointer.
 
 //Constructors and assignments
 public:
@@ -105,7 +106,7 @@ public:
 	
 	pcl::PointCloud<pcl::PointXYZ>::Ptr getKeyPoints();
 
-	pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints);
+	pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints);
 
 };
 

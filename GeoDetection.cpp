@@ -234,7 +234,7 @@ GeoDetection::getKeyPoints()
 }
 
 pcl::PointCloud<pcl::FPFHSignature33>::Ptr 
-GeoDetection::getFPFH(pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints)
+GeoDetection::getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints)
 {
 	std::cout << "Computing fast point feature histograms..." << std::endl;
 	auto start = std::chrono::steady_clock::now();
