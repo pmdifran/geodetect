@@ -5,7 +5,23 @@ project( GeoDetection LANGUAGES CXX)
 
 #Create dummy file for cmake and create executable with it 
 #file(WRITE null.cpp "") #--> uncomment if you have no GeoDetection source files
-add_executable( GeoDetection main.cpp )
+set(SOURCE
+    ${SOURCE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/autoRegistration.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/GeoDetection.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/PCLreadASCII.cpp
+)
+
+set(HEADERS
+    ${HEADERS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/autoRegistration.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/fast_float.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GeoDetection.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/PCLreadASCII.h
+)
+
+add_executable( GeoDetection ${SOURCE} ${HEADERS} )
 
 # Set StartUp Project (Option)
 # (This setting is able to enable by using CMake 3.6.0 RC1 or later.)
