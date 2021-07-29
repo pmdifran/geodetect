@@ -3,9 +3,9 @@ cmake_minimum_required( VERSION 3.0 )
 # Create Project
 project( GeoDetection LANGUAGES CXX)
 
-#Create dummy file for cmake and create executable with it --> uncomment if you have no GeoDetection source files
-#file(WRITE null.cpp "")
-#add_executable( GeoDetection null.cpp )
+#Create dummy file for cmake and create executable with it 
+#file(WRITE null.cpp "") #--> uncomment if you have no GeoDetection source files
+add_executable( GeoDetection main.cpp )
 
 # Set StartUp Project (Option)
 # (This setting is able to enable by using CMake 3.6.0 RC1 or later.)
