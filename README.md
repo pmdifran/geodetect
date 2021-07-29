@@ -36,9 +36,9 @@ $ cd C:/Dev
 $ git clone https://github.com/pmdifran/GeoDetection.git
 ```
 
-3. Download the PCL-AllInOne installer from the PCL releases on github (i.e. PCL-1.12.0-AllInOne-msvc2019-win64.exe)
+3. Download the PCL-AllInOne installer from the PCL releases on github (i.e. `PCL-1.12.0-AllInOne-msvc2019-win64.exe`)
 
-4. Launch the installer, and install it into your folder (e.g. C:/Dev/pcl)
+4. Launch the installer, and install it into your folder (e.g. C:/Dev/PCL<version>)
 
 5. Launch the CMake GUI:\
 Where is the source code: `C:/Dev/GeoDetection`\
@@ -46,7 +46,11 @@ Where to build the binaries: `C:/Dev/Build`\
 --> **Configure** \
 --> **Generate**
 
-6. Open the .sln located in the build directory.
+6. Open the `GeoDetection.sln` MSVS solution file, located in the build directory.
+
+7. (*Optional*) Download the PDB files from PCL releases (i.e. `pcl-1.12.0-rc1-pdb-msvc2019-win64.zip`).\
+--> Paste the .pdb files into the pcl bin folder (i.e. `C:/Dev/PCL 1.12.0/bin`)\
+--> This will allow you to run the debugger inside the PCL libraries. 
 
 ## Linux; MacOS; Windows (custom)
 
