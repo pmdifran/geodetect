@@ -56,19 +56,19 @@ public:
 //Setters and checkers
 public:
 	//Sets the cloud to a new pcl::PointCloud, updates the KdTrees, and clears the normals. 
-	void setCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) { m_cloud = std::move(cloud); setKdTrees(); m_normals->clear(); }
+	inline void setCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) { m_cloud = std::move(cloud); setKdTrees(); m_normals->clear(); }
 	
 	//I'm not sure if passing const lvalue reference is correct?
-	void setNormals(const pcl::PointCloud<pcl::Normal>::Ptr& normals) { m_normals = std::move(normals); }
+	inline void setNormals(pcl::PointCloud<pcl::Normal>::Ptr& normals) { m_normals = std::move(normals); }
 
 	void setKdTrees();
 
-	void setScale(float& scale) { m_scale = scale; }
+	void setScale(float scale) { m_scale = scale; }
 
 	//Checks that normals have been computed.
 	inline bool hasNormals() { return  m_normals->size() == m_cloud->size() && m_normals->size()!=0; }
 
-	inline void setView(float& x, float& y, float& z) { m_view[0] = x; m_view[1] = y; m_view[2] = z; }
+	inline void setView(float x, float y, float z) { m_view[0] = x; m_view[1] = y; m_view[2] = z; }
 
 //Methods
 public: 
