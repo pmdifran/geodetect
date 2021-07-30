@@ -28,29 +28,27 @@ Tools for processing and extracting information from point clouds of natural env
 
 1. Make a folder (e.g. C:/Dev)
 
-2. Make a build subfodler (e.g. C:/Dev/Build)
-
-2. Clone the GeoDetection repository into your repository:  
+2. Clone the GeoDetection repository into your folder (cloned into a "GeoDetection" folder).
 ```
 $ cd C:/Dev
 $ git clone https://github.com/pmdifran/GeoDetection.git
 ```
 
-3. Download the PCL-AllInOne installer from the PCL releases on github (i.e. `PCL-1.12.0-AllInOne-msvc2019-win64.exe`)
+3. Download the PCL-AllInOne installer from the PCL releases on github (i.e. `PCL-1.12.0-AllInOne-msvc2019-win64.exe`)\
+Download the PDB files from PCL releases (i.e. `pcl-1.12.0-rc1-pdb-msvc2019-win64.zip`).\
+--> Allows you to debug inside the PCL libraries.
 
 4. Launch the installer, and install it into your folder (e.g. C:/Dev/PCL<version>)
 
-5. Launch the CMake GUI:\
-Where is the source code: `C:/Dev/GeoDetection`\
-Where to build the binaries: `C:/Dev/Build`\
---> **Configure** \
---> **Generate**
+5. Build the project with CMake from the command line.
+```
+cd C:/Dev
+mkdir build
+cd build
+cmake ../GeoDetection
+```
 
-6. Open the `GeoDetection.sln` MSVS solution file, located in the build directory.
-
-7. (*Optional*) Download the PDB files from PCL releases (i.e. `pcl-1.12.0-rc1-pdb-msvc2019-win64.zip`).\
---> Paste the .pdb files into the pcl bin folder (i.e. `C:/Dev/PCL 1.12.0/bin`)\
---> This will allow you to run the debugger inside the PCL libraries. 
+6. Open the build file created for MSVS (i.e. `C:/Dev/Build/GeoDetection.sln`)
 
 ## Linux; MacOS; Windows (custom)
 
@@ -63,8 +61,10 @@ Where to build the binaries: `C:/Dev/Build`\
 - qhull (download and build)
 - Eigen (header only --> download)
 - VTK
+- Qt is neccessary for some visualization libraries if you want to use them.\
+--> Qt itself is huge - double check which parts of Qt are required.\
 
-1. Point CMake to the dependencies. Check out PCL build guides for details.
+1. Point CMake to the dependencies. Check out PCL build guides for details @ www.pointclouds.org
 2. Configure and Build
 
 The GeoDetection CMakeLists.txt is not yet written for the custom build. In the project file you will have to:\
