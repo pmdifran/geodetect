@@ -233,7 +233,8 @@ GeoDetection::getKeyPoints()
 	return keypoints;
 }
 
-pcl::PointCloud<pcl::FPFHSignature33>::Ptr 
+//Enable AVX in Properties --> C/C++ --> Enable Enhanced Instruction Set --> /arch:AVX
+pcl::PointCloud<pcl::FPFHSignature33>::Ptr
 GeoDetection::getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints)
 {
 	std::cout << "Computing fast point feature histograms..." << std::endl;
@@ -249,7 +250,7 @@ GeoDetection::getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints)
 	computefpfh.setSearchMethod(m_kdtree);
 	computefpfh.setRadiusSearch(3.0); //function of voxel subsample? ***************************************************************************
 
-	computefpfh.setSearchSurface(m_cloud);//subsample? ******************************************************************
+	computefpfh.setSearchSurface(m_cloud);
 
 	computefpfh.compute(*fpfh);
 	
@@ -257,5 +258,5 @@ GeoDetection::getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints)
 	std::cout << "Fast point feature histograms computed" << std::endl;
 	std::cout << "--> calculation time: " << timer.count() << " seconds\n" << std::endl;
 
-	return fpfh;
+	return fpfh; //--> causes heap error (ptr deleted twice?)
 }
