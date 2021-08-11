@@ -27,7 +27,8 @@ Eigen::Matrix4f globalRegistration(GeoDetection& reference, GeoDetection& source
 	pcl::PointCloud<pcl::FPFHSignature33>::Ptr src_fpfh = source.getFPFH(src_keypoints);
 
 	//Compute keypoint correspondences
-	pcl::CorrespondencesPtr correspondences (new pcl::Correspondences);
+	pcl::CorrespondencesPtr correspondences(new pcl::Correspondences);
+
 	pcl::registration::CorrespondenceEstimation<pcl::FPFHSignature33, pcl::FPFHSignature33> estimator;
 	estimator.setInputTarget(ref_fpfh);
 	estimator.setInputSource(src_fpfh);
@@ -37,14 +38,15 @@ Eigen::Matrix4f globalRegistration(GeoDetection& reference, GeoDetection& source
 
 	//Random Sample Consensus (RANSAC) -based correspondence rejection. 
 	pcl::registration::CorrespondenceRejectorSampleConsensus<pcl::PointXYZ> rejector;
+	pcl::CorrespondencesPtr remaining_correspondences(new pcl::Correspondences);
+
 	rejector.setInputTarget(ref_keypoints);
 	rejector.setInputSource(src_keypoints);
 	rejector.setMaximumIterations(1000000);
 	rejector.setRefineModel(true);
 	rejector.setInlierThreshold(0.5);
-	rejector.setInputCorrespondences(correspondences);
 	
-	rejector.getCorrespondences(*correspondences); //computes ransac --> gets best transforation
+	rejector.getRemainingCorrespondences(*correspondences, *remaining_correspondences);
 	Eigen::Matrix4f transformation = rejector.getBestTransformation();
 	
 	std::cout << ":: Number of inlier fpfh correpondences: " << correspondences->size() << std::endl;
