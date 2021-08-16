@@ -1,23 +1,26 @@
 cmake_minimum_required( VERSION 3.0 )
 
+set(GeoDetection_source ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(GeoDetection_vendor ${CMAKE_CURRENT_SOURCE_DIR}/vendor) 
+
 # Create Project
 project( GeoDetection LANGUAGES CXX)
 
 #Set Geodetecton source files
 set(SOURCE
     ${SOURCE}
-    ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/autoRegistration.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/GeoDetection.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/PCLreadASCII.cpp
+    ${GeoDetection_source}/main.cpp
+    ${GeoDetection_source}/autoRegistration.cpp
+    ${GeoDetection_source}/GeoDetection.cpp
+    ${GeoDetection_source}/PCLreadASCII.cpp
 )
 
 set(HEADERS
     ${HEADERS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/autoRegistration.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/fast_float.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/GeoDetection.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/PCLreadASCII.h
+    ${GeoDetection_source}/autoRegistration.h
+    ${GeoDetection_source}/fast_float.h
+    ${GeoDetection_source}/GeoDetection.h
+    ${GeoDetection_source}/PCLreadASCII.h
 )
 
 add_executable( GeoDetection ${SOURCE} ${HEADERS} )
@@ -35,7 +38,7 @@ if(OpenMP_CXX_FOUND)
     target_compile_options(GeoDetection PUBLIC "${OpenMP_CXX_FLAGS}")
 endif()
 
-# Find Packages
+# Find PCL (from default PCL cmake implementation)
 find_package( PCL 1.12 REQUIRED )
 
 if( PCL_FOUND )
@@ -55,9 +58,11 @@ if( PCL_FOUND )
   target_link_libraries( GeoDetection PUBLIC ${PCL_LIBRARIES} )
 endif()
 
-file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/src)
+#Include GeoDetection 3rdPartys
+#spdlog
+include_directories(${GeoDetection_vendor}/spdlog/include)
 
-#Set output directories (to coincide with PCL libraries and binaries)
+#Set output directories (to coincide with PCL libraries and binaries - i.e. "../PCL 1.12/bin/")
 if ( MSVC )
     message([STATUS] "MSVS Detected... Setting output directories...")
     set_target_properties( GeoDetection PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PCL_DIR}/../lib)
@@ -71,8 +76,9 @@ if ( MSVC )
     set_target_properties( GeoDetection PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PCL_DIR}/../bin)
     set_target_properties( GeoDetection PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${PCL_DIR}/../bin)
     set_target_properties( GeoDetection PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${PCL_DIR}/../bin)
-
-    set_property(TARGET GeoDetection PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+	
+    #set directory to where test_data is. 
+    set_property(TARGET GeoDetection PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test_data)
 
 endif ( MSVC )
 
