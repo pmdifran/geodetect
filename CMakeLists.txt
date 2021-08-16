@@ -13,6 +13,7 @@ set(SOURCE
     ${GeoDetection_source}/autoRegistration.cpp
     ${GeoDetection_source}/GeoDetection.cpp
     ${GeoDetection_source}/PCLreadASCII.cpp
+    ${GeoDetection_source}/log.cpp
 )
 
 set(HEADERS
@@ -21,6 +22,7 @@ set(HEADERS
     ${GeoDetection_source}/fast_float.h
     ${GeoDetection_source}/GeoDetection.h
     ${GeoDetection_source}/PCLreadASCII.h
+    ${GeoDetection_source}/log.h
 )
 
 add_executable( GeoDetection ${SOURCE} ${HEADERS} )
