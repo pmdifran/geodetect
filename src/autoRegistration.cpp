@@ -15,7 +15,8 @@
 #include <pcl/registration/gicp.h>
 #include <pcl/features/from_meshes.h>
 
-Eigen::Matrix4f globalRegistration(GeoDetection& reference, GeoDetection& source, const float& radius, const float& subres)
+Eigen::Matrix4f globalRegistration(GeoDetection::Cloud& reference, 
+	GeoDetection::Cloud& source, const float& radius, const float& subres)
 {
 	std::cout << "----------------------------------------------" << std::endl;
 	std::cout << "Auto Registration --Global...\n" << std::endl;
@@ -88,7 +89,8 @@ Eigen::Matrix4f globalRegistration(GeoDetection& reference, GeoDetection& source
 	return transformation;
 }
 
-Eigen::Matrix4f icpRegistration(GeoDetection& reference, GeoDetection& source, const float radius)
+Eigen::Matrix4f icpRegistration(GeoDetection::Cloud& reference, 
+	GeoDetection::Cloud& source, const float radius)
 {
 	std::cout << "----------------------------------------------" << std::endl;
 	std::cout << "Auto Registration --ICP...\n" << std::endl;

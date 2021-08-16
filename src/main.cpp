@@ -1,6 +1,10 @@
+//GeoDetection includes
 #include "PCLreadASCII.h"
 #include "GeoDetection.h"
 #include "autoRegistration.h"
+#include "log.h"
+
+//stdlib includes
 #include <iomanip>
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -17,6 +21,7 @@
 
 int main (int argc, char* argv[])
 {
+	GeoDetection::Log::Init();
 	const char* source_file = "test_source.txt";
 	const char* reference_file = "test_reference.txt";
 
@@ -24,12 +29,12 @@ int main (int argc, char* argv[])
 	std::cout << "Reference name: " << reference_file << std::endl;
 
 	//Import point clouds into GeoDetection objects
-	GeoDetection source(PCLreadASCIIxyz(source_file), "Source");
-	GeoDetection reference(PCLreadASCIIxyz(reference_file), "Reference");
+	GeoDetection::Cloud source(PCLreadASCIIxyz(source_file), "Source");
+	GeoDetection::Cloud reference(PCLreadASCIIxyz(reference_file), "Reference");
 
 	//Create subsampled GeoDetection objects
-	GeoDetection source_down = GeoDetection(source.getDistanceDownSample(0.25), "Downsampled Source");
-	GeoDetection reference_down = GeoDetection(reference.getDistanceDownSample(0.25), "Downsampled Reference");
+	GeoDetection::Cloud source_down = Cloud(source.getDistanceDownSample(0.25), "Downsampled Source");
+	GeoDetection::Cloud reference_down = Cloud(reference.getDistanceDownSample(0.25), "Downsampled Reference");
 
 	//Use subsampled objects for Global Registration
 	Eigen::Matrix4f global_transformation = globalRegistration(reference_down, source_down);
