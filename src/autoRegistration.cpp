@@ -18,10 +18,8 @@
 Eigen::Matrix4f globalRegistration(GeoDetection::Cloud& reference, 
 	GeoDetection::Cloud& source, const float& radius, const float& subres)
 {
-	std::cout << "----------------------------------------------" << std::endl;
-	std::cout << "Auto Registration --Global...\n" << std::endl;
-
-	//Hardcode subsample, or make user do it?
+	GD_INFO("----------------------------------------------\
+		Auto Registration --Global...\n");
 
 	if (!reference.hasNormals()) {
 		reference.m_normals = reference.getNormals(1.0);
@@ -47,7 +45,7 @@ Eigen::Matrix4f globalRegistration(GeoDetection::Cloud& reference,
 	estimator.setInputSource(src_fpfh);
 	estimator.determineCorrespondences(*correspondences);
 
-	std::cout << ":: Number of initial fpfh correspondences: " << correspondences->size() << std::endl;
+	GD_TRACE(":: Number of initial fpfh correspondences: {0}", correspondences->size());
 
 	//Random Sample Consensus (RANSAC) -based correspondence rejection. 
 	pcl::registration::CorrespondenceRejectorSampleConsensus<pcl::PointXYZ> ransac_rejector;
@@ -61,9 +59,9 @@ Eigen::Matrix4f globalRegistration(GeoDetection::Cloud& reference,
 	
 	ransac_rejector.getRemainingCorrespondences(*correspondences, *remaining_correspondences);
 	Eigen::Matrix4f transformation = ransac_rejector.getBestTransformation();
-	
-	std::cout << ":: Number of inlier fpfh correpondences: " << correspondences->size() << std::endl;
-	std::cout << ":: Transformation computed: \n" << std::endl;
+
+	GD_TRACE(":: Number of inlier fpfh correpondences: {0}", correspondences->size());
+	GD_INFO("--> Transformation computed: \n");
 	std::cout << std::setprecision(16) << std::fixed << transformation << '\n' << std::endl;
 
 	//Compute the MSE of the global registration
@@ -81,8 +79,8 @@ Eigen::Matrix4f globalRegistration(GeoDetection::Cloud& reference,
 
 	mse /= (double)(remaining_correspondences->size());
 
-	std::cout << "  --> Mean square error: " << mse << std::endl;
-	std::cout << "\n note: MSE may be higher due to a subsample input" << std::endl;
+	GD_TRACE("--> Mean square error: {0}", mse);
+	GD_WARN("NOTE: MSE may be higher due to a subsample input");
 
 	//Apply the transformation to the source GeoDetection object.
 	source.applyTransformation(transformation);

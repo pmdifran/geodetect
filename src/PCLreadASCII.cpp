@@ -1,12 +1,15 @@
 // Functions for importing custom .txt pointcloud data, and converting it to a pcl type.
 
 #include "PCLreadASCII.h" //includes our custom point cloud structures, and those from pcl.
+#include "log.h"
+
 #include <cstring> //for memchr
 #include <cstdlib> //for strtod
 #include "fast_float.h" //Single header library version of fast_float
 
 #include <limits>
 #include <cstdio>
+#include <filesystem>
 
 uintmax_t 
 getLineCount(char const* fname)
@@ -16,8 +19,7 @@ getLineCount(char const* fname)
 
 	if ((err = fopen_s(&file,fname, "r")) != 0 )
 	{
-		std::cout << "Failed to find or open the file: " << fname << "\nExiting the program..." << std::endl;
-		std::exit(EXIT_FAILURE);
+		GD_ERROR("Failed to open file: {0} \n", fname);
 	}
 	
 	static const auto BUFFER_SIZE = 16 * 1024;
@@ -27,7 +29,7 @@ getLineCount(char const* fname)
 	while (size_t bytes_read = fread(&buf, 1, BUFFER_SIZE, file)) {
 
 		if (bytes_read == std::numeric_limits<size_t>::max())
-			std::cout << "read failed" << std::endl;
+			GD_ERROR("Read failed \n");
 		if (!bytes_read)
 			break;
 
@@ -42,8 +44,7 @@ getLineCount(char const* fname)
 	std::ifstream in(fname);
 
 	if (!in.is_open()) {
-		std::cout << "Failed to find or open the file\nExiting the program..." << std::endl;
-		std::exit(EXIT_FAILURE);
+		GD_ERROR("Failed to open file: {0} \n", fname);
 	}
 
 	char ch;
@@ -67,7 +68,7 @@ hasHeader(char const* fname)
 	std::string line; //string object for getline
 
 	if (!in.is_open()) {
-		std::cout << "Failed to find or open the file\nExiting the program..." << std::endl;
+		GD_ERROR("Failed to open file: {0} \n", fname);
 		std::exit(EXIT_FAILURE);
 	}
 
@@ -100,7 +101,7 @@ getNumColumns(const char* fname)
 	std::string line; //string object for getline
 
 	if (!in.is_open()) {
-		std::cout << "Failed to find or open the file\nExiting the program..." << std::endl;
+		GD_ERROR("Failed to open file: {0} \n", fname);
 		std::exit(EXIT_FAILURE);
 	}
 
@@ -130,7 +131,7 @@ getDelimeter(const char* fname)
 
 	in.imbue(std::locale(std::locale(), new csv_reader())); //for the rest of stream, treat commas as whitespace
 	if (!in.is_open()) {
-		std::cout << "Failed to find or open the file\nExiting the program..." << std::endl;
+		GD_ERROR("Failed to open file: {0} \n", fname);
 		std::exit(EXIT_FAILURE);
 	}
 
@@ -144,10 +145,14 @@ getDelimeter(const char* fname)
 		i++;
 	}
 
-	if (delimeters[i] == ' ') 
-		std::cout << ":: Delimeter detected: " << "~space~" << std::endl;
-	else 
-		std::cout << ":: Delimeter detected: " << delimeters[i] << std::endl;
+	if (delimeters[i] == ' ')
+	{
+		GD_INFO("Delimeter detected: ' '", fname);
+	}
+	else
+	{
+		GD_INFO("Delimeter detected: {}", delimeters[i]);
+	}
 
 	in.close();
 	return delimeters[i];
@@ -157,17 +162,17 @@ getDelimeter(const char* fname)
 pcl::PointCloud<pcl::PointXYZ>::Ptr
 PCLreadASCIIxyz(char const* fname)
 {
-	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudptr(new pcl::PointCloud<pcl::PointXYZ>);
+	GD_INFO("\n\nImporting XYZ Data...");
+	auto start = GeoDetection::Time::getStart();
 
-	auto start = std::chrono::steady_clock::now();
-	std::cout << "\n\nImporting XYZ Data.." << std::endl;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudptr(new pcl::PointCloud<pcl::PointXYZ>);
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//Check that there is XYZ data
 	size_t num_columns = getNumColumns(fname);
 	if (num_columns < 3) {
-		std::cout << ":: Number of columns detected: " << num_columns << "\nThe inputted file must contain XYZ coordinates."
-			<< "Exiting the program..." << std::endl;
+		GD_ERROR(":: Number of columns detected: {0}\
+			\n--> The inputted file must contain XYZ coordinates.", num_columns);
 		std::exit(EXIT_FAILURE);
 	}
 
@@ -175,25 +180,26 @@ PCLreadASCIIxyz(char const* fname)
 	//Determine number of points and reserve space for the pcl pointcloud object
 	size_t num_points = getLineCount(fname);
 	if (num_points < 2) {
-		std::cout << "Needs more than 2 points to create a point cloud object.\n Exiting the program..." << std::endl;
+		GD_ERROR("Needs more than 2 points to create a point cloud object.\
+			\n Exiting the program...");
 		std::exit(EXIT_FAILURE);
 	}
 	bool hasheader = hasHeader(fname);
 	if (hasheader) { num_points--; }
 
 	cloudptr->points.reserve(num_points);
-	std::cout << ":: Number of points: " << num_points << std::endl;
+	GD_WARN(":: Number of points: {0}", num_points);
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//Read file into buffer (c-style because its faster) and import into pcl::PointCloud
-	std::cout << ":: Reading data..." << std::endl;
+	GD_TRACE(":: Reading Data...");
 
 	FILE* file;
 	errno_t err;
 
 	if ((err = fopen_s(&file, fname, "r")) != 0)
 	{
-		std::cout << "Failed to find or open the file: " << fname << "\nExiting the program..." << std::endl;
+		GD_ERROR("Failed to open file: {0} \n", fname);
 		std::exit(EXIT_FAILURE);
 	}
 
@@ -211,7 +217,7 @@ PCLreadASCIIxyz(char const* fname)
 		char* p = buf; //pointer to the beginning of the line that we'll read
 
 		if (bytes_read == std::numeric_limits<size_t>::max())
-			std::cout << "read failed" << std::endl;
+			GD_ERROR("Read failed!");
 		if (!bytes_read) //not sure if this is neccessary
 			break;
 
@@ -238,21 +244,20 @@ PCLreadASCIIxyz(char const* fname)
 			mypoint.y = strtod(p_end + 1, &p_end);
 			mypoint.z = strtod(p_end + 1, NULL);
 			cloudptr->points.push_back(mypoint);
-
 		}
 	}
 
 	fclose(file);
-	auto timer = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
-	std::cout << "--> Data import time: "<< timer.count() << " seconds\n" << std::endl;
+	GD_WARN("--> Data import time: {0} ms", GeoDetection::Time::getDuration(start));
+
 	return cloudptr;
 }
 
 void
 PCLwriteASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr)
 {
-	auto start = std::chrono::steady_clock::now();
-	std::cout << "Exporting XYZ data..." << std::endl;
+	GD_INFO("Exporting XYZ data...");
+	auto start = GeoDetection::Time::getStart();
 
 	static const auto BUFFER_SIZE = 16 * 1024;
 	char buf[BUFFER_SIZE + 1];
@@ -290,127 +295,7 @@ PCLwriteASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudpt
 	}
 	fstream.close();
 
-	auto timer = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
-	std::cout << "--> Data export time: " << timer.count() << " seconds\n" << std::endl;
+	GD_WARN("--> Data export time: {0} ms", GeoDetection::Time::getDuration(start));
 }
 
-//read file into a vector of custom point types
-template <typename point_t>
-void 
-ASCIIreadXYZ(std::string& filename, std::vector<point_t>& xyzpoints)
-{
-	std::cout << "Reading XYZ Data..." << std::endl;
-
-//objects for parsing
-	point_t xyz; // temporary variable of custom type for parsing
-	std::string line; //string object for getline and stringstreams 
-
-	std::ifstream in(filename); //input file stream
-	in.imbue(std::locale(std::locale(), new csv_reader())); //for the rest of stream, treat commas as whitespace
-	if (!in.is_open()) {
-		std::cout << "Failed to find or open the file" << std::endl;
-		std::cout << "Exiting program..." << std::endl;
-		std::exit(EXIT_FAILURE);
-	}
-
-//get the number of lines in the file and store in count
-	size_t count = 0;
-	while (std::getline(in, line))
-		count++;
-	in.clear(); //clear the eof flag from the std::ifstream object
-	in.seekg(0); //return to beginning of stream
-
-//Determine how many columns are in the data.
-	bool is_xyz;
-	int num_columns = 0;
-	float temp = 0;
-
-	std::getline(in, line);
-	std::getline(in, line); //second line to protect in case of header.
-	std::istringstream c_iss(line);
-
-	while (c_iss >> temp) num_columns++;
-
-	if (num_columns < 3) {
-		std::cout << ":: Number of columns detected: " << num_columns << "\nThe inputted file must contain XYZ coordinates."
-			<< "Exiting the program..." << std::endl;
-		std::exit(EXIT_FAILURE);
-	}
-
-	else if (num_columns == 3) {
-		is_xyz = true;
-		std::cout << ":: XYZ data detected." << std::endl;
-	}
-	else {
-		is_xyz = false;
-		std::cout << ":: Additional point fields detected: " << num_columns - 3 << "\n--> importing XYZ only." << std::endl;
-	}
-		
-	in.clear();
-	in.seekg(0);
-
-//test to see if the file has a header
-	bool isheader;
-	std::getline(in, line); //first line
-	std::istringstream iss(line); //construct into stringstream object
-
-	if (iss >> xyz.x >> xyz.y >> xyz.z) { //if parsing works, there is not header.
-		isheader = false;
-		in.clear();
-		in.seekg(0);
-		std::cout << ":: No header detected." << std::endl;
-	}
-
-	else 
-	{
-		isheader = true;
-		std::cout << ":: Header found." << std::endl;
-	}
-
-//Determine number of points and allocate memory
-	size_t num_points = count - (int)isheader;
-	std::cout << ":: Number of points: " << num_points << '\n' << std::endl;
-	xyzpoints.reserve(num_points);
-	
-//Read the stream and import into fullpoints
-	std::cout << "Reading data..." << std::endl;
-
-	auto start = getTime();
-	if (is_xyz) {
-		while (in >> xyz.x >> xyz.y >> xyz.z) {
-			xyzpoints.push_back(xyz);
-		}
-	}
-	else {
-		while (getline(in, line)) {
-			std::istringstream iss(line);
-			iss >> xyz.x >> xyz.y >> xyz.z;
-			xyzpoints.push_back(xyz);
-		}
-	}
-	auto stop = getTime();
-	auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
-	std::cout << "--> Import duration: " << duration.count() << " seconds" << std::endl;
-
-	in.close();
-	
-	std::cout << ":: File imported \n" << std::endl;
-}
-
-//Copy xyz coordinates from templated vector of structs to a PCL::Pointcloud<pcl::PointXYZ>::Ptr (smart, shared ptr)
-void 
-ASCIItoPCL(std::vector<XYZ>& xyzpoints, pcl::PointCloud<pcl::PointXYZ>::Ptr cloudptr)
-{
-	//initialize point cloud shape. 
-	cloudptr->width = xyzpoints.size();
-	cloudptr->height = 1;	//'height' is 1 for unorganized (i.e not pixelated) point clouds.
-	cloudptr->points.resize((cloudptr->width));
-
-	for (std::size_t i = 0; i < cloudptr->width; i++)
-	{
-		cloudptr->points[i].x = xyzpoints[i].x;
-		cloudptr->points[i].y = xyzpoints[i].y;
-		cloudptr->points[i].z = xyzpoints[i].z;
-	}
-}
 

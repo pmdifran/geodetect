@@ -1,4 +1,6 @@
 #pragma once
+#include "log.h"
+
 #include <pcl/filters/extract_indices.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_types.h>
@@ -42,9 +44,9 @@ namespace GeoDetection
 			m_transformation(Eigen::Matrix4d::Identity())
 
 		{
-			std::cout << "Creating GeoDetection Object: " << m_name << '\n' << "::Constructing KdTrees..." << std::endl;
+			GD_INFO("Creating GeoDetection Cloud Object: '{0}' with {1} points", m_name, m_cloud->size());
 			setKdTrees();
-			std::cout << "GeoDetection Object Created with: " << m_cloud->size() << " points.\n" << std::endl;
+			GD_INFO("--> GeoDetection Cloud Created");
 		}
 
 		Cloud(const Cloud&) = default;
