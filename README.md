@@ -7,6 +7,7 @@ Tools for processing and extracting information from point clouds of natural env
   - Revolves around the Point Cloud Library (PCL)
   - Methods aid with common point cloud processing objectives, and member variables store critical data structures (i.e. point cloud kd-trees) for reuse throughout object lifetime.
 - autoRegistration: module for coarse and icp point-set registration. 
+- macro-based logging implementation of spdlog
 
 ### To be added...
 -  _IO_: Templated c-style ascii IO for custom point clouds with numerous scalar features.
