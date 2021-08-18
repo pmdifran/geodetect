@@ -162,7 +162,8 @@ getDelimeter(const char* fname)
 pcl::PointCloud<pcl::PointXYZ>::Ptr
 PCLreadASCIIxyz(char const* fname)
 {
-	GD_INFO("\n\nImporting XYZ Data...");
+	std::cout << '\n' << std::endl;
+	GD_INFO("Importing XYZ Data...");
 	auto start = GeoDetection::Time::getStart();
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudptr(new pcl::PointCloud<pcl::PointXYZ>);

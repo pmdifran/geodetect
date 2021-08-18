@@ -73,14 +73,13 @@ Eigen::Matrix4f globalRegistration(GeoDetection::Cloud& reference,
 		float distance = pcl::euclideanDistance(src_keypoints->at(corr.index_query),
 			ref_keypoints->at(corr.index_match));
 
-		std::cout << distance << std::endl;
 		mse += distance;
 	}
 
 	mse /= (double)(remaining_correspondences->size());
 
 	GD_TRACE("--> Mean square error: {0}", mse);
-	GD_WARN("NOTE: MSE may be higher due to a subsample input");
+	GD_WARN("NOTE: MSE may be higher due to a subsample input\n");
 
 	//Apply the transformation to the source GeoDetection object.
 	source.applyTransformation(transformation);
