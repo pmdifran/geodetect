@@ -273,7 +273,7 @@ namespace GeoDetection
 	void
 		PCLwriteASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr)
 	{
-		GD_INFO("Exporting XYZ data...");
+		GD_TITLE("Exporting XYZ data...");
 		auto start = GeoDetection::Time::getStart();
 
 		static const auto BUFFER_SIZE = 16 * 1024;

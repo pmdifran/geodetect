@@ -42,11 +42,12 @@ namespace GeoDetection
 			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
 			m_normals(new pcl::PointCloud<pcl::Normal>),
 			m_transformation(Eigen::Matrix4d::Identity())
-
+			
 		{
-			GD_INFO("Creating GeoDetection Cloud Object: '{0}' with {1} points", m_name, m_cloud->size());
+			GD_CORE_TITLE("GeoDetection Cloud Construction");
+			GD_CORE_TRACE("Creating GeoDetection Cloud Object: '{0}' with {1} points", m_name, m_cloud->size());
 			setKdTrees();
-			GD_INFO("--> GeoDetection Cloud Created");
+			GD_CORE_INFO("--> GeoDetection Cloud Created");
 		}
 
 		Cloud(const Cloud&) = default;
