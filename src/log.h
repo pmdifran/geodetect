@@ -40,27 +40,24 @@ namespace GeoDetection
 }
 
 //Preprocessors to include or ignore log functions.
-#if !defined LOG_CORE_OFF || !defined LOG_ALL_OFF 
-#define GD_CORE_TRACE(...)     ::GeoDetection::Log::getCoreLogger()->trace(__VA_ARGS__)
-#define GD_CORE_INFO(...)      ::GeoDetection::Log::getCoreLogger()->info(__VA_ARGS__)
-#define GD_CORE_WARN(...)      ::GeoDetection::Log::getCoreLogger()->warn(__VA_ARGS__)
-#define GD_CORE_ERROR(...)     ::GeoDetection::Log::getCoreLogger()->error(__VA_ARGS__)
-#define GD_CORE_FATAL(...)     ::GeoDetection::Log::getCoreLogger()->critical(__VA_ARGS__)
-
-#else
-#define GD_CORE_TRACE
-#define GD_CORE_INFO
-#define GD_CORE_WARN
-#define GD_CORE_ERROR
-#define GD_CORE_FATAL
-#endif
-
 #if !defined LOG_CLIENT_OFF ||  !defined LOG_ALL_OFF
 #define GD_TRACE(...)          ::GeoDetection::Log::getClientLogger()->trace(__VA_ARGS__)
 #define GD_INFO(...)           ::GeoDetection::Log::getClientLogger()->info(__VA_ARGS__)
 #define GD_WARN(...)           ::GeoDetection::Log::getClientLogger()->warn(__VA_ARGS__)
 #define GD_ERROR(...)          ::GeoDetection::Log::getClientLogger()->error(__VA_ARGS__)
 #define GD_FATAL(...)          ::GeoDetection::Log::getClientLogger()->critical(__VA_ARGS__)
+
+#define GD_TITLE(...)	{																	\
+							int num_dashes = 75;											\
+							std::cout << '\n' << std::endl;									\
+							GD_WARN(std::string(num_dashes,'-'));							\
+							std::string s = std::string(__VA_ARGS__);						\
+							std::string substr = s.substr(0, s.find(','));					\
+							int length = substr.length();									\
+							auto new_s = std::string((num_dashes-length)/2,' ') + s;		\
+							GD_WARN(new_s);													\
+							GD_WARN(std::string(num_dashes,'-'));							\
+						} 
 
 #else
 #define GD_TRACE
@@ -70,5 +67,30 @@ namespace GeoDetection
 #define GD_FATAL
 #endif
 
+#if !defined LOG_CORE_OFF || !defined LOG_ALL_OFF 
+#define GD_CORE_TRACE(...)     ::GeoDetection::Log::getCoreLogger()->trace(__VA_ARGS__)
+#define GD_CORE_INFO(...)      ::GeoDetection::Log::getCoreLogger()->info(__VA_ARGS__)
+#define GD_CORE_WARN(...)      ::GeoDetection::Log::getCoreLogger()->warn(__VA_ARGS__)
+#define GD_CORE_ERROR(...)     ::GeoDetection::Log::getCoreLogger()->error(__VA_ARGS__)
+#define GD_CORE_FATAL(...)     ::GeoDetection::Log::getCoreLogger()->critical(__VA_ARGS__)
 
+#define GD_CORE_TITLE(...)	{																\
+							int num_dashes = 75;											\
+							std::cout << '\n' << std::endl;									\
+							GD_CORE_WARN(std::string(num_dashes,'-'));						\
+							std::string s = std::string(__VA_ARGS__);						\
+							std::string substr = s.substr(0, s.find(','));					\
+							int length = substr.length();									\
+							auto new_s = std::string((num_dashes-length)/2,' ') + s;		\
+							GD_CORE_WARN(new_s);											\
+							GD_CORE_WARN(std::string(num_dashes,'-'));						\
+						} 
+
+#else
+#define GD_CORE_TRACE
+#define GD_CORE_INFO
+#define GD_CORE_WARN
+#define GD_CORE_ERROR
+#define GD_CORE_FATAL
+#endif
 
