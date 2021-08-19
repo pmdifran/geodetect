@@ -265,7 +265,7 @@ namespace GeoDetection
 		}
 
 		fclose(file);
-		GD_WARN("--> Data import time: {0} ms\n\n", GeoDetection::Time::getDuration(start));
+		GD_WARN("--> Data import time: {0} ms", GeoDetection::Time::getDuration(start));
 
 		return cloudptr;
 	}
