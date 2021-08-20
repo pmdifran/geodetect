@@ -68,6 +68,7 @@ namespace GeoDetection
 		inline std::string name() { return m_name; }
 		inline pcl::PointCloud<pcl::PointXYZ>::Ptr cloud() { return m_cloud; }
 		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr tree() { return m_kdtree; }
+		inline pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr flanntree() { return m_kdtreeFLANN; }
 		inline pcl::PointCloud<pcl::Normal>::Ptr normals() { return m_normals; }
 
 	//Setters and checks
@@ -135,6 +136,8 @@ namespace GeoDetection
 		* \param[in] shared pointer to a pcl point cloud containing keypoints
 		*/
 		pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints);
+
+		pcl::PointCloud<pcl::PrincipalCurvatures>::Ptr getCurvatures(float nrad);
 
 		/* \brief Method for filtering NaN values from the point cloud.
 		*/
