@@ -21,13 +21,14 @@ namespace GeoDetection
 		GeoDetection::Cloud& source, const float& radius, const float& subres)
 	{
 		GD_TITLE("Auto Registration --Global");
+		auto start = GeoDetection::Time::getStart();
 
 		if (!reference.hasNormals()) {
-			reference.m_normals = reference.getNormals(1.0);
+			reference.setNormals(reference.getNormals(1.0));
 		}
 
 		if (!source.hasNormals()) {
-			source.m_normals = source.getNormals(1.0);
+			source.setNormals(source.getNormals(1.0));
 		}
 
 		//Compute ISS keypoints
@@ -61,9 +62,10 @@ namespace GeoDetection
 		ransac_rejector.getRemainingCorrespondences(*correspondences, *remaining_correspondences);
 		Eigen::Matrix4f transformation = ransac_rejector.getBestTransformation();
 
-		GD_TRACE(":: Number of inlier fpfh correpondences: {0}", correspondences->size());
-		GD_INFO("--> Transformation computed: \n");
-		std::cout << std::setprecision(16) << std::fixed << transformation << '\n' << std::endl;
+		GD_TRACE(":: Number of inlier fpfh correpondences: {0}\n", correspondences->size());
+		GD_WARN("--> Transformation computed in: {0} ms: \n", GeoDetection::Time::getDuration(start));
+		std::cout << std::setprecision(16) << std::fixed <<
+			"Transformation: \n" << transformation << '\n' << std::endl;
 
 		//Compute the MSE of the global registration
 		pcl::transformPointCloud(*src_keypoints, *src_keypoints, transformation);
@@ -79,10 +81,8 @@ namespace GeoDetection
 
 		mse /= (double)(remaining_correspondences->size());
 
-		GD_TRACE("--> Mean square error: {0}", mse);
-		std::cout << std::setprecision(16) << std::fixed <<
-			"Transformation: \n" << transformation << '\n' << std::endl;
-		GD_WARN("NOTE: MSE may be higher due to a subsample input\n");
+		GD_WARN("--> Mean square error: {0}", mse);
+		GD_TRACE("NOTE: MSE may be higher due to a subsample input\n");
 
 		//Apply the transformation to the source GeoDetection object.
 		source.applyTransformation(transformation);
@@ -92,36 +92,39 @@ namespace GeoDetection
 	Eigen::Matrix4f getICPRegistration(GeoDetection::Cloud& reference,
 		GeoDetection::Cloud& source, const float radius)
 	{
-		GD_TITLE("Auto Registration --ICP")
+		GD_TITLE("Auto Registration --ICP");
+		auto start = GeoDetection::Time::getStart();
 
 		//Compute the normals if they are not already computed.
 		if (!reference.hasNormals()) {
-			reference.m_normals = reference.getNormals(radius);
+			reference.setNormals(reference.getNormals(radius));
 		}
 
 		if (!source.hasNormals()) {
-			source.m_normals = source.getNormals(radius);
+			source.setNormals(source.getNormals(radius));
 		}
 
 		pcl::GeneralizedIterativeClosestPoint <pcl::PointXYZ, pcl::PointXYZ> gicp;
 		gicp.setMaxCorrespondenceDistance(radius);
 
-		gicp.setInputSource(source.m_cloud);
-		gicp.setInputTarget(reference.m_cloud);
+		gicp.setInputSource(source.cloud());
+		gicp.setInputTarget(reference.cloud());
 
 		gicp.setCorrespondenceRandomness(10);
 		gicp.setMaximumIterations(100);
-		gicp.setSearchMethodSource(source.m_kdtree);
-		gicp.setSearchMethodTarget(reference.m_kdtree);
+		gicp.setSearchMethodSource(source.tree());
+		gicp.setSearchMethodTarget(reference.tree());
 
-		gicp.align(*source.m_cloud);
+		gicp.align(*source.cloud());
 
 		Eigen::Matrix4f transformation = gicp.getFinalTransformation();
 		
-		GD_TRACE("--> Mean square error: {0}", gicp.getFitnessScore());
+		GD_WARN("ICP computed in: {0} ms\n", GeoDetection::Time::getDuration(start));
 		std::cout << std::setprecision(16) << std::fixed <<
 			"Transformation: \n" << transformation << '\n' << std::endl;
-		GD_WARN("NOTE: MSE may be higher due to a subsample input\n");
+
+		GD_WARN("--> Mean square error: {0}\n", gicp.getFitnessScore());
+		GD_TRACE("NOTE: MSE may be higher due to a subsample input\n");
 
 		return transformation;
 	}
