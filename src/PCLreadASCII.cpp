@@ -13,7 +13,7 @@
 
 namespace GeoDetection
 {
-
+	//HELPER FUNCTIONS
 	size_t
 		getNumColumns(const char* fname)
 	{
@@ -190,6 +190,8 @@ namespace GeoDetection
 		return delimeters[i];
 	}
 
+
+	//IMPORT FUNCTIONS
 	pcl::PointCloud<pcl::PointXYZ>::Ptr
 		PCLreadASCIIxyz(char const* fname)
 	{

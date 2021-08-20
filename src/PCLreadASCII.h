@@ -57,5 +57,6 @@ namespace GeoDetection
 			return &rc[0]; //returns ctype mapping table address.
 		}
 	};
+
 }
 
