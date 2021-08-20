@@ -33,4 +33,5 @@ int main (int argc, char* argv[])
 	Eigen::Matrix4f icp_transformation = getICPRegistration(reference_down, source_down);
 
 	std::cin.get();
+
 }
