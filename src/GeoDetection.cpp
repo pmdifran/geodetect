@@ -48,7 +48,7 @@ namespace GeoDetection
 	}
 
 	void
-		Cloud::setKdTrees()
+		Cloud::getKdTrees()
 	{
 		GD_CORE_TRACE(":: Constructing Search Trees");
 		auto start = GeoDetection::Time::getStart();
@@ -100,7 +100,7 @@ namespace GeoDetection
 	}
 
 	pcl::PointCloud<pcl::Normal>::Ptr
-		Cloud::getNormals(float nrad)
+		Cloud::getNormals(float nrad, bool set_m_normals)
 	{
 		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Normal scale {0}", nrad);
 		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
@@ -121,6 +121,8 @@ namespace GeoDetection
 
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
+
+		if (set_m_normals) { m_normals = normals; }
 
 		return normals;
 	}
