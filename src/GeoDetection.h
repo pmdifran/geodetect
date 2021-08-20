@@ -1,10 +1,15 @@
 #pragma once
 #include "log.h"
 
-#include <pcl/filters/extract_indices.h>
-#include <pcl/kdtree/kdtree_flann.h>
+//PCL core
 #include <pcl/point_types.h>
+
+//KdTrees
+#include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/search/kdtree.h>
+
+//Filters
+#include <pcl/filters/extract_indices.h>
 
 #include <array>
 #include <cmath>
@@ -16,7 +21,7 @@ namespace GeoDetection
 	class Cloud
 	{
 		//Members
-	public:
+	private:
 		std::string m_name;
 		pcl::PointCloud<pcl::PointXYZ>::Ptr m_cloud;
 		pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr m_kdtreeFLANN;
@@ -46,7 +51,7 @@ namespace GeoDetection
 		{
 			GD_CORE_TITLE("GeoDetection Cloud Construction");
 			GD_CORE_TRACE("Creating GeoDetection Cloud Object: '{0}' with {1} points", m_name, m_cloud->size());
-			setKdTrees();
+			getKdTrees();
 			GD_CORE_INFO("--> GeoDetection Cloud Created");
 		}
 
@@ -58,61 +63,88 @@ namespace GeoDetection
 
 		~Cloud() = default;
 
-		//Setters and checkers
+	//Accessors
+	public:
+		inline std::string name() { return m_name; }
+		inline pcl::PointCloud<pcl::PointXYZ>::Ptr cloud() { return m_cloud; }
+		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr tree() { return m_kdtree; }
+		inline pcl::PointCloud<pcl::Normal>::Ptr normals() { return m_normals; }
+
+	//Setters and checks
 	public:
 		//Sets the cloud to a new pcl::PointCloud, updates the KdTrees, and clears the normals. 
-		inline void setCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) { m_cloud = std::move(cloud); setKdTrees(); m_normals->clear(); }
+		inline void setCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) { m_cloud = std::move(cloud); getKdTrees(); m_normals->clear(); }
 
-		//I'm not sure if passing const lvalue reference is correct?
 		inline void setNormals(pcl::PointCloud<pcl::Normal>::Ptr& normals) { m_normals = std::move(normals); }
-
-		void setKdTrees();
-
-		void setScale(float scale) { m_scale = scale; }
-
-		//Checks that normals have been computed.
-		inline bool hasNormals() { return  m_normals->size() == m_cloud->size() && m_normals->size() != 0; }
 
 		inline void setView(float x, float y, float z) { m_view[0] = x; m_view[1] = y; m_view[2] = z; }
 
-		//Methods
-	public:
-		void removeNaN();
+		void setScale(float scale) { m_scale = scale; }
 
-		void writeRT(const char* fname);
+		inline bool hasNormals() { return  m_normals->size() == m_cloud->size() && m_normals->size() != 0; }
+
+	//Methods
+	public:
+
+		/** \brief Method for setting up the Kd 3D search trees for the cloud. Two KdTrees are used:
+		* a regular pcl implementation - used as the input search tree for various methods. 
+		* a pcl wrapper for FLANN - used for searches, and not as input into various pcl compute methods. 
+		* \return Internal: builds trees m_kdtree and m_kdtreeFLANN.
+		*/
+		void getKdTrees();
+
+		/** \brief Method for computing normals. View point is set as 0,0,0 as default unless set with setView
+		* \param[in] nrad: Radius for spherical neighbour search used for principle component analysis.
+		* \param[in] set_m_normals: Whether to set member m_normals to the result (default = true).
+		* \return shared pointer to the computed normals.
+		*/
+		pcl::PointCloud<pcl::Normal>::Ptr getNormals(float nrad, bool set_m_normals = true);
 
 		/** \brief Method for computing the local point cloud resolution (i.e. spacing).
 		* \param[in] k: the number of neighbors to use for determining local resolution (default=2).
-		* \param[out] vector containing local point resolution with matching indices.
-		* \param[out] updated m_resolution to contain the average resolution
+		* \return Vector of local resolutions, consistent with point cloud indices.
+		Internal: updates member m_resolution (average cloud resolution).
 		*/
 		std::vector<float> getResolution(int num_neighbors = 2);
 
 		/** \brief Method for generating a new, subsampled cloud, using a voxel filter. The local cloud should be dense relative to voxel size
 		{i.e. specify it based on the point cloud resolution from getResolution()}.
-	* \param[in] voxel_size: cubic voxel size used to create average-point locations.
-	*/
+		* \param[in] voxel_size: cubic voxel size used to create average-point locations.
+		* \return Shared pointer to the subsampeld cloud.
+		*/
 		pcl::PointCloud<pcl::PointXYZ>::Ptr getVoxelDownSample(float voxel_size);
 
 		/** \brief Method for generating a new, subsampled cloud, using a minimum distance (similar to CloudCompare).
-	* \param[in] distance: minimum distance between points
-	* \param[out] new, subsampled, pointcloud object (pointer).
-	*/
+		* \param[in] distance: minimum distance between points
+		* \return Shared pointer to the subsampled cloud.
+		*/
 		pcl::PointCloud<pcl::PointXYZ>::Ptr getDistanceDownSample(float distance);
 
-		/** \brief Method for computing normals.
-		* //View point is set as 0,0,0 as default unless set with setView
-	* \param[in] nrad: Radius for spherical neighbour search used for principle component analysis.
-	* \param[in] normals (optional): object for which the results are written to. Otherwise, normals are written to m_normals member.
-	*/
-		pcl::PointCloud<pcl::Normal>::Ptr getNormals(float nrad);
-
+		/** \brief Method for transforming the cloud.
+		* \param[in] transformation: affine matrix.
+		* \return internal: combines with m_transformation with matrix multiplication.
+		*/
 		void applyTransformation(const Eigen::Matrix4f& transformation);
 
+		/** \brief Method for computing intrinsic shape signature keypoints.
+		* \return shared pointer to a pcl point cloud.
+		*/
 		pcl::PointCloud<pcl::PointXYZ>::Ptr getKeyPoints();
 
+		/** \brief Method for computing fast point feature histograms 
+		* \param[in] shared pointer to a pcl point cloud containing keypoints
+		*/
 		pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints);
 
+		/* \brief Method for filtering NaN values from the point cloud.
+		*/
+		void removeNaN();
+
+		/* \brief Method for writing the transformation matrix to an ascii file.
+		* \param[in] fname: Output file path/name.
+		*/
+		void writeRT(const char* fname);
 	};
+
 }
 
