@@ -17,6 +17,8 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/keypoints/iss_3d.h>
+#include <pcl/features/principal_curvatures.h>
+
 
 //filters
 #include <pcl/filters/voxel_grid.h>
@@ -25,26 +27,85 @@
 
 namespace GeoDetection
 {
-	void
-		Cloud::removeNaN()
+	void Cloud::addScalarField(std::vector<float>& new_fields)
 	{
-		GD_CORE_TRACE(":: Removing NaN from Cloud.\n");
+		GD_CORE_TRACE(":: Adding scalar field to GeoDetection Cloud");
+		if (new_fields.size() != m_cloud->size())
+		{
+			GD_CORE_ERROR("Scalar fields with size {0} does not agree with cloud size {1}",
+				new_fields.size(), m_cloud->size());
+		}
 
-		m_cloud->is_dense = false;
-		std::vector<int> indices;
-		pcl::removeNaNFromPointCloud(*m_cloud, *m_cloud, indices);
-		m_cloud->is_dense = true;
+		if (m_fields_structured)
+		{
+			unstructureScalarFields();
+		}
+
+		m_num_fields++;
+		int64_t new_size = m_num_fields * m_cloud->size();
+		int64_t startcopy_index = new_size - m_cloud->size();
+
+		m_scalar_fields.resize(new_size);
+
+#pragma omp parallel for
+		for (int64_t i = 0; i < m_cloud->size(); i++)
+		{
+			int64_t index_main = i + startcopy_index;
+			m_scalar_fields[index_main] = new_fields[i];
+		}
 	}
 
-	void
-		Cloud::writeRT(const char* fname)
+	void 
+		Cloud::structureScalarFields()
 	{
-		GD_CORE_TRACE(":: Writing RT file...\n");
+		if (m_fields_structured)
+		{
+			GD_CORE_ERROR("Error: scalar fields are already structured.");
+			return;
+		}
 
-		std::ofstream ofs;
-		ofs.open(fname, std::ios::out | std::ios::binary | std::ios::trunc);
-		ofs << std::fixed << std::setprecision(16) << m_transformation << std::endl;
-		ofs.close();
+		int64_t cloud_size = m_cloud->size();
+		int64_t fields_size = m_scalar_fields.size();
+		size_t num_fields = m_num_fields;
+
+		std::vector<float> new_fields(fields_size);
+
+#pragma omp parallel for
+		for (int64_t i = 0; i < cloud_size; i++)
+		{
+			for (int j = 0; j < m_num_fields; j++) 
+			{ new_fields[i*num_fields + j] = m_scalar_fields[j*cloud_size + i]; }
+		}
+
+		m_scalar_fields = new_fields;
+		m_fields_structured = true;
+	}
+
+	void Cloud::unstructureScalarFields()
+	{
+		if (!m_fields_structured)
+		{
+			GD_CORE_ERROR("Error: scalar fields are already structured.");
+			return;
+		}
+
+		int64_t cloud_size = m_cloud->size();
+		int64_t fields_size = m_scalar_fields.size();
+		size_t num_fields = m_num_fields;
+
+		std::vector<float> new_fields(fields_size);
+
+#pragma omp parallel for
+		for (int64_t i = 0; i < cloud_size; i++)
+		{
+			for (int j = 0; j < m_num_fields; j++)
+			{
+				new_fields[j * cloud_size + i] = m_scalar_fields[i * num_fields + j];
+			}
+		}
+
+		m_scalar_fields = new_fields;
+		m_fields_structured = false;
 	}
 
 	void
@@ -265,4 +326,25 @@ namespace GeoDetection
 		return fpfh; 
 	}
 
+	void
+		Cloud::removeNaN()
+	{
+		GD_CORE_TRACE(":: Removing NaN from Cloud.\n");
+
+		m_cloud->is_dense = false;
+		std::vector<int> indices;
+		pcl::removeNaNFromPointCloud(*m_cloud, *m_cloud, indices);
+		m_cloud->is_dense = true;
+	}
+
+	void
+		Cloud::writeTransformation(const char* fname)
+	{
+		GD_CORE_TRACE(":: Writing RT file...\n");
+
+		std::ofstream ofs;
+		ofs.open(fname, std::ios::out | std::ios::binary | std::ios::trunc);
+		ofs << std::fixed << std::setprecision(16) << m_transformation << std::endl;
+		ofs.close();
+	}
 }

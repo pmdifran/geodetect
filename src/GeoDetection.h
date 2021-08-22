@@ -22,19 +22,26 @@ namespace GeoDetection
 	{
 		//Members
 	private:
+		//PCL Data Structures
 		std::string m_name;
 		pcl::PointCloud<pcl::PointXYZ>::Ptr m_cloud;
 		pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr m_kdtreeFLANN;
 		pcl::search::KdTree<pcl::PointXYZ>::Ptr m_kdtree;
 		pcl::PointCloud<pcl::Normal>::Ptr m_normals;
 
-		pcl::PointIndices::Ptr m_subindices;
+		//Scalar fields					         // If structured, first num_fields terms correspond to columns:
+		bool m_fields_structured = false;        //{0,0}, {1,0}, {2,0}; {0,1}, {1,1}, {2,1}
+		int m_num_fields = 0;		             
+		std::vector<float> m_scalar_fields;		 //If not structured, data is entire columns followed by another:
+												 //({0,0}, {0,1}, {0,2]..., {1,0}, {1,1}, {1,2}
 
+		//Transformation Matrix
 		Eigen::Matrix4d m_transformation;
-
 		std::array<float, 3> m_view = { 0, 0, 0 };
+
+		//Scale and resoluton
 		double m_resolution = 0.0; //average resolution of the point cloud.
-		double m_scale = 0.0; //subsampled resolution of the point cloud by means of voxel filtering or minimuim distance. 
+		double m_scale = 0.0;
 
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW //So that dynamic allocation returns aligned pointer.
 
@@ -70,6 +77,7 @@ namespace GeoDetection
 		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr tree() { return m_kdtree; }
 		inline pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr flanntree() { return m_kdtreeFLANN; }
 		inline pcl::PointCloud<pcl::Normal>::Ptr normals() { return m_normals; }
+		inline std::vector<float>& scalarfields() { return m_scalar_fields; }
 
 	//Setters and checks
 	public:
@@ -86,6 +94,22 @@ namespace GeoDetection
 
 	//Methods
 	public:
+		/** \brief Method for adding another scalar field (i.e column) to the scalar fields.
+		* \param[in] new_fields: float vector which should be the same length as # of points (this is checked for).
+		* \return Internal: m_scalar_fields is modified to include an additional scalar field.
+		*/
+		void addScalarField(std::vector<float>& new_fields);
+
+		/** \brief Method for structuring the scalar fields. Scalar fields should be structured to improve write methods.
+		* \return Internal: m_scalar_fields is modified such that the scalar fields of a singular point are
+		*					contiguous in memory (i.e. [1,1], [1,2], [1,3]; [2,1], [2,2], [2,3]
+		*/
+		void structureScalarFields();
+
+		/** \brief Method for unstructuring the scalar fields. 
+		* \return Internal: m_scalar_fields is modified such that all entries of one scalar field are followed by another.
+		*/
+		void unstructureScalarFields();
 
 		/** \brief Method for setting up the Kd 3D search trees for the cloud. Two KdTrees are used:
 		* a regular pcl implementation - used as the input search tree for various methods. 
@@ -125,11 +149,7 @@ namespace GeoDetection
 		* \param[in] transformation: affine matrix.
 		* \return internal: combines with m_transformation with matrix multiplication.
 		*/
-		void applyTransformation(const Eigen::Matrix4f& transformation);
 
-		/** \brief Method for computing intrinsic shape signature keypoints.
-		* \return shared pointer to a pcl point cloud.
-		*/
 		pcl::PointCloud<pcl::PointXYZ>::Ptr getKeyPoints();
 
 		/** \brief Method for computing fast point feature histograms 
@@ -137,16 +157,22 @@ namespace GeoDetection
 		*/
 		pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints);
 
-		pcl::PointCloud<pcl::PrincipalCurvatures>::Ptr getCurvatures(float nrad);
-
 		/* \brief Method for filtering NaN values from the point cloud.
 		*/
+
+		void applyTransformation(const Eigen::Matrix4f& transformation);
+
+		/** \brief Method for computing intrinsic shape signature keypoints.
+		* \return shared pointer to a pcl point cloud.
+		*/
+
 		void removeNaN();
 
 		/* \brief Method for writing the transformation matrix to an ascii file.
 		* \param[in] fname: Output file path/name.
 		*/
-		void writeRT(const char* fname);
+		
+		void writeTransformation(const char* fname);
 	};
 
 }
