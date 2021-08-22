@@ -14,6 +14,7 @@ set(SOURCE
     ${GeoDetection_source}/GeoDetection.cpp
     ${GeoDetection_source}/PCLreadASCII.cpp
     ${GeoDetection_source}/log.cpp
+    ${GeoDetection_source}/segmentVegetation.cpp
 )
 
 set(HEADERS
@@ -23,6 +24,7 @@ set(HEADERS
     ${GeoDetection_source}/GeoDetection.h
     ${GeoDetection_source}/PCLreadASCII.h
     ${GeoDetection_source}/log.h
+    ${GeoDetection_source}/segmentVegetation.h
 )
 
 add_executable( GeoDetection ${SOURCE} ${HEADERS} )
