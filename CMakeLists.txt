@@ -42,6 +42,28 @@ if(OpenMP_CXX_FOUND)
     target_compile_options(GeoDetection PUBLIC "${OpenMP_CXX_FLAGS}")
 endif()
 
+#Other dependencies
+#######################################################################################
+if (NOT DEFINED dependencies_DIR)
+    set(dependencies_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies)
+endif()
+
+# Find PDAL - in development
+set(PDAL_DIR ${dependencies_DIR}/pdal/Library/lib/cmake/PDAL)
+find_package(PDAL 1.0.0 REQUIRED CONFIG)
+
+if (PDAL_FOUND)
+    message("\nPDAL FOUND\n")
+    include_directories(${PDAL_INCLUDE_DIRS})
+    link_directories(${PDAL_LIBRARY_DIRS})
+    add_definitions(${PDAL_DEFINITIONS})
+    set(CMAKE_CXX_FLAGS "-std=c++11")
+endif()
+
+target_link_libraries( GeoDetection PRIVATE ${PDAL_LIBRARIES})
+
+#PCL
+#######################################################################################
 # Find PCL (from default PCL cmake implementation)
 find_package( PCL 1.12 REQUIRED )
 

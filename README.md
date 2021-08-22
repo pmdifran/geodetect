@@ -35,21 +35,26 @@ $ cd C:/Dev
 $ git clone https://github.com/pmdifran/GeoDetection.git
 ```
 
-3. Download the PCL-AllInOne installer from the PCL releases on github (i.e. `PCL-1.12.0-AllInOne-msvc2019-win64.exe`)\
-Download the PDB files from PCL releases (i.e. `pcl-1.12.0-rc1-pdb-msvc2019-win64.zip`).\
+3. Download the PCL-AllInOne installer from the PCL releases on github (i.e. `PCL-1.12.0-AllInOne-msvc2019-win64.exe`).
+
+4. Download the PDB files from PCL releases (i.e. `pcl-1.12.0-rc1-pdb-msvc2019-win64.zip`).\
 --> Allows you to debug inside the PCL libraries.
 
-4. Launch the installer, and install it into your folder (e.g. C:/Dev/PCL<version>)
+5. Launch the installer, and install it into your folder (e.g. C:/Dev/PCL<version>). Copy the .pdb files into PCL/bin.
 
-5. Build the project with CMake from the command line.
+6. Download PDAL using conda package manager:\
+--> Create dependencies directory with `pdal` folder (e.g. C:/Dev/dependencies/pdal)\
+-->install pdal in this directory: `conda create --yes --channel conda-forge pdal -p C:/Dev/dependencies/pdal`
+
+7. Build the project with CMake from the command line.
 ```
 cd C:/Dev
 mkdir build
 cd build
-cmake ../GeoDetection
+cmake -Ddependencies_DIR=C:/Dev/dependencies ../GeoDetection
 ```
 
-6. Open the build file created for MSVS (i.e. `C:/Dev/Build/GeoDetection.sln`)
+8. Open the build file created for MSVS (i.e. `C:/Dev/Build/GeoDetection.sln`)
 
 ## Linux; MacOS; Windows (custom)
 
