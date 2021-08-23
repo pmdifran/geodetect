@@ -25,6 +25,9 @@
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/radius_outlier_removal.h>
 
+//IO
+#include <pcl/io/pcd_io.h>
+
 namespace GeoDetection
 {
 	void Cloud::addScalarField(std::vector<float>& new_fields)
@@ -55,7 +58,7 @@ namespace GeoDetection
 		}
 	}
 
-	void 
+	void
 		Cloud::structureScalarFields()
 	{
 		if (m_fields_structured)
@@ -73,8 +76,10 @@ namespace GeoDetection
 #pragma omp parallel for
 		for (int64_t i = 0; i < cloud_size; i++)
 		{
-			for (int j = 0; j < m_num_fields; j++) 
-			{ new_fields[i*num_fields + j] = m_scalar_fields[j*cloud_size + i]; }
+			for (int j = 0; j < m_num_fields; j++)
+			{
+				new_fields[i * num_fields + j] = m_scalar_fields[j * cloud_size + i];
+			}
 		}
 
 		m_scalar_fields = new_fields;
@@ -177,7 +182,7 @@ namespace GeoDetection
 		calcnormals.setSearchMethod(m_kdtree);
 		calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
 		calcnormals.setRadiusSearch(nrad);
-		calcnormals.setNumberOfThreads(omp_get_num_procs());	
+		calcnormals.setNumberOfThreads(omp_get_num_procs());
 		calcnormals.compute(*normals);
 
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
@@ -200,7 +205,7 @@ namespace GeoDetection
 		grid.setInputCloud(m_cloud);
 		grid.setLeafSize(voxel_size, voxel_size, voxel_size);
 		grid.filter(*cloud_down);
-		
+
 		GD_CORE_WARN("-->   Full cloud size: {0}\n --> Downsampled cloud size: {1}",
 			m_cloud->size(), cloud_down->size());
 
@@ -265,11 +270,20 @@ namespace GeoDetection
 		auto start = GeoDetection::Time::getStart();
 
 		pcl::transformPointCloud(*m_cloud, *m_cloud, transformation);
+
+		GD_CORE_TRACE(":: Updating transformation...");
 		Eigen::Matrix4d temp = transformation.cast<double>(); //using doubles for more accurate arithmitic
 		m_transformation = temp * m_transformation; //eigen matrix multiplication
 
 		GD_CORE_WARN("--> Transformation time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
+	}
+
+	void Cloud::updateTransformation(const Eigen::Matrix4f& transformation)
+	{
+		GD_CORE_TRACE(":: Updating transformation...");
+		Eigen::Matrix4d temp = transformation.cast<double>(); //using doubles for more accurate arithmitic
+		m_transformation = temp * m_transformation; //eigen matrix multiplication
 	}
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr
@@ -284,17 +298,17 @@ namespace GeoDetection
 		iss_detector.setSearchMethod(m_kdtree);
 
 		//Revisit parameters. Automatic selection using scale, subsample scale?
-		iss_detector.setSalientRadius(0.5); 
-		iss_detector.setNonMaxRadius(1.5); 
+		iss_detector.setSalientRadius(0.5);
+		iss_detector.setNonMaxRadius(1.5);
 		iss_detector.setMinNeighbors(5);
 
 		iss_detector.setInputCloud(m_cloud);
 
-		iss_detector.setThreshold21(0.975); 
-		iss_detector.setThreshold32(0.975); 
+		iss_detector.setThreshold21(0.975);
+		iss_detector.setThreshold32(0.975);
 		iss_detector.setNumberOfThreads(omp_get_num_procs());
 		iss_detector.compute(*keypoints);
-		
+
 		GD_CORE_WARN("--> Keypoint calculation time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
 
@@ -316,14 +330,14 @@ namespace GeoDetection
 		computefpfh.setInputNormals(m_normals);
 		computefpfh.setSearchSurface(m_cloud);
 		computefpfh.setSearchMethod(m_kdtree);
-		computefpfh.setRadiusSearch(3.0); 
+		computefpfh.setRadiusSearch(3.0);
 
 		computefpfh.compute(*fpfh);
 
 		GD_CORE_WARN("--> FPFH calculation time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
 
-		return fpfh; 
+		return fpfh;
 	}
 
 	void
@@ -346,5 +360,56 @@ namespace GeoDetection
 		ofs.open(fname, std::ios::out | std::ios::binary | std::ios::trunc);
 		ofs << std::fixed << std::setprecision(16) << m_transformation << std::endl;
 		ofs.close();
+	}
+
+	//IN DEVELOPMENT
+	void Cloud::writeAsASCII(const char* fname, bool write_scalarfields, bool write_normals)
+	{
+		GD_TITLE("Exporting GeoDetection Cloud...");
+		auto start = GeoDetection::Time::getStart();
+
+		static const auto BUFFER_SIZE = 16 * 1024;
+		char buf[BUFFER_SIZE + 1];
+
+		std::fstream fstream;
+		fstream.open(fname, std::ios::out | std::ios::binary | std::ios::trunc);
+
+		size_t i = 0;
+
+		while (i < m_cloud->size()) {
+			size_t cx = 0;
+			size_t cx_increment = 0;
+
+			while (true)
+			{
+				cx_increment = snprintf(buf + cx, BUFFER_SIZE - cx, "%.8f %.8f %.8f\n", m_cloud->points[i].x,
+					m_cloud->points[i].y, m_cloud->points[i].z);
+
+				cx += cx_increment;
+				i++;
+
+				if (cx >= BUFFER_SIZE) {
+					i--; //Last point is inbetween the buffer; redo at the beginning of new buffer.
+					break;
+				}
+
+				if (i == m_cloud->size()) {
+					cx_increment = 0;
+					break;
+				}
+
+			}
+
+			fstream.write(buf, cx - cx_increment);
+		}
+		fstream.close();
+
+		GD_WARN("--> Data export time: {0} ms", GeoDetection::Time::getDuration(start));
+	}
+
+	void
+		Cloud::writeAsPCD(const char* fname)
+	{
+
 	}
 }

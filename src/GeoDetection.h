@@ -78,6 +78,7 @@ namespace GeoDetection
 		inline pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr flanntree() { return m_kdtreeFLANN; }
 		inline pcl::PointCloud<pcl::Normal>::Ptr normals() { return m_normals; }
 		inline std::vector<float>& scalarfields() { return m_scalar_fields; }
+		inline Eigen::Matrix4d transformation() { return m_transformation; }
 
 	//Setters and checks
 	public:
@@ -145,11 +146,9 @@ namespace GeoDetection
 		*/
 		pcl::PointCloud<pcl::PointXYZ>::Ptr getDistanceDownSample(float distance);
 
-		/** \brief Method for transforming the cloud.
-		* \param[in] transformation: affine matrix.
-		* \return internal: combines with m_transformation with matrix multiplication.
+		/** \brief Method for computing intrinsic shape signature keypoints.
+		* \return shared pointer to a pcl point cloud.
 		*/
-
 		pcl::PointCloud<pcl::PointXYZ>::Ptr getKeyPoints();
 
 		/** \brief Method for computing fast point feature histograms 
@@ -157,22 +156,31 @@ namespace GeoDetection
 		*/
 		pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints);
 
-		/* \brief Method for filtering NaN values from the point cloud.
+		/** \brief Method for transforming the cloud and updating the object's final transformation matrix
+		* \param[in] transformation: affine matrix.
+		* \return Internal: updates m_transformation and repositions m_cloud.
 		*/
-
 		void applyTransformation(const Eigen::Matrix4f& transformation);
 
-		/** \brief Method for computing intrinsic shape signature keypoints.
-		* \return shared pointer to a pcl point cloud.
+		/** \brief Method for ONLY updating the object's final transformation matrix.
+		* Should be called if a function has transformed the cloud without updating the matrix (i.e. generalized icp)
+		* \param[in] transformation: affine matrix.
+		* \return Internal: updates m_transformation.
 		*/
+		void updateTransformation(const Eigen::Matrix4f& transformation);
 
+		/* \brief Method for filtering NaN values from the point cloud.
+		*/
 		void removeNaN();
 
 		/* \brief Method for writing the transformation matrix to an ascii file.
 		* \param[in] fname: Output file path/name.
 		*/
-		
 		void writeTransformation(const char* fname);
+		
+		void writeAsASCII(const char* fname, bool write_scalarfields, bool write_normals);
+
+		void writeAsPCD(const char* fname);
 	};
 
 }
