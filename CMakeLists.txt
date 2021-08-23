@@ -57,7 +57,8 @@ if (PDAL_FOUND)
     include_directories(${PDAL_INCLUDE_DIRS})
     link_directories(${PDAL_LIBRARY_DIRS})
     add_definitions(${PDAL_DEFINITIONS})
-    set(CMAKE_CXX_FLAGS "-std=c++11")
+    #set(CMAKE_CXX_FLAGS "-std=c++11") 
+##This flag is not compatible with AVX, so FPFH will be prone to heap corruption... Hopefully pdal works without
 endif()
 
 target_link_libraries( GeoDetection PRIVATE ${PDAL_LIBRARIES})
