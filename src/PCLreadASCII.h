@@ -25,19 +25,15 @@ namespace GeoDetection
 		PCLwriteASCIIxyz(char const* fname, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudptr);
 
 	//Custom input data type xyz. You can modify this to add more fields. 
-	typedef struct _XYZ
+	struct XYZ
 	{
 		float x, y, z;  // X, Y, Z position
-	}XYZ;
+	};
 
 	//Reads xyz data from an ASCII file into a templated vector point cloud (needs xyz fields --> see example)
 	template <typename point_t>
 	void
 		ASCIIreadXYZ(std::string& filename, std::vector<point_t>& points);
-
-	//Copies the vector xyz data from an ASCII file into the provided vector point cloud
-	void
-		ASCIItoPCL(std::vector<XYZ>& xyzpoints, pcl::PointCloud<pcl::PointXYZ>::Ptr cloudptr);
 
 	//Locale to treat commas, spaces, and newlines as whitespace. 
 	struct csv_reader : std::ctype<char>

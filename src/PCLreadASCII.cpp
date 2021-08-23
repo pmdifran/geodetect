@@ -5,7 +5,7 @@
 
 #include <cstring> //for memchr
 #include <cstdlib> //for strtod
-#include "fast_float.h" //Single header library version of fast_float
+#include <fast_float/fast_float.h> //Single header library version of fast_float
 
 #include <limits>
 #include <cstdio>

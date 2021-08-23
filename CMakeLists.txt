@@ -88,6 +88,8 @@ endif()
 #Include GeoDetection 3rdPartys
 #spdlog
 include_directories(${GeoDetection_vendor}/spdlog/include)
+#fast_float
+include_directories(${GeoDetection_vendor}/fast_float/include)
 
 #Set output directories (to coincide with PCL libraries and binaries - i.e. "../PCL 1.12/bin/")
 if ( MSVC )

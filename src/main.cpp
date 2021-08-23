@@ -12,9 +12,11 @@
 int main (int argc, char* argv[])
 {
 	GeoDetection::Log::Init();
+	auto start = GeoDetection::Time::getStart();
 
 	const char* source_file = "test_source.txt";
 	const char* reference_file = "test_reference.txt";
+	
 
 	GD_TRACE("Source name: {0}", source_file);
 	GD_TRACE("Reference name: {0}", reference_file);
@@ -31,6 +33,10 @@ int main (int argc, char* argv[])
 	Eigen::Matrix4f global_transformation = GeoDetection::getGlobalRegistration(reference_down, source_down);
 
 	Eigen::Matrix4f icp_transformation = getICPRegistration(reference_down, source_down);
+
+	GD_WARN("Total time: {0} s \n", GeoDetection::Time::getDuration(start)/1000);
+	GD_INFO("Final Matrix:");
+	std::cout << source_down.transformation() << std::endl;
 
 	std::cin.get();
 
