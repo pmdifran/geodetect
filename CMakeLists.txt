@@ -25,6 +25,7 @@ set(HEADERS
     ${GeoDetection_source}/PCLreadASCII.h
     ${GeoDetection_source}/log.h
     ${GeoDetection_source}/segmentVegetation.h
+    ${GeoDetection_source}/ScalarField.h
 )
 
 add_executable( GeoDetection ${SOURCE} ${HEADERS} )

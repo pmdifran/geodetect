@@ -1,5 +1,6 @@
 #pragma once
 #include "log.h"
+#include "ScalarField.h"
 
 //PCL core
 #include <pcl/point_types.h>
@@ -22,18 +23,17 @@ namespace GeoDetection
 	{
 		//Members
 	private:
-		//PCL Data Structures
 		std::string m_name;
+
+		//Scalar Fields
+		int m_num_fields = 0;
+		std::vector<ScalarField::Ptr> m_scalar_fields;
+
+		//PCL Data Structures
 		pcl::PointCloud<pcl::PointXYZ>::Ptr m_cloud;
 		pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr m_kdtreeFLANN;
 		pcl::search::KdTree<pcl::PointXYZ>::Ptr m_kdtree;
 		pcl::PointCloud<pcl::Normal>::Ptr m_normals;
-
-		//Scalar fields					         // If structured, first num_fields terms correspond to columns:
-		bool m_fields_structured = false;        //{0,0}, {1,0}, {2,0}; {0,1}, {1,1}, {2,1}
-		int m_num_fields = 0;		             
-		std::vector<float> m_scalar_fields;		 //If not structured, data is entire columns followed by another:
-												 //({0,0}, {0,1}, {0,2]..., {1,0}, {1,1}, {1,2}
 
 		//Transformation Matrix
 		Eigen::Matrix4d m_transformation;
@@ -47,14 +47,14 @@ namespace GeoDetection
 
 	//Constructors and assignments
 	public:
-		Cloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string name = "GeoDetection Default")
+		Cloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string name = "Cloud Default")
 			: m_name(name),
 			m_cloud(cloud),
 			m_kdtreeFLANN(new pcl::KdTreeFLANN<pcl::PointXYZ>),
 			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
 			m_normals(new pcl::PointCloud<pcl::Normal>),
 			m_transformation(Eigen::Matrix4d::Identity())
-			
+
 		{
 			GD_CORE_TITLE("GeoDetection Cloud Construction");
 			GD_CORE_TRACE("Creating GeoDetection Cloud Object: '{0}' with {1} points", m_name, m_cloud->size());
@@ -70,17 +70,20 @@ namespace GeoDetection
 
 		~Cloud() = default;
 
-	//Accessors
+		//Accessors
 	public:
 		inline std::string name() { return m_name; }
-		inline pcl::PointCloud<pcl::PointXYZ>::Ptr cloud() { return m_cloud; }
-		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr tree() { return m_kdtree; }
-		inline pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr flanntree() { return m_kdtreeFLANN; }
-		inline pcl::PointCloud<pcl::Normal>::Ptr normals() { return m_normals; }
-		inline std::vector<float>& scalarfields() { return m_scalar_fields; }
-		inline Eigen::Matrix4d transformation() { return m_transformation; }
+		inline pcl::PointCloud<pcl::PointXYZ>::Ptr const cloud() const { return m_cloud; }
+		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr const tree() const { return m_kdtree; }
+		inline pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr const flanntree() const { return m_kdtreeFLANN; }
+		inline pcl::PointCloud<pcl::Normal>::Ptr const normals() const { return m_normals; }
+		inline std::vector<const ScalarField*> scalarfields() const
+		{
+			return std::vector<const ScalarField*>(m_scalar_fields.begin(), m_scalar_fields.end());
+		}
+		inline Eigen::Matrix4d transformation() const { return m_transformation; }
 
-	//Setters and checks
+		//Setters and checks
 	public:
 		//Sets the cloud to a new pcl::PointCloud, updates the KdTrees, and clears the normals. 
 		inline void setCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) { m_cloud = std::move(cloud); getKdTrees(); m_normals->clear(); }
@@ -93,30 +96,31 @@ namespace GeoDetection
 
 		inline bool hasNormals() { return  m_normals->size() == m_cloud->size() && m_normals->size() != 0; }
 
-	//Methods
+		//Methods
 	public:
-		/** \brief Method for adding another scalar field (i.e column) to the scalar fields.
+		/** \brief Method for adding another column of scalar fields
 		* \param[in] new_fields: float vector which should be the same length as # of points (this is checked for).
-		* \return Internal: m_scalar_fields is modified to include an additional scalar field.
+		* \return Internal: m_scalar_fields is modified to include an additional pointer to the fields.
 		*/
-		void addScalarField(std::vector<float>& new_fields);
+		inline void addScalarField(ScalarField::Ptr new_fields)
+		{
+			if (new_fields->size() == m_cloud->size()) { m_scalar_fields.push_back(new_fields); m_num_fields++; }
+			else { GD_ERROR("Scalar field size must agree with the cloud size"); }
+		}
 
-		/** \brief Method for structuring the scalar fields. Scalar fields should be structured to improve write methods.
-		* \return Internal: m_scalar_fields is modified such that the scalar fields of a singular point are
-		*					contiguous in memory (i.e. [1,1], [1,2], [1,3]; [2,1], [2,2], [2,3]
+		/** \brief Method for removing column of scalar fields
+		* \param[in] new_fields: index of scalar field to remove
+		* \return Internal: m_scalar_fields is modified to remove an pointer to a fields column.
 		*/
-		void structureScalarFields();
+		inline void deleteScalarField(int index = -1)
+		{
+			if (index != -1 || index < 0 || m_num_fields == 0 || index >(m_num_fields - 1)) 
+			{ GD_ERROR("Attempting to access a scalar field index that does not exist");  return; }
+			if (index == -1) { index = m_num_fields - 1; }
+			m_scalar_fields.erase(m_scalar_fields.begin() + index);
+			m_num_fields--;
+		}
 
-		/** \brief Method for unstructuring the scalar fields. 
-		* \return Internal: m_scalar_fields is modified such that all entries of one scalar field are followed by another.
-		*/
-		void unstructureScalarFields();
-
-		/** \brief Method for setting up the Kd 3D search trees for the cloud. Two KdTrees are used:
-		* a regular pcl implementation - used as the input search tree for various methods. 
-		* a pcl wrapper for FLANN - used for searches, and not as input into various pcl compute methods. 
-		* \return Internal: builds trees m_kdtree and m_kdtreeFLANN.
-		*/
 		void getKdTrees();
 
 		/** \brief Method for computing normals. View point is set as 0,0,0 as default unless set with setView

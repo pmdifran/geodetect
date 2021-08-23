@@ -79,7 +79,10 @@ namespace GeoDetection
 		segmentVegetation(GeoDetection::Cloud& geodetect, float rad)
 	{
 		int64_t cloud_size = geodetect.cloud()->size();
-		std::vector<float> vegetation_scores(cloud_size, 0); //0-init because we sums the weighted scores
+
+		ScalarField::Ptr vegetation_scores(new ScalarField);
+		vegetation_scores->setName("Vegetation_Scores");
+		vegetation_scores->resize(cloud_size, 0); //0-init because we sum the weighted scores
 
 		//Tree segmentation parameters
 		std::array<float, 6> curve_scale =   { 0.50, 1.00, 1.50, 2.00, 2.50, 3.00 };
@@ -103,13 +106,11 @@ namespace GeoDetection
 			std::vector<float> densities = getVolumetricDensities(geodetect, density_scale[i]);
 
 			//Calculate TREEZ index
-			getVegetationScore(vegetation_scores, weights[i], curvatures, densities);
-
+			getVegetationScore(*vegetation_scores, weights[i], curvatures, densities);
 		}
 
-		//add some sort of scalar field labelling system. 
+		//Push ptr to vector to m_scalar_fields.
 		geodetect.addScalarField(vegetation_scores);
-
 	}
 
 	//IN DEVELOPMENT
