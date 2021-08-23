@@ -115,9 +115,12 @@ namespace GeoDetection
 		gicp.setSearchMethodSource(source.tree());
 		gicp.setSearchMethodTarget(reference.tree());
 
-		gicp.align(*source.cloud());
+		gicp.align(*source.cloud()); //**The transformation is applied to the cloud here!
 
 		Eigen::Matrix4f transformation = gicp.getFinalTransformation();
+
+		// update the matrix without transforming the data again.
+		source.updateTransformation(transformation);
 		
 		GD_WARN("ICP computed in: {0} ms\n", GeoDetection::Time::getDuration(start));
 		std::cout << std::setprecision(16) << std::fixed <<
