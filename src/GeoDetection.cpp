@@ -31,17 +31,16 @@
 
 //Average-out normals around a given radius of core points. For entire cloud: set corepoints equal to cloud.
 pcl::PointCloud<pcl::Normal>::Ptr
-	averageNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints, const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
-					pcl::PointCloud<pcl::Normal>::Ptr normals, pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr tree, float radius)
+	averageNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr const corepoints, const pcl::PointCloud<pcl::PointXYZ>::Ptr const cloud,
+			const pcl::PointCloud<pcl::Normal>::Ptr const normals, const pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr const tree, float radius)
 {
-	//Check for correct inputs
-	if (tree->getInputCloud()->size() != cloud->size())
-	{
-		GD_CORE_ERROR(":: KdTree pointer disagrees with input cloud.");
-		return;
-	}
+	if (radius <= 0) { GD_CORE_ERROR(":: Invalid normal averaging radius inputted"); return; }
 
-	if (corepoints->size() == 0) { GD_CORE_WARN(":: Input core points are empty."); }
+	//Check for correct inputs
+
+	if (tree->getInputCloud()->size() != cloud->size()) { GD_CORE_ERROR(":: KdTree pointer disagrees with the input cloud."); return; }
+
+	if (corepoints->size() == 0) { GD_CORE_WARN(":: Input core points are empty."); return; }
 
 	if (cloud->size() != normals->size()) 
 	{ 
@@ -56,7 +55,7 @@ pcl::PointCloud<pcl::Normal>::Ptr
 #pragma omp parallel for
 	for (int64_t i = 0; i < corepoints->size(); i++)
 	{
-		pcl::Normal n(0, 0, 0);
+		pcl::Normal n(0, 0, 0, 0);
 		pcl::PointXYZ p(corepoints->points[i]);
 		std::vector<int> ids;
 		std::vector<float> sqdistances;
@@ -69,15 +68,65 @@ pcl::PointCloud<pcl::Normal>::Ptr
 			n.normal_x += normals->points[ids[j]].normal_x;
 			n.normal_y += normals->points[ids[j]].normal_y;
 			n.normal_z += normals->points[ids[j]].normal_z;
+			n.curvature += normals->points[ids[j]].curvature;
 		}
 		n.normal_x /= num_ids;
 		n.normal_y /= num_ids;
 		n.normal_z /= num_ids;
+		n.curvature /= num_ids;
 
 		averaged_normals->points[i] = n;
 	}
 
 	return averaged_normals;
+}
+
+GeoDetection::ScalarField::Ptr
+averageScalarFields(const pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints, const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+	std::vector<GeoDetection::ScalarField::Ptr>& scalar_fields, pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr tree, float radius,
+	int num_fields, int field_index)
+{
+	//Check for correct inputs
+	if (radius <= 0) { GD_CORE_ERROR(":: Invalid scalar field averaging radius inputted"); return; }
+
+	if (num_fields == 0) { GD_CORE_ERROR(":: There is no scalar field to average"); return; }
+
+	if (field_index > num_fields - 1) { GD_CORE_ERROR(":: Invalid scalar field index accessed."); return; }
+
+	if (tree->getInputCloud()->size() != cloud->size()) { GD_CORE_ERROR(":: KdTree pointer disagrees with the input cloud."); return; }
+
+	if (corepoints->size() == 0) { GD_CORE_WARN(":: Input core points are empty."); }
+
+	if (cloud->size() != scalar_fields[field_index]->size())
+	{
+		GD_CORE_ERROR(":: Cannot average out scalars. Input size does not agree with the cloud.");
+		return;
+	}
+
+	//Average normals into new pointcloud.
+	GeoDetection::ScalarField::Ptr averaged_fields(new GeoDetection::ScalarField); 
+	averaged_fields->reserve(corepoints->size());
+
+#pragma omp parallel for
+	for (int64_t i = 0; i < corepoints->size(); i++)
+	{
+		float average = 0;
+		pcl::PointXYZ p(corepoints->points[i]);
+		std::vector<int> ids;
+		std::vector<float> sqdistances;
+		tree->radiusSearch(p, radius, ids, sqdistances);
+
+		int num_ids = ids.size();
+
+		for (int j = 0; j < num_ids; j++) 
+		{ 
+			average += (*scalar_fields[field_index])[ids[j]]; 
+		}
+
+		(*averaged_fields)[i] = average / num_ids;
+	}
+
+	return averaged_fields;
 }
 
 namespace GeoDetection
