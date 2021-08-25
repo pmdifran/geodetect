@@ -83,15 +83,14 @@ namespace GeoDetection
 		//Setters and checks
 	public:
 		//Sets the cloud to a new pcl::PointCloud, updates the KdTrees, and clears the normals. 
+		inline void setScalarFields(std::vector<ScalarField::Ptr> sf) { std::copy(sf.begin(), sf.end(), m_scalar_fields.begin()); }
 		inline void setCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) { m_cloud = std::move(cloud); getKdTrees(); m_normals->clear(); }
-
 		inline void setNormals(pcl::PointCloud<pcl::Normal>::Ptr& normals) { m_normals = std::move(normals); }
-
 		inline void setView(float x, float y, float z) { m_view[0] = x; m_view[1] = y; m_view[2] = z; }
-
 		void setScale(float scale) { m_scale = scale; }
 
 		inline bool hasNormals() { return  m_normals->size() == m_cloud->size() && m_normals->size() != 0; }
+		inline bool hasScalarFields() { return m_num_fields > 0; }
 
 		//Methods
 	public:
@@ -139,13 +138,13 @@ namespace GeoDetection
 		* \param[in] voxel_size: cubic voxel size used to create average-point locations.
 		* \return Shared pointer to the subsampeld cloud.
 		*/
-		pcl::PointCloud<pcl::PointXYZ>::Ptr getVoxelDownSample(float voxel_size);
+		void voxelDownSample(float voxel_size);
 
 		/** \brief Method for generating a new, subsampled cloud, using a minimum distance (similar to CloudCompare).
 		* \param[in] distance: minimum distance between points
 		* \return Shared pointer to the subsampled cloud.
 		*/
-		pcl::PointCloud<pcl::PointXYZ>::Ptr getDistanceDownSample(float distance);
+		void distanceDownSample(float distance);
 
 		/** \brief Method for computing intrinsic shape signature keypoints.
 		* \return shared pointer to a pcl point cloud.

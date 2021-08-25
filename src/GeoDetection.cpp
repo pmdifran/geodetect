@@ -19,7 +19,6 @@
 #include <pcl/keypoints/iss_3d.h>
 #include <pcl/features/principal_curvatures.h>
 
-
 //filters
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/extract_indices.h>
@@ -27,6 +26,59 @@
 
 //IO
 #include <pcl/io/pcd_io.h>
+
+//Helpers
+
+//Average-out normals around a given radius of core points. For entire cloud: set corepoints equal to cloud.
+pcl::PointCloud<pcl::Normal>::Ptr
+	averageNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints, const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+					pcl::PointCloud<pcl::Normal>::Ptr normals, pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr tree, float radius)
+{
+	//Check for correct inputs
+	if (tree->getInputCloud()->size() != cloud->size())
+	{
+		GD_CORE_ERROR(":: KdTree pointer disagrees with input cloud.");
+		return;
+	}
+
+	if (corepoints->size() == 0) { GD_CORE_WARN(":: Input core points are empty."); }
+
+	if (cloud->size() != normals->size()) 
+	{ 
+		GD_CORE_ERROR(":: Cannot average out normals. Input size does not agree with the cloud."); 
+		return; 
+	}
+
+	//Average normals into new pointcloud.
+	pcl::PointCloud<pcl::Normal>::Ptr averaged_normals(new pcl::PointCloud<pcl::Normal>);
+	averaged_normals->points.reserve(corepoints->size());
+
+#pragma omp parallel for
+	for (int64_t i = 0; i < corepoints->size(); i++)
+	{
+		pcl::Normal n(0, 0, 0);
+		pcl::PointXYZ p(corepoints->points[i]);
+		std::vector<int> ids;
+		std::vector<float> sqdistances;
+		tree->radiusSearch(p, radius, ids, sqdistances);
+
+		int num_ids = ids.size();
+
+		for (int j = 0; j < num_ids; j++)
+		{
+			n.normal_x += normals->points[ids[j]].normal_x;
+			n.normal_y += normals->points[ids[j]].normal_y;
+			n.normal_z += normals->points[ids[j]].normal_z;
+		}
+		n.normal_x /= num_ids;
+		n.normal_y /= num_ids;
+		n.normal_z /= num_ids;
+
+		averaged_normals->points[i] = n;
+	}
+
+	return averaged_normals;
+}
 
 namespace GeoDetection
 {
@@ -110,8 +162,8 @@ namespace GeoDetection
 		return normals;
 	}
 
-	pcl::PointCloud<pcl::PointXYZ>::Ptr
-		Cloud::getVoxelDownSample(float voxel_size)
+	void
+		Cloud::voxelDownSample(float voxel_size)
 	{
 		GD_CORE_TRACE(":: Creating downsampled cloud with voxels...\
 			\n--> voxel filter size: {0}", voxel_size);
@@ -129,11 +181,23 @@ namespace GeoDetection
 		GD_CORE_WARN("--> Downsample time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
 
-		return cloud_down;
+		double len = voxel_size / 2;
+		double rad = sqrt(pow(len, 2) * 3);
+
+		if (this->hasNormals())
+		{
+
+		}
+
+		if (this->hasScalarFields())
+		{
+			pcl::PointCloud<pcl::PointXYZ>::Ptr scalar_fields_down(new pcl::PointCloud<pcl::PointXYZ>);
+			scalar_fields_down->points.reserve(cloud_down->size());
+		}
 	}
 
-	pcl::PointCloud<pcl::PointXYZ>::Ptr
-		Cloud::getDistanceDownSample(float distance)
+	void
+		Cloud::distanceDownSample(float distance)
 	{
 		GD_CORE_TRACE(":: Subsampling cloud by distance...\
 			\n--> Distance: {0}", distance);
@@ -177,7 +241,6 @@ namespace GeoDetection
 		GD_CORE_WARN("--> Downsample time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
 
-		return cloud_down;
 	}
 
 	void
@@ -286,29 +349,18 @@ namespace GeoDetection
 		auto start = GeoDetection::Time::getStart();
 
 		//Check for proper normals
-		if (write_normals)
+		if (this->hasNormals())
 		{
-			if (m_normals->size() == 0)
-			{
-				GD_CORE_ERROR(":: Normals are nonexistent for the cloud and will not be written");
-				write_normals = false;
-			}
-			else if (m_normals->size() != m_cloud->size())
-			{
-				GD_CORE_ERROR(":: Normals of size {0} cannot be written alongside cloud of size {1}", 
-					m_normals->size(), m_cloud->size());
-				write_normals = false;
-			}
+			GD_CORE_ERROR(":: Normals of size {0} cannot be written alongside cloud of size {1}",
+				m_normals->size(), m_cloud->size());
+			write_normals = false;
 		}
 
 		//Check for proper scalar fields
-		if (write_scalarfields)
+		if (this->hasScalarFields())
 		{
-			if (m_num_fields < 1)
-			{
-				GD_CORE_ERROR(":: Cannot write scalar fields. No scalar fields have been added to the cloud.");
-				write_scalarfields = false;
-			}
+			GD_CORE_ERROR(":: Cannot write scalar fields. No scalar fields have been added to the cloud.");
+			write_scalarfields = false;
 		}
 
 		static const auto BUFFER_SIZE = 16 * 1024;
