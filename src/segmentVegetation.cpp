@@ -15,6 +15,7 @@ namespace GeoDetection
 		{
 			curvatures[i] = normals->points[i].curvature;
 		}
+		return curvatures;
 	}
 
 	std::vector<float> 
@@ -45,21 +46,21 @@ namespace GeoDetection
 	void 
 	normalizeMinMax(std::vector<float>& data)
 	{
-		const double min = *(std::min_element(data.begin(), data.end()));
-		const double max = *(std::max_element(data.begin(), data.end()));
+		const auto min = std::min_element(data.begin(), data.end()); //returns iterator
+		const auto max = std::max_element(data.begin(), data.end());
 
-		const double range = max - min;
+		const double range = *max - *min;
 
 #pragma omp parallel for
 		for (int64_t i = 0; i < data.size(); i++)
 		{
-			data[i] = (data[i] - min) / range;
+			data[i] = (data[i] - *min) / range;
 		}
 	}
 
 	void
-	getVegetationScore(std::vector<float> vegetation_scores, float weight,
-						std::vector<float> curvatures, std::vector<float> densities)
+	getVegetationScore(std::vector<float>& vegetation_scores, const float weight,
+						std::vector<float>& curvatures, std::vector<float>& densities)
 
 	{
 		normalizeMinMax(curvatures);
@@ -76,7 +77,7 @@ namespace GeoDetection
 
 	//Main functions
 	void 
-		segmentVegetation(GeoDetection::Cloud& geodetect, float rad)
+		segmentVegetation(GeoDetection::Cloud& geodetect)
 	{
 		int64_t cloud_size = geodetect.cloud()->size();
 

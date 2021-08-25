@@ -77,10 +77,7 @@ namespace GeoDetection
 		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr const tree() const { return m_kdtree; }
 		inline pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr const flanntree() const { return m_kdtreeFLANN; }
 		inline pcl::PointCloud<pcl::Normal>::Ptr const normals() const { return m_normals; }
-		inline std::vector<const ScalarField*> scalarfields() const
-		{
-			return std::vector<const ScalarField*>(m_scalar_fields.begin(), m_scalar_fields.end());
-		}
+		inline const std::vector <ScalarField::Ptr> scalarfields() const { return m_scalar_fields; }
 		inline Eigen::Matrix4d transformation() const { return m_transformation; }
 
 		//Setters and checks
@@ -105,7 +102,7 @@ namespace GeoDetection
 		inline void addScalarField(ScalarField::Ptr new_fields)
 		{
 			if (new_fields->size() == m_cloud->size()) { m_scalar_fields.push_back(new_fields); m_num_fields++; }
-			else { GD_ERROR("Scalar field size must agree with the cloud size"); }
+			else { GD_CORE_ERROR(":: Scalar field size must agree with the cloud size"); }
 		}
 
 		/** \brief Method for removing column of scalar fields
@@ -115,7 +112,7 @@ namespace GeoDetection
 		inline void deleteScalarField(int index = -1)
 		{
 			if (index != -1 || index < 0 || m_num_fields == 0 || index >(m_num_fields - 1)) 
-			{ GD_ERROR("Attempting to access a scalar field index that does not exist");  return; }
+			{ GD_CORE_ERROR(":: Attempting to access a scalar field index that does not exist");  return; }
 			if (index == -1) { index = m_num_fields - 1; }
 			m_scalar_fields.erase(m_scalar_fields.begin() + index);
 			m_num_fields--;
@@ -182,7 +179,7 @@ namespace GeoDetection
 		*/
 		void writeTransformation(const char* fname);
 		
-		void writeAsASCII(const char* fname, bool write_scalarfields, bool write_normals);
+		void writeAsASCII(const char* fname, bool write_normals = true, bool write_scalarfields = true);
 
 		void writeAsPCD(const char* fname);
 	};

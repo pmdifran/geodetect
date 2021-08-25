@@ -3,5 +3,5 @@
 
 namespace GeoDetection
 {
-	void segmentVegetation(GeoDetection::Cloud& geodetect, float rad);
+	void segmentVegetation(GeoDetection::Cloud& geodetect);
 }

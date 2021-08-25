@@ -280,10 +280,36 @@ namespace GeoDetection
 	}
 
 	//IN DEVELOPMENT
-	void Cloud::writeAsASCII(const char* fname, bool write_scalarfields, bool write_normals)
+	void Cloud::writeAsASCII(const char* fname, bool write_normals, bool write_scalarfields)
 	{
 		GD_TITLE("Exporting GeoDetection Cloud...");
 		auto start = GeoDetection::Time::getStart();
+
+		//Check for proper normals
+		if (write_normals)
+		{
+			if (m_normals->size() == 0)
+			{
+				GD_CORE_ERROR(":: Normals are nonexistent for the cloud and will not be written");
+				write_normals = false;
+			}
+			else if (m_normals->size() != m_cloud->size())
+			{
+				GD_CORE_ERROR(":: Normals of size {0} cannot be written alongside cloud of size {1}", 
+					m_normals->size(), m_cloud->size());
+				write_normals = false;
+			}
+		}
+
+		//Check for proper scalar fields
+		if (write_scalarfields)
+		{
+			if (m_num_fields < 1)
+			{
+				GD_CORE_ERROR(":: Cannot write scalar fields. No scalar fields have been added to the cloud.");
+				write_scalarfields = false;
+			}
+		}
 
 		static const auto BUFFER_SIZE = 16 * 1024;
 		char buf[BUFFER_SIZE + 1];
@@ -293,31 +319,60 @@ namespace GeoDetection
 
 		size_t i = 0;
 
+		//Once this works, spin into helper functions.
 		while (i < m_cloud->size()) {
-			size_t cx = 0;
-			size_t cx_increment = 0;
+			
+			size_t increment = 0; //number of chars written by latest call of snprintf
+			size_t total_increment = 0; //number of chars needed for the current i-th point.
+			size_t cx = 0; //number of chars to be written (can be larger than BUFFER_SIZE)
 
 			while (true)
 			{
-				cx_increment = snprintf(buf + cx, BUFFER_SIZE - cx, "%.8f %.8f %.8f\n", m_cloud->points[i].x,
+				//Print xyz to the buffer
+				increment = snprintf(buf + cx, BUFFER_SIZE - cx, "%.8f %.8f %.8f", m_cloud->points[i].x,
 					m_cloud->points[i].y, m_cloud->points[i].z);
+				cx += increment;
+				total_increment = increment; //total_increment is reset here.
 
-				cx += cx_increment;
-				i++;
-
-				if (cx >= BUFFER_SIZE) {
-					i--; //Last point is inbetween the buffer; redo at the beginning of new buffer.
-					break;
+				if (cx >= BUFFER_SIZE) { break; } //possible buffer overflow on next call of snprintf if this isn't checked.
+				
+				//Print normals to the buffer
+				if (write_normals)
+				{
+					increment = snprintf(buf + cx, BUFFER_SIZE - cx, " %.8f %.8f %.8f", m_normals->points[i].normal_x,
+						m_normals->points[i].normal_y, m_normals->points[i].normal_z);
+					cx += increment;
+					total_increment += increment;
+					if (cx >= BUFFER_SIZE) { break; }
 				}
 
+				//Print scalar fields to the buffer
+				if (write_scalarfields)
+				{
+					bool buffer_full = false;
+					for (size_t sf = 0; sf < m_num_fields; sf++)
+					{
+						increment = snprintf(buf + cx, BUFFER_SIZE - cx, " %.8f", (*m_scalar_fields[sf])[i]);
+						cx += increment;
+						total_increment += increment;
+						if (cx >= BUFFER_SIZE) { buffer_full = true;  break; }
+					}	
+					if (buffer_full) { break; }
+				}
+
+				cx += snprintf(buf + cx, BUFFER_SIZE - cx, "\n");
+				i++;
+
+				if (cx >= BUFFER_SIZE) { i--; break; }
+
 				if (i == m_cloud->size()) {
-					cx_increment = 0;
+					total_increment = 0;
 					break;
 				}
 
 			}
 
-			fstream.write(buf, cx - cx_increment);
+			fstream.write(buf, cx - total_increment);
 		}
 		fstream.close();
 
