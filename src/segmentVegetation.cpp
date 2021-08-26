@@ -44,23 +44,23 @@ namespace GeoDetection
 	}
 
 	void 
-	normalizeMinMax(std::vector<float>& data)
+	normalizeMinMax(GeoDetection::ScalarField fields)
 	{
-		const auto min = std::min_element(data.begin(), data.end()); //returns iterator
-		const auto max = std::max_element(data.begin(), data.end());
+		const auto min = std::min_element(fields.begin(), fields.end()); //returns iterator
+		const auto max = std::max_element(fields.begin(), fields.end());
 
-		const double range = *max - *min;
+		const float range = *max - *min;
 
 #pragma omp parallel for
-		for (int64_t i = 0; i < data.size(); i++)
+		for (int64_t i = 0; i < fields.size(); i++)
 		{
-			data[i] = (data[i] - *min) / range;
+			fields[i] = (fields[i] - *min) / range;
 		}
 	}
 
 	void
-	getVegetationScore(std::vector<float>& vegetation_scores, const float weight,
-						std::vector<float>& curvatures, std::vector<float>& densities)
+	getVegetationScore(GeoDetection::ScalarField vegetation_scores, const float weight,
+						GeoDetection::ScalarField curvatures, GeoDetection::ScalarField densities)
 
 	{
 		normalizeMinMax(curvatures);
@@ -81,9 +81,8 @@ namespace GeoDetection
 	{
 		int64_t cloud_size = geodetect.cloud()->size();
 
-		ScalarField::Ptr vegetation_scores(new ScalarField);
-		vegetation_scores->setName("Vegetation_Scores");
-		vegetation_scores->resize(cloud_size, 0); //0-init because we sum the weighted scores
+		//0-init because we sum the weighted scores
+		ScalarField vegetation_scores(cloud_size, 0, "Vegetation_Scores"); 
 
 		//Tree segmentation parameters
 		std::array<float, 6> curve_scale =   { 0.50, 1.00, 1.50, 2.00, 2.50, 3.00 };
@@ -107,7 +106,69 @@ namespace GeoDetection
 			std::vector<float> densities = getVolumetricDensities(geodetect, density_scale[i]);
 
 			//Calculate TREEZ index
-			getVegetationScore(*vegetation_scores, weights[i], curvatures, densities);
+			getVegetationScore(vegetation_scores, weights[i], curvatures, densities);
+		}
+
+		//Push ptr to vector to m_scalar_fields.
+		geodetect.addScalarField(vegetation_scores);
+	}
+
+	void segmentVegetationAveraging(GeoDetection::Cloud& geodetect)
+	{
+		int64_t cloud_size = geodetect.cloud()->size();
+
+		//0-init because we sum the weighted scores
+		ScalarField vegetation_scores(cloud_size, 0, "Vegetation_Scores");
+
+		//Tree segmentation parameters
+		std::array<float, 6> curve_scale = { 0.50, 1.00, 1.50, 2.00, 2.50, 3.00 };
+		std::array<float, 6> density_scale = { 1.25, 1.00, 0.75, 0.60, 0.45, 0.40 };
+		std::array<float, 6> weights = { 0.15, 0.15, 0.10, 0.10, 0.10, 0.30 };
+
+		if (weights.size() != curve_scale.size() || weights.size() != density_scale.size())
+		{
+			GD_ERROR("Vegetation segmentation multi-scale parameters must be the same size");
+			GD_WARN("Curvature scales: {0} | Density scales: {1} | Weights {2}",
+				curve_scale.size(), density_scale.size(), weights.size());
+		}
+
+		//Determine the features at minimum scale. All larger scales will take average WRT the minimum scale. 
+		float min_curve_scale = *(std::min_element(curve_scale.begin(), curve_scale.end()));
+		float min_density_scale = *(std::min_element(density_scale.begin(), density_scale.end()));
+
+		//Determine curvature at smallest scale 
+		pcl::PointCloud<pcl::Normal>::Ptr normals = geodetect.getNormals(min_curve_scale, false);
+
+		GeoDetection::ScalarField curvatures_minscale = NormalsToCurvature(normals);
+		normals = nullptr;
+
+		//Determine densities at smallest scale
+		GeoDetection::ScalarField densities_minscale = getVolumetricDensities(geodetect, min_density_scale);
+
+		//Compute features by averaging the minimum scale across a neighborhood. 
+		for (int i = 0; i < weights.size(); i++)
+		{
+			float c_scale = curve_scale[i];
+			float d_scale = density_scale[i];
+
+			GeoDetection::ScalarField* curvatures = &curvatures_minscale;
+			GeoDetection::ScalarField* densities = &densities_minscale;
+
+			//Determine averaged curvatures
+			if (c_scale != min_curve_scale) 
+			{ 
+				*curvatures = computeAverageFields(geodetect.cloud(), curvatures_minscale, 
+					geodetect.flanntree(), c_scale);
+			}
+
+			if (d_scale != min_density_scale)
+			{
+				*densities = computeAverageFields(geodetect.cloud(), densities_minscale,
+					geodetect.flanntree(), d_scale);
+			}
+
+			//Calculate TREEZ index
+			getVegetationScore(vegetation_scores, weights[i], *curvatures, *densities);
 		}
 
 		//Push ptr to vector to m_scalar_fields.

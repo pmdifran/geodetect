@@ -27,7 +27,7 @@ namespace GeoDetection
 
 		//Scalar Fields
 		int m_num_fields = 0;
-		std::vector<ScalarField::Ptr> m_scalar_fields;
+		std::vector<ScalarField> m_scalar_fields;
 
 		//PCL Data Structures
 		pcl::PointCloud<pcl::PointXYZ>::Ptr m_cloud;
@@ -77,13 +77,13 @@ namespace GeoDetection
 		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr const tree() const { return m_kdtree; }
 		inline pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr const flanntree() const { return m_kdtreeFLANN; }
 		inline pcl::PointCloud<pcl::Normal>::Ptr const normals() const { return m_normals; }
-		inline const std::vector <ScalarField::Ptr> scalarfields() const { return m_scalar_fields; }
+		inline const std::vector <ScalarField> scalarfields() const { return m_scalar_fields; }
 		inline Eigen::Matrix4d transformation() const { return m_transformation; }
 
 		//Setters and checks
 	public:
 		//Sets the cloud to a new pcl::PointCloud, updates the KdTrees, and clears the normals. 
-		inline void setScalarFields(std::vector<ScalarField::Ptr> sf) { std::copy(sf.begin(), sf.end(), m_scalar_fields.begin()); }
+		inline void setScalarFields(std::vector<ScalarField> sf) { std::copy(sf.begin(), sf.end(), m_scalar_fields.begin()); }
 		inline void setCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) { m_cloud = std::move(cloud); getKdTrees(); m_normals->clear(); }
 		inline void setNormals(pcl::PointCloud<pcl::Normal>::Ptr& normals) { m_normals = std::move(normals); }
 		inline void setView(float x, float y, float z) { m_view[0] = x; m_view[1] = y; m_view[2] = z; }
@@ -98,9 +98,9 @@ namespace GeoDetection
 		* \param[in] new_fields: float vector which should be the same length as # of points (this is checked for).
 		* \return Internal: m_scalar_fields is modified to include an additional pointer to the fields.
 		*/
-		inline void addScalarField(ScalarField::Ptr new_fields)
+		inline void addScalarField(ScalarField new_fields)
 		{
-			if (new_fields->size() == m_cloud->size()) { m_scalar_fields.push_back(new_fields); m_num_fields++; }
+			if (new_fields.size() == m_cloud->size()) { m_scalar_fields.push_back(new_fields); m_num_fields++; }
 			else { GD_CORE_ERROR(":: Scalar field size must agree with the cloud size"); }
 		}
 
@@ -110,12 +110,17 @@ namespace GeoDetection
 		*/
 		inline void deleteScalarField(int index = -1)
 		{
-			if (index != -1 || index < 0 || m_num_fields == 0 || index >(m_num_fields - 1)) 
-			{ GD_CORE_ERROR(":: Attempting to access a scalar field index that does not exist");  return; }
+			if (index != -1 || index < 0 || m_num_fields == 0 || index >(m_num_fields - 1))
+			{
+				GD_CORE_ERROR(":: Attempting to access a scalar field index that does not exist");  return;
+			}
 			if (index == -1) { index = m_num_fields - 1; }
 			m_scalar_fields.erase(m_scalar_fields.begin() + index);
 			m_num_fields--;
 		}
+
+		/** \brief Method for averaging scalar fields within a defined search radius.*/
+		void averageScalarFields(float radius, int index);
 
 		void getKdTrees();
 
@@ -125,6 +130,9 @@ namespace GeoDetection
 		* \return shared pointer to the computed normals.
 		*/
 		pcl::PointCloud<pcl::Normal>::Ptr getNormals(float nrad, bool set_m_normals = true);
+
+		/** \brief Method for averaging normals within a defined search radius.*/
+		void averageNormals(float radius);
 
 		/** \brief Method for computing the local point cloud resolution (i.e. spacing).
 		* \param[in] k: the number of neighbors to use for determining local resolution (default=2).
@@ -151,7 +159,7 @@ namespace GeoDetection
 		*/
 		pcl::PointCloud<pcl::PointXYZ>::Ptr getKeyPoints();
 
-		/** \brief Method for computing fast point feature histograms 
+		/** \brief Method for computing fast point feature histograms
 		* \param[in] shared pointer to a pcl point cloud containing keypoints
 		*/
 		pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints);
@@ -177,7 +185,7 @@ namespace GeoDetection
 		* \param[in] fname: Output file path/name.
 		*/
 		void writeTransformation(const char* fname);
-		
+
 		void writeAsASCII(const char* fname, bool write_normals = true, bool write_scalarfields = true);
 
 		void writeAsPCD(const char* fname);
@@ -185,3 +193,21 @@ namespace GeoDetection
 
 }
 
+//Abstract functions / helpers
+namespace GeoDetection
+{
+		
+	//Average-out normals around a given radius of core points. For entire cloud: set corepoints equal to cloud.
+	pcl::PointCloud<pcl::Normal>::Ptr
+		computeAverageNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr const cloud,
+			const pcl::PointCloud<pcl::Normal>::Ptr const normals,
+			const pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr const tree,
+			float radius,
+			pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints = nullptr);
+
+	//Average-out scalar fields around a given radius of core points. For entire cloud: set corepoints equal to cloud.
+	ScalarField
+		computeAverageFields(const pcl::PointCloud<pcl::PointXYZ>::Ptr const cloud, ScalarField fields,
+			pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr tree, float radius,
+			pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints = nullptr);
+}
