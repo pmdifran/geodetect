@@ -29,18 +29,38 @@
 
 namespace GeoDetection
 {
-	void Cloud::averageScalarFields(float radius, int field_index)
+	void Cloud::averageScalarFields(float radius, int field_index /* = -1 */)
 	{
+		//Set whether to average all of the scalar fields
+		bool average_all = false;
+		if (field_index == -1) { average_all = true; }
+
 		//Check for correct inputs
 		if (m_num_fields == 0) { GD_CORE_ERROR(":: There is no scalar field to average"); return; }
 		if (field_index > m_num_fields - 1) { GD_CORE_ERROR(":: Invalid scalar field index accessed."); return; }
 
 		//Average scalarfields as new fields.
-		GeoDetection::ScalarField averaged_fields;
-		averaged_fields = computeAverageFields(m_cloud, m_scalar_fields[field_index], m_kdtreeFLANN, radius);
+		if (!average_all)
+		{
+			GD_CORE_TRACE(":: Averaging scalar field index: {0} with name: {1}", field_index, m_scalar_fields[field_index].name);
+			GeoDetection::ScalarField averaged_fields;
+			averaged_fields = computeAverageFields(m_cloud, m_scalar_fields[field_index], m_kdtreeFLANN, radius);
 
-		//Reassign pointer
-		m_scalar_fields[field_index] = averaged_fields;
+			m_scalar_fields[field_index] = std::move(averaged_fields);
+		}
+
+		else
+		{
+			for (int i = 0; i < m_num_fields; i++)
+			{
+				GD_CORE_TRACE(":: Averaging scalar field index: {0} with name: {1}", i, m_scalar_fields[i].name);
+				GeoDetection::ScalarField averaged_fields;
+				averaged_fields = computeAverageFields(m_cloud, m_scalar_fields[field_index], m_kdtreeFLANN, radius);
+				m_scalar_fields[i] = std::move(averaged_fields);
+			}
+			GD_CORE_TRACE(":: All fields averaged");
+		}
+
 	}
 
 	void
@@ -129,8 +149,8 @@ namespace GeoDetection
 		m_normals = computeAverageNormals(m_cloud, m_normals, m_kdtreeFLANN, radius);
 	}
 
-	void
-		Cloud::voxelDownSample(float voxel_size)
+	pcl::PointCloud<pcl::PointXYZ>::Ptr
+		Cloud::getVoxelDownSample(float voxel_size)
 	{
 		GD_CORE_TRACE(":: Creating downsampled cloud with voxels...\
 			\n--> voxel filter size: {0}", voxel_size);
@@ -148,23 +168,22 @@ namespace GeoDetection
 		GD_CORE_WARN("--> Downsample time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
 
-		double len = voxel_size / 2;
-		double rad = sqrt(pow(len, 2) * 3);
-
-		if (this->hasNormals())
-		{
-
-		}
-
-		if (this->hasScalarFields())
-		{
-			pcl::PointCloud<pcl::PointXYZ>::Ptr scalar_fields_down(new pcl::PointCloud<pcl::PointXYZ>);
-			scalar_fields_down->points.reserve(cloud_down->size());
-		}
+		return cloud_down;
 	}
 
-	void
-		Cloud::distanceDownSample(float distance)
+	void Cloud::voxelDownSample(float voxel_size)
+	{
+		m_cloud = getVoxelDownSample(voxel_size);
+		this->getKdTrees();
+
+		double averaging_radius = sqrt(pow(voxel_size/2, 2) * 3); //averaging radius relative to the voxel size.
+
+		if (this->hasNormals()) { this->averageNormals(averaging_radius); }
+		if (this->hasScalarFields()) { this->averageScalarFields(averaging_radius); }
+	}
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr
+		Cloud::getDistanceDownSample(float distance)
 	{
 		GD_CORE_TRACE(":: Subsampling cloud by distance...\
 			\n--> Distance: {0}", distance);
@@ -208,6 +227,17 @@ namespace GeoDetection
 		GD_CORE_WARN("--> Downsample time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
 
+		return cloud_down;
+
+	}
+
+	void Cloud::distanceDownSample(float distance)
+	{
+		GD_CORE_TITLE("Subsampling GeoDetection Cloud");
+		m_cloud = this->getDistanceDownSample(distance);
+		this->getKdTrees();
+		if (this->hasNormals()) { this->averageNormals(distance); }
+		if (this->hasScalarFields()) { this->averageScalarFields(distance); }
 	}
 
 	void
@@ -317,7 +347,7 @@ namespace GeoDetection
 		auto start = GeoDetection::Time::getStart();
 
 		//Check for proper normals
-		if (this->hasNormals())
+		if (!this->hasNormals())
 		{
 			GD_CORE_ERROR(":: Normals of size {0} cannot be written alongside cloud of size {1}",
 				m_normals->size(), m_cloud->size());
@@ -325,7 +355,7 @@ namespace GeoDetection
 		}
 
 		//Check for proper scalar fields
-		if (this->hasScalarFields())
+		if (!this->hasScalarFields())
 		{
 			GD_CORE_ERROR(":: Cannot write scalar fields. No scalar fields have been added to the cloud.");
 			write_scalarfields = false;
@@ -411,20 +441,19 @@ namespace GeoDetection
 
 		//Average-out normals around a given radius of core points. For entire cloud: set corepoints equal to cloud.
 	pcl::PointCloud<pcl::Normal>::Ptr
-		computeAverageNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr const cloud,
-			const pcl::PointCloud<pcl::Normal>::Ptr const normals,
-			const pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr const tree,
+		computeAverageNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+			const pcl::PointCloud<pcl::Normal>::Ptr normals,
+			const pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr tree,
 			float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints /* = nullptr */)
 	{
 		//Check for correct inputs
 		if (radius <= 0) { GD_CORE_ERROR(":: Invalid normal averaging radius inputted"); return nullptr; }
 		if (tree->getInputCloud()->size() != cloud->size()) { GD_CORE_ERROR(":: KdTree pointer disagrees with the input cloud."); return nullptr; }
-		if (corepoints->size() == 0) { GD_CORE_WARN(":: Input core points are empty."); return nullptr; }
+		if (corepoints != nullptr && corepoints->size() == 0) { GD_CORE_WARN(":: Input core points are empty."); return nullptr; }
 
 		if (cloud->size() != normals->size())
 		{
 			GD_CORE_ERROR(":: Cannot average out normals. Input size does not agree with the cloud.");
-			return nullptr;
 		}
 
 		//Average normals as new pointcloud
@@ -464,13 +493,15 @@ namespace GeoDetection
 	}
 
 	ScalarField
-		computeAverageFields(const pcl::PointCloud<pcl::PointXYZ>::Ptr const cloud, ScalarField fields,
+		computeAverageFields(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, ScalarField fields,
 			pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr tree, float radius,
 			pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints /* = nullptr */)
 	{
+		GD_CORE_TRACE(":: Computing average fields with radius: {0}", radius);
+
 		if (radius <= 0) { GD_CORE_ERROR(":: Invalid scalar field averaging radius inputted"); }
 		if (tree->getInputCloud()->size() != cloud->size()) { GD_CORE_ERROR(":: KdTree pointer disagrees with the input cloud."); }
-		if (corepoints->size() == 0) { GD_CORE_WARN(":: Input core points are empty."); }
+		if (corepoints != nullptr && corepoints->size() == 0) { GD_CORE_WARN(":: Input core points are empty."); }
 		if (cloud->size() != fields.size()) { GD_CORE_ERROR(":: Cannot average out scalars. Input size does not agree with the cloud.");}
 
 		//If no corepoints specified, assume to use the entire cloud.

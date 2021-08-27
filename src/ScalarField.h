@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <memory>
 
 namespace GeoDetection
 {
@@ -10,7 +11,6 @@ namespace GeoDetection
 		const char* name = "Default";
 		std::vector<float> data;
 
-	public:
 		//Constructors
 		ScalarField() = default;
 
@@ -39,6 +39,7 @@ namespace GeoDetection
 		ScalarField& operator=(const ScalarField&) = default;
 		ScalarField& operator=(ScalarField&& rhs) = default;
 
+		//Assignment Operators with std::vector
 		ScalarField& operator=(std::vector<float>& vec)
 		{
 			data = vec;
@@ -57,9 +58,15 @@ namespace GeoDetection
 			return data[index];
 		}
 
+		//Getters 
 	public:
 		size_t size() { return data.size(); }
 		std::vector<float>::iterator begin() { return data.begin(); }
 		std::vector<float>::iterator end() { return data.end(); }
+
+		//Modifyers
+	public:
+		//Modify scalar field data with min-max normalization
+		void normalizeMinMax();
 	};
 }

@@ -43,33 +43,18 @@ namespace GeoDetection
 
 	}
 
-	void 
-	normalizeMinMax(GeoDetection::ScalarField fields)
-	{
-		const auto min = std::min_element(fields.begin(), fields.end()); //returns iterator
-		const auto max = std::max_element(fields.begin(), fields.end());
-
-		const float range = *max - *min;
-
-#pragma omp parallel for
-		for (int64_t i = 0; i < fields.size(); i++)
-		{
-			fields[i] = (fields[i] - *min) / range;
-		}
-	}
-
 	void
-	getVegetationScore(GeoDetection::ScalarField vegetation_scores, const float weight,
-						GeoDetection::ScalarField curvatures, GeoDetection::ScalarField densities)
+	getVegetationScore(GeoDetection::ScalarField& vegetation_scores, const float weight,
+						GeoDetection::ScalarField& curvatures, GeoDetection::ScalarField& densities)
 
 	{
-		normalizeMinMax(curvatures);
-		normalizeMinMax(densities);
+		curvatures.normalizeMinMax();
+		densities.normalizeMinMax();
 
 #pragma omp parallel for
 		for (int64_t i = 0; i < vegetation_scores.size(); i++)
 		{
-			float score = weight * (curvatures[i] - densities[i]);
+			float score = weight * abs((curvatures[i] - densities[i]));
 			vegetation_scores[i] = vegetation_scores[i] + score; //scores can increase with each set of scales.
 		}
 
@@ -100,10 +85,10 @@ namespace GeoDetection
 		{
 			//Get normal-rate-of change curvature
 			auto normals = geodetect.getNormals(curve_scale[i], false);
-			std::vector<float> curvatures = NormalsToCurvature(normals);
+			GeoDetection::ScalarField curvatures = NormalsToCurvature(normals);
 			
 			//Get volumetric point density
-			std::vector<float> densities = getVolumetricDensities(geodetect, density_scale[i]);
+			GeoDetection::ScalarField densities = getVolumetricDensities(geodetect, density_scale[i]);
 
 			//Calculate TREEZ index
 			getVegetationScore(vegetation_scores, weights[i], curvatures, densities);

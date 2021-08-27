@@ -4,4 +4,6 @@
 namespace GeoDetection
 {
 	void segmentVegetation(GeoDetection::Cloud& geodetect);
+
+	void segmentVegetationAveraging(GeoDetection::Cloud& geodetect);
 }

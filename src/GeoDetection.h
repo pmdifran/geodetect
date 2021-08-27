@@ -89,7 +89,7 @@ namespace GeoDetection
 		inline void setView(float x, float y, float z) { m_view[0] = x; m_view[1] = y; m_view[2] = z; }
 		void setScale(float scale) { m_scale = scale; }
 
-		inline bool hasNormals() { return  m_normals->size() == m_cloud->size() && m_normals->size() != 0; }
+		inline bool hasNormals() { return m_normals->size() > 0; }
 		inline bool hasScalarFields() { return m_num_fields > 0; }
 
 		//Methods
@@ -98,9 +98,9 @@ namespace GeoDetection
 		* \param[in] new_fields: float vector which should be the same length as # of points (this is checked for).
 		* \return Internal: m_scalar_fields is modified to include an additional pointer to the fields.
 		*/
-		inline void addScalarField(ScalarField new_fields)
+		inline void addScalarField(ScalarField& new_fields)
 		{
-			if (new_fields.size() == m_cloud->size()) { m_scalar_fields.push_back(new_fields); m_num_fields++; }
+			if (new_fields.size() == m_cloud->size()) { m_scalar_fields.push_back(std::move(new_fields)); m_num_fields++; }
 			else { GD_CORE_ERROR(":: Scalar field size must agree with the cloud size"); }
 		}
 
@@ -120,7 +120,7 @@ namespace GeoDetection
 		}
 
 		/** \brief Method for averaging scalar fields within a defined search radius.*/
-		void averageScalarFields(float radius, int index);
+		void averageScalarFields(float radius, int index = -1);
 
 		void getKdTrees();
 
@@ -146,11 +146,25 @@ namespace GeoDetection
 		* \param[in] voxel_size: cubic voxel size used to create average-point locations.
 		* \return Shared pointer to the subsampeld cloud.
 		*/
+		pcl::PointCloud<pcl::PointXYZ>::Ptr getVoxelDownSample(float voxel_size);
+
+
+		/** \brief Similar to getVoxelDownsample, but directly modifies member m_cloud, resets KdTrees, 
+		*    and averages normals/scalar fields.
+		* \param[in] distance: minimum distance between points
+		* \return Internal: modifies m_cloud, KdTrees, Normals, Scalar Fields
+		*/
 		void voxelDownSample(float voxel_size);
 
 		/** \brief Method for generating a new, subsampled cloud, using a minimum distance (similar to CloudCompare).
 		* \param[in] distance: minimum distance between points
 		* \return Shared pointer to the subsampled cloud.
+		*/
+		pcl::PointCloud<pcl::PointXYZ>::Ptr getDistanceDownSample(float distance);
+
+		/** \brief Similar to getDistanceDownsample, but directly modifies member m_cloud and resets normals/scalar fields.
+		* \param[in] distance: minimum distance between points
+		* \return Internal: Internal: modifies m_cloud, KdTrees, Normals, Scalar Fields
 		*/
 		void distanceDownSample(float distance);
 
@@ -199,15 +213,15 @@ namespace GeoDetection
 		
 	//Average-out normals around a given radius of core points. For entire cloud: set corepoints equal to cloud.
 	pcl::PointCloud<pcl::Normal>::Ptr
-		computeAverageNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr const cloud,
-			const pcl::PointCloud<pcl::Normal>::Ptr const normals,
-			const pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr const tree,
+		computeAverageNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+			const pcl::PointCloud<pcl::Normal>::Ptr normals,
+			const pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr tree,
 			float radius,
 			pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints = nullptr);
 
 	//Average-out scalar fields around a given radius of core points. For entire cloud: set corepoints equal to cloud.
 	ScalarField
-		computeAverageFields(const pcl::PointCloud<pcl::PointXYZ>::Ptr const cloud, ScalarField fields,
+		computeAverageFields(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, ScalarField fields,
 			pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr tree, float radius,
 			pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints = nullptr);
 }

@@ -15,11 +15,13 @@ int main (int argc, char* argv[])
 	GeoDetection::Log::Init();
 	auto start = GeoDetection::Time::getStart();
 
-	const char* source_file = "test_source.txt";
+	const char* source_file = "treez_test.txt";
 	GeoDetection::Cloud source(GeoDetection::PCLreadASCIIxyz(source_file), "Source");
 	//GeoDetection::Cloud source_down(source.getDistanceDownSample(0.15));
 
-	GeoDetection::segmentVegetation(source);
+	source.distanceDownSample(0.05);
+		
+	GeoDetection::segmentVegetationAveraging(source);
 	source.writeAsASCII("test_out.txt");
 
 	//const char* source_file = "test_source.txt";
