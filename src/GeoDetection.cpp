@@ -29,7 +29,7 @@
 
 namespace GeoDetection
 {
-	void Cloud::averageScalarFields(float radius, int field_index /* = -1 */)
+	void Cloud::averageScalarFields(const float radius, int field_index /* = -1 */)
 	{
 		//Set whether to average all of the scalar fields
 		bool average_all = false;
@@ -76,7 +76,7 @@ namespace GeoDetection
 			GeoDetection::Time::getDuration(start));
 	}
 
-	std::vector<float> Cloud::getResolution(int num_neighbors)
+	std::vector<float> Cloud::getResolution(const int num_neighbors)
 	{
 		GD_CORE_TRACE(":: Computing cloud resolution...");
 		GD_CORE_TRACE("--> k-nearest neighbors used for distances: {0}", num_neighbors);
@@ -116,7 +116,7 @@ namespace GeoDetection
 	}
 
 	pcl::PointCloud<pcl::Normal>::Ptr
-		Cloud::getNormals(float nrad, bool set_m_normals)
+		Cloud::getNormals(const float nrad, const bool set_m_normals)
 	{
 		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Normal scale {0}", nrad);
 		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
@@ -144,13 +144,13 @@ namespace GeoDetection
 	}
 
 	void
-		Cloud::averageNormals(float radius)
+		Cloud::averageNormals(const float radius)
 	{
 		m_normals = computeAverageNormals(m_cloud, m_normals, m_kdtreeFLANN, radius);
 	}
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr
-		Cloud::getVoxelDownSample(float voxel_size)
+		Cloud::getVoxelDownSample(const float voxel_size)
 	{
 		GD_CORE_TRACE(":: Creating downsampled cloud with voxels...\
 			\n--> voxel filter size: {0}", voxel_size);
@@ -171,7 +171,7 @@ namespace GeoDetection
 		return cloud_down;
 	}
 
-	void Cloud::voxelDownSample(float voxel_size)
+	void Cloud::voxelDownSample(const float voxel_size)
 	{
 		m_cloud = getVoxelDownSample(voxel_size);
 		this->getKdTrees();
@@ -183,7 +183,7 @@ namespace GeoDetection
 	}
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr
-		Cloud::getDistanceDownSample(float distance)
+		Cloud::getDistanceDownSample(const float distance)
 	{
 		GD_CORE_TRACE(":: Subsampling cloud by distance...\
 			\n--> Distance: {0}", distance);
@@ -231,7 +231,7 @@ namespace GeoDetection
 
 	}
 
-	void Cloud::distanceDownSample(float distance)
+	void Cloud::distanceDownSample(const float distance)
 	{
 		GD_CORE_TITLE("Subsampling GeoDetection Cloud");
 		m_cloud = this->getDistanceDownSample(distance);
@@ -341,7 +341,7 @@ namespace GeoDetection
 	}
 
 	//IN DEVELOPMENT
-	void Cloud::writeAsASCII(const char* fname, bool write_normals, bool write_scalarfields)
+	void Cloud::writeAsASCII(const char* fname, bool write_normals /* = true */, bool write_scalarfields /* = true */)
 	{
 		GD_TITLE("Exporting GeoDetection Cloud...");
 		auto start = GeoDetection::Time::getStart();

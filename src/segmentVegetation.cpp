@@ -6,7 +6,7 @@ namespace GeoDetection
 {
 	//Helpers
 	std::vector<float> 
-	NormalsToCurvature(pcl::PointCloud<pcl::Normal>::Ptr normals)
+	NormalsToCurvature(const pcl::PointCloud<pcl::Normal>::Ptr normals)
 	{
 		std::vector<float> curvatures(normals->size());
 
@@ -19,7 +19,7 @@ namespace GeoDetection
 	}
 
 	std::vector<float> 
-	getVolumetricDensities(GeoDetection::Cloud geodetect, float rad)
+	getVolumetricDensities(const GeoDetection::Cloud geodetect, const float rad)
 	{
 		auto cloud = geodetect.cloud();
 		auto flanntree = geodetect.flanntree();
