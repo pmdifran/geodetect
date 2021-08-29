@@ -14,6 +14,11 @@ namespace GeoDetection
 		for (int64_t i = 0; i < normals->size(); i++)
 		{
 			curvatures[i] = normals->points[i].curvature;
+
+			if (isnan(curvatures[i]))
+			{
+				GD_CORE_ERROR("NaN Detected at index: {0}", i);
+			}
 		}
 		return curvatures;
 	}
@@ -54,7 +59,7 @@ namespace GeoDetection
 #pragma omp parallel for
 		for (int64_t i = 0; i < vegetation_scores.size(); i++)
 		{
-			float score = weight * abs((curvatures[i] - densities[i]));
+			float score = weight * (curvatures[i] - densities[i]);
 			vegetation_scores[i] = vegetation_scores[i] + score; //scores can increase with each set of scales.
 		}
 
@@ -84,10 +89,11 @@ namespace GeoDetection
 		for (int i = 0; i < weights.size(); i++)
 		{
 			//Get normal-rate-of change curvature
-			auto normals = geodetect.getNormals(curve_scale[i], false);
+			auto normals = geodetect.getNormalsRadiusSearch(curve_scale[i], false);
 			GeoDetection::ScalarField curvatures = NormalsToCurvature(normals);
 			
 			//Get volumetric point density
+			//Provide an Optimization which looks for all scales. Same neighborhoods keep getting used. Just search the largest, then take subsets.
 			GeoDetection::ScalarField densities = getVolumetricDensities(geodetect, density_scale[i]);
 
 			//Calculate TREEZ index
@@ -117,18 +123,10 @@ namespace GeoDetection
 				curve_scale.size(), density_scale.size(), weights.size());
 		}
 
-		//Determine the features at minimum scale. All larger scales will take average WRT the minimum scale. 
-		float min_curve_scale = *(std::min_element(curve_scale.begin(), curve_scale.end()));
-		float min_density_scale = *(std::min_element(density_scale.begin(), density_scale.end()));
-
-		//Determine curvature at smallest scale 
-		pcl::PointCloud<pcl::Normal>::Ptr normals = geodetect.getNormals(min_curve_scale, false);
-
+		//Determine curvature at a small enough scale 
+		pcl::PointCloud<pcl::Normal>::Ptr normals = geodetect.getNormalsKSearch(10, false);
 		GeoDetection::ScalarField curvatures_minscale = NormalsToCurvature(normals);
 		normals = nullptr;
-
-		//Determine densities at smallest scale
-		GeoDetection::ScalarField densities_minscale = getVolumetricDensities(geodetect, min_density_scale);
 
 		//Compute features by averaging the minimum scale across a neighborhood. 
 		for (int i = 0; i < weights.size(); i++)
@@ -136,24 +134,12 @@ namespace GeoDetection
 			float c_scale = curve_scale[i];
 			float d_scale = density_scale[i];
 
-			GeoDetection::ScalarField* curvatures = &curvatures_minscale;
-			GeoDetection::ScalarField* densities = &densities_minscale;
-
 			//Determine averaged curvatures
-			if (c_scale != min_curve_scale) 
-			{ 
-				*curvatures = computeAverageFields(geodetect.cloud(), curvatures_minscale, 
-					geodetect.flanntree(), c_scale);
-			}
-
-			if (d_scale != min_density_scale)
-			{
-				*densities = computeAverageFields(geodetect.cloud(), densities_minscale,
-					geodetect.flanntree(), d_scale);
-			}
+			GeoDetection::ScalarField curvatures = computeAverageFields(geodetect.cloud(), curvatures_minscale, geodetect.flanntree(), c_scale);
+			GeoDetection::ScalarField densities = getVolumetricDensities(geodetect, d_scale);
 
 			//Calculate TREEZ index
-			getVegetationScore(vegetation_scores, weights[i], *curvatures, *densities);
+			getVegetationScore(vegetation_scores, weights[i], curvatures, densities);
 		}
 
 		//Push ptr to vector to m_scalar_fields.

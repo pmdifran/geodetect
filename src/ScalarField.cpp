@@ -12,7 +12,7 @@ namespace GeoDetection
 		const float range = *max - *min;
 
 #pragma omp parallel for
-		for (size_t i = 0; i < data.size(); i++)
+		for (int64_t i = 0; i < (int64_t)data.size(); i++)
 		{
 			data[i] = (data[i] - *min) / range;
 		}

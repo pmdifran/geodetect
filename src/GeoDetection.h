@@ -125,11 +125,18 @@ namespace GeoDetection
 		void getKdTrees();
 
 		/** \brief Method for computing normals. View point is set as 0,0,0 as default unless set with setView
-		* \param[in] nrad: Radius for spherical neighbour search used for principle component analysis.
+		* \param[in] radius: Radius for spherical neighbour search used for principle component analysis.
 		* \param[in] set_m_normals: Whether to set member m_normals to the result (default = true).
 		* \return shared pointer to the computed normals.
 		*/
-		pcl::PointCloud<pcl::Normal>::Ptr getNormals(const float nrad, const bool set_m_normals = true);
+		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearch(const float radius, const bool set_m_normals = true);
+
+		/** \brief Method for computing normals. View point is set as 0,0,0 as default unless set with setView
+		* \param[in] k: # neighbors to use for normal estimation
+		* \param[in] set_m_normals: Whether to set member m_normals to the result (default = true).
+		* \return shared pointer to the computed normals.
+		*/
+		pcl::PointCloud<pcl::Normal>::Ptr getNormalsKSearch(const int k, const bool set_m_normals = true);
 
 		/** \brief Method for averaging normals within a defined search radius.*/
 		void averageNormals(const float radius);

@@ -19,7 +19,7 @@ int main (int argc, char* argv[])
 	GeoDetection::Cloud source(GeoDetection::PCLreadASCIIxyz(source_file), "Source");
 	//GeoDetection::Cloud source_down(source.getDistanceDownSample(0.15));
 
-	source.distanceDownSample(0.05);
+	//source.distanceDownSample(0.1);
 		
 	GeoDetection::segmentVegetationAveraging(source);
 	source.writeAsASCII("test_out.txt");

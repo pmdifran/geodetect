@@ -116,9 +116,9 @@ namespace GeoDetection
 	}
 
 	pcl::PointCloud<pcl::Normal>::Ptr
-		Cloud::getNormals(const float nrad, const bool set_m_normals)
+		Cloud::getNormalsRadiusSearch(const float radius, const bool set_m_normals)
 	{
-		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Normal scale {0}", nrad);
+		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Normal scale {0}", radius);
 		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
 			omp_get_num_procs());
 		auto start = GeoDetection::Time::getStart();
@@ -131,7 +131,35 @@ namespace GeoDetection
 		calcnormals.setInputCloud(m_cloud);
 		calcnormals.setSearchMethod(m_kdtree);
 		calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
-		calcnormals.setRadiusSearch(nrad);
+		calcnormals.setRadiusSearch(radius);
+		calcnormals.setNumberOfThreads(omp_get_num_procs());
+		calcnormals.compute(*normals);
+
+		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
+			GeoDetection::Time::getDuration(start));
+
+		if (set_m_normals) { m_normals = normals; }
+
+		return normals;
+	}
+
+	pcl::PointCloud<pcl::Normal>::Ptr
+		Cloud::getNormalsKSearch(const int k, const bool set_m_normals)
+	{
+		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Number of neighbors: {0}", k);
+		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
+			omp_get_num_procs());
+		auto start = GeoDetection::Time::getStart();
+
+		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+		normals->reserve(m_cloud->size());
+
+		pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> calcnormals;
+
+		calcnormals.setInputCloud(m_cloud);
+		calcnormals.setSearchMethod(m_kdtree);
+		calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
+		calcnormals.setKSearch(k);
 		calcnormals.setNumberOfThreads(omp_get_num_procs());
 		calcnormals.compute(*normals);
 

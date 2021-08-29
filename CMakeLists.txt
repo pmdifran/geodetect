@@ -15,6 +15,7 @@ set(SOURCE
     ${GeoDetection_source}/PCLreadASCII.cpp
     ${GeoDetection_source}/log.cpp
     ${GeoDetection_source}/segmentVegetation.cpp
+    ${GeoDetection_source}/ScalarField.cpp
 )
 
 set(HEADERS
