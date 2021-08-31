@@ -53,16 +53,15 @@ namespace GeoDetection
 		}
 
 		//Vector Access Operators
-		float& operator[](const size_t index)
-		{
-			return data[index];
-		}
+		float& operator[](const size_t index) { return data[index]; }
+
+		const float& operator[](const size_t index) const { return data[index];}
 
 		//Getters 
 	public:
-		size_t size() { return data.size(); }
-		std::vector<float>::iterator begin() { return data.begin(); }
-		std::vector<float>::iterator end() { return data.end(); }
+		const size_t size() const { return data.size(); }
+		const std::vector<float>::const_iterator begin() const { return data.begin(); }
+		const std::vector<float>::const_iterator end() const { return data.end(); }
 
 		//Modifyers
 	public:
