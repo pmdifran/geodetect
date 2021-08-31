@@ -70,7 +70,10 @@ namespace GeoDetection
 		auto start = GeoDetection::Time::getStart();
 
 		m_kdtreeFLANN->setInputCloud(m_cloud);
+		m_kdtreeFLANN->setSortedResults(true); //explicit --> should be true by default construction
+
 		m_kdtree->setInputCloud(m_cloud);
+		m_kdtree->setSortedResults(true);
 
 		GD_CORE_WARN("--> KdTree construction time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
