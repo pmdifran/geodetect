@@ -79,6 +79,7 @@ namespace GeoDetection
 		inline pcl::PointCloud<pcl::Normal>::Ptr const normals() const { return m_normals; }
 		inline const std::vector <ScalarField> scalarfields() const { return m_scalar_fields; }
 		inline Eigen::Matrix4d transformation() const { return m_transformation; }
+		inline double resolution() const { return m_resolution; }
 
 		//Setters and checks
 	public:
