@@ -59,7 +59,7 @@ namespace GeoDetection
 			GD_CORE_TITLE("GeoDetection Cloud Construction");
 			GD_CORE_TRACE("Creating GeoDetection Cloud Object: '{0}' with {1} points", m_name, m_cloud->size());
 			getKdTrees();
-			GD_CORE_INFO("--> GeoDetection Cloud Created");
+			GD_CORE_INFO("--> GeoDetection Cloud Created\n");
 		}
 
 		Cloud(const Cloud&) = default;
@@ -228,7 +228,7 @@ namespace GeoDetection
 
 	//Average-out scalar fields around a given radius of core points. For entire cloud: set corepoints equal to cloud.
 	ScalarField
-		computeAverageFields(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, ScalarField fields,
+		computeAverageFields(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, const ScalarField& fields,
 			pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr tree, float radius,
 			pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints = nullptr);
 }

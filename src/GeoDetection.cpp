@@ -524,7 +524,7 @@ namespace GeoDetection
 	}
 
 	ScalarField
-		computeAverageFields(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, ScalarField fields,
+		computeAverageFields(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, const ScalarField& fields,
 			pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr tree, float radius,
 			pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints /* = nullptr */)
 	{
