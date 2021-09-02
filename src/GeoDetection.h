@@ -1,6 +1,6 @@
 #pragma once
-#include "log.h"
 #include "ScalarField.h"
+#include "log.h"
 
 //PCL core
 #include <pcl/point_types.h>
@@ -208,27 +208,6 @@ namespace GeoDetection
 		void writeTransformation(const char* fname);
 
 		void writeAsASCII(const char* fname, bool write_normals = true, bool write_scalarfields = true);
-
-		void writeAsPCD(const char* fname);
 	};
 
-}
-
-//Abstract functions / helpers
-namespace GeoDetection
-{
-		
-	//Average-out normals around a given radius of core points. For entire cloud: set corepoints equal to cloud.
-	pcl::PointCloud<pcl::Normal>::Ptr
-		computeAverageNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
-			const pcl::PointCloud<pcl::Normal>::Ptr normals,
-			const pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr tree,
-			float radius,
-			pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints = nullptr);
-
-	//Average-out scalar fields around a given radius of core points. For entire cloud: set corepoints equal to cloud.
-	ScalarField
-		computeAverageFields(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, const ScalarField& fields,
-			pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr tree, float radius,
-			pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints = nullptr);
 }
