@@ -1,70 +1,9 @@
 #include "segmentVegetation.h"
+#include "features.h"
 #include <omp.h>
-#include <pcl/features/principal_curvatures.h>
 
 namespace GeoDetection
 {
-	//Helpers
-	std::vector<float> 
-	NormalsToCurvature(const pcl::PointCloud<pcl::Normal>::Ptr normals)
-	{
-		std::vector<float> curvatures(normals->size());
-
-#pragma omp parallel for
-		for (int64_t i = 0; i < normals->size(); i++)
-		{
-			curvatures[i] = normals->points[i].curvature;
-
-			if (isnan(curvatures[i]))
-			{
-				GD_CORE_ERROR("NaN Detected at index: {0}", i);
-			}
-		}
-		return curvatures;
-	}
-
-	std::vector<float> 
-	getVolumetricDensities(const GeoDetection::Cloud geodetect, const float rad)
-	{
-		auto cloud = geodetect.cloud();
-		auto flanntree = geodetect.flanntree();
-		auto normals = geodetect.normals();
-
-		double sphere_vol = (4 / 3) / (M_PI * pow(rad, 3));
-
-		std::vector<float> densities(cloud->size());
-
-#pragma omp parallel for
-		for (int64_t i = 0; i < cloud->size(); i++)
-		{
-			std::vector<float> distances;
-			std::vector<int> indices;
-
-			flanntree->radiusSearch(cloud->points[i], rad, indices, distances);
-			densities[i] = (indices.size() - 1) / sphere_vol;
-		}
-
-		return densities;
-
-	}
-
-	void
-	getVegetationScore(GeoDetection::ScalarField& vegetation_scores, const float weight,
-						GeoDetection::ScalarField& curvatures, GeoDetection::ScalarField& densities)
-
-	{
-		curvatures.normalizeMinMax();
-		densities.normalizeMinMax();
-
-#pragma omp parallel for
-		for (int64_t i = 0; i < vegetation_scores.size(); i++)
-		{
-			float score = weight * (curvatures[i] - densities[i]);
-			vegetation_scores[i] = vegetation_scores[i] + score; //scores can increase with each set of scales.
-		}
-
-	}
-
 	//Main functions
 	void 
 		segmentVegetation(GeoDetection::Cloud& geodetect)
@@ -75,105 +14,71 @@ namespace GeoDetection
 		ScalarField vegetation_scores(cloud_size, 0, "Vegetation_Scores"); 
 
 		//Tree segmentation parameters
-		std::array<float, 6> curve_scale =   { 0.50, 1.00, 1.50, 2.00, 2.50, 3.00 };
-		std::array<float, 6> density_scale = { 1.25, 1.00, 0.75, 0.60, 0.45, 0.40 };
-		std::array<float, 6> weights =       { 0.15, 0.15, 0.10, 0.10, 0.10, 0.30 };
+		std::vector<float> curve_scales =   { 0.50, 1.00, 1.50, 2.00, 2.50, 3.00 };
+		std::vector<float> density_scales = { 1.25, 1.00, 0.75, 0.60, 0.45, 0.40 };
+		std::vector<float> weights =       { 0.15, 0.15, 0.10, 0.10, 0.10, 0.30 };
 
-		if (weights.size() != curve_scale.size() || weights.size() != density_scale.size())
+		if (weights.size() != curve_scales.size() || weights.size() != density_scales.size())
 		{
 			GD_ERROR("Vegetation segmentation multi-scale parameters must be the same size");
 			GD_WARN("Curvature scales: {0} | Density scales: {1} | Weights {2}", 
-				curve_scale.size(), density_scale.size(), weights.size());
+				curve_scales.size(), density_scales.size(), weights.size());
 		}
-	
+
 		for (int i = 0; i < weights.size(); i++)
 		{
-			//Get normal-rate-of change curvature
-			auto normals = geodetect.getNormalsRadiusSearch(curve_scale[i], false);
+			//Compute features at their respective scales.
+			auto normals = geodetect.getNormalsRadiusSearch(curve_scales[i], false);
 			GeoDetection::ScalarField curvatures = NormalsToCurvature(normals);
-			
-			//Get volumetric point density
-			//Provide an Optimization which looks for all scales. Same neighborhoods keep getting used. Just search the largest, then take subsets.
-			GeoDetection::ScalarField densities = getVolumetricDensities(geodetect, density_scale[i]);
+			GeoDetection::ScalarField densities = getVolumetricDensities(geodetect, density_scales[i]);
 
 			//Calculate TREEZ index
 			getVegetationScore(vegetation_scores, weights[i], curvatures, densities);
 		}
 
-		//Push ptr to vector to m_scalar_fields.
+		//Push GeoDetection::ScalarField to GeoDetection::Cloud::m_scalar_fields.
 		geodetect.addScalarField(vegetation_scores);
 	}
 
-	void segmentVegetationAveraging(GeoDetection::Cloud& geodetect)
+	void segmentVegetationSimplified(GeoDetection::Cloud& geodetect)
 	{
+		GD_TITLE("Vegetation Segmentation - simplified");
 		int64_t cloud_size = geodetect.cloud()->size();
 
 		//0-init because we sum the weighted scores
 		ScalarField vegetation_scores(cloud_size, 0, "Vegetation_Scores");
 
 		//Tree segmentation parameters
-		std::array<float, 6> curve_scale = { 0.50, 1.00, 1.50, 2.00, 2.50, 3.00 };
-		std::array<float, 6> density_scale = { 1.25, 1.00, 0.75, 0.60, 0.45, 0.40 };
-		std::array<float, 6> weights = { 0.15, 0.15, 0.10, 0.10, 0.10, 0.30 };
+		std::vector<float> curve_scales = { 0.50, 1.00, 1.50, 2.00, 2.50, 3.00 };
+		std::vector<float> density_scales = { 1.25, 1.00, 0.75, 0.60, 0.45, 0.40 };
+		std::vector<float> weights = { 0.15, 0.15, 0.10, 0.10, 0.10, 0.30 };
 
-		if (weights.size() != curve_scale.size() || weights.size() != density_scale.size())
+		if (weights.size() != curve_scales.size() || weights.size() != density_scales.size())
 		{
 			GD_ERROR("Vegetation segmentation multi-scale parameters must be the same size");
 			GD_WARN("Curvature scales: {0} | Density scales: {1} | Weights {2}",
-				curve_scale.size(), density_scale.size(), weights.size());
+				curve_scales.size(), density_scales.size(), weights.size());
 		}
+
+		//Calculate volumetric densities for all scales and store in a 2D vector.
+		std::vector<GeoDetection::ScalarField> densities_multiscale = getVolumetricDensitiesMultiscale(geodetect, density_scales);
 
 		//Determine curvature at a small enough scale 
-		pcl::PointCloud<pcl::Normal>::Ptr normals = geodetect.getNormalsKSearch(10, false);
-		GeoDetection::ScalarField curvatures_minscale = NormalsToCurvature(normals);
+		pcl::PointCloud<pcl::Normal>::Ptr normals = geodetect.getNormalsKSearch(7, false);
+		GeoDetection::ScalarField curvatures = NormalsToCurvature(normals);
 		normals = nullptr;
 
-		//Compute features by averaging the minimum scale across a neighborhood. 
+		//Calculate multiscale averaged curvatures
+		std::vector<ScalarField> curvatures_multiscale = computeAverageFieldMultiscale(geodetect, curvatures, curve_scales);
+
+		// Compute vegetation index using the input features
 		for (int i = 0; i < weights.size(); i++)
 		{
-			float c_scale = curve_scale[i];
-			float d_scale = density_scale[i];
-
-			//Determine averaged curvatures
-			GeoDetection::ScalarField curvatures = computeAverageFields(geodetect.cloud(), curvatures_minscale, geodetect.flanntree(), c_scale);
-			GeoDetection::ScalarField densities = getVolumetricDensities(geodetect, d_scale);
-
-			//Calculate TREEZ index
-			getVegetationScore(vegetation_scores, weights[i], curvatures, densities);
+			getVegetationScore(vegetation_scores, weights[i], curvatures_multiscale[i], densities_multiscale[i]);
 		}
 
-		//Push ptr to vector to m_scalar_fields.
+		//Push GeoDetection::ScalarField to GeoDetection::Cloud::m_scalar_fields.
 		geodetect.addScalarField(vegetation_scores);
 	}
 
-	//IN DEVELOPMENT
-//	pcl::PointCloud<pcl::PrincipalCurvatures>::Ptr getPrincipalCurvatures(GeoDetection::Cloud& geodetect, float rad)
-//	{
-//		//Setup curvature calculation object
-//		pcl::PrincipalCurvaturesEstimation<pcl::PointXYZ, pcl::Normal, pcl::PrincipalCurvatures> calc_curvatures;
-//		calc_curvatures.setInputCloud(geodetect.cloud());
-//		calc_curvatures.setInputNormals(geodetect.normals());
-//		calc_curvatures.setSearchMethod(geodetect.tree());
-//		calc_curvatures.setSearchSurface(geodetect.cloud());
-//		calc_curvatures.setRadiusSearch(rad);
-//
-//		//Compute curvatures
-//		pcl::PointCloud<pcl::PrincipalCurvatures>::Ptr curvatures(new pcl::PointCloud<pcl::PrincipalCurvatures>);
-//		calc_curvatures.compute(*curvatures);
-//	}
-//
-//	std::vector<float> getNormalRateCurvature(GeoDetection::Cloud& geodetect, float rad)
-//	{
-//		auto principal_curvatures = getPrincipalCurvatures(geodetect, rad);
-//		std::vector<float> normal_rate_curvature(principal_curvatures->size());
-//
-//		for (int64_t i = 0; i < principal_curvatures->size(); i++)
-//		{
-//			auto p = principal_curvatures->points[i];
-//
-//			//normal_rate_curvature
-//		}
-//
-//
-//	}
  }
