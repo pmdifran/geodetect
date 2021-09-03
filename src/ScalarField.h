@@ -31,11 +31,11 @@ namespace GeoDetection
 		ScalarField(std::vector<float>&& vec) :
 			data(std::move(vec)) {}
 
-		//Copy & Move Ctors
+		//Copy & Move Ctors (placeholders)
 		ScalarField(const ScalarField& scalar_field) = default;
 		ScalarField(ScalarField&& scalar_field) = default;
 
-		//Assignment Operators
+		//Assignment Operators (placeholders)
 		ScalarField& operator=(const ScalarField&) = default;
 		ScalarField& operator=(ScalarField&& rhs) = default;
 

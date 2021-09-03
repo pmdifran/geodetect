@@ -48,12 +48,12 @@ namespace GeoDetection
 			GD_CORE_ERROR(":: Cannot average out normals. Input size does not agree with the cloud.");
 		}
 
+		//If no core points given, use full cloud
+		if (corepoints == nullptr) { corepoints = cloud; }
+
 		//Average normals as new pointcloud
 		pcl::PointCloud<pcl::Normal>::Ptr averaged_normals(new pcl::PointCloud<pcl::Normal>);
 		averaged_normals->points.reserve(corepoints->size());
-
-		//If no core points given, use full cloud
-		if (corepoints == nullptr) { corepoints = cloud; }
 
 #pragma omp parallel for
 		for (int64_t i = 0; i < corepoints->size(); i++)
@@ -274,7 +274,7 @@ namespace GeoDetection
 		for (int64_t i = 0; i < vegetation_scores.size(); i++)
 		{
 			float score = weight * (curvatures[i] - densities[i]);
-			vegetation_scores[i] = vegetation_scores[i] + score; //scores can increase with each set of scales.
+			vegetation_scores[i] +=  score; //scores can increase with each set of scales.
 		}
 
 	}

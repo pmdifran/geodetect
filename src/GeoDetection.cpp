@@ -137,7 +137,8 @@ namespace GeoDetection
 
 		pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> calcnormals;
 
-		calcnormals.setInputCloud(m_cloud);
+		pcl::PointCloud<pcl::PointXYZ>* cloud;
+		calcnormals.setInputCloud(cloud);
 		calcnormals.setSearchMethod(m_kdtree);
 		calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
 		calcnormals.setRadiusSearch(radius);

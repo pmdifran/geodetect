@@ -112,19 +112,23 @@ namespace GeoDetection
 		}
 
 		/** \brief Method for removing column of scalar fields
-		* \param[in] new_fields: index of scalar field to remove
+		* \param[in] index: index of scalar field to remove (removes the largest index by default).
 		* \return Internal: m_scalar_fields is modified to remove an pointer to a fields column.
 		*/
-		inline void deleteScalarField(int index = -1)
+		inline void deleteScalarField(int index)
 		{
-			if (index != -1 || index < 0 || m_num_fields == 0 || index >(m_num_fields - 1))
+			if (index < 0 || m_num_fields == 0 || index > (m_num_fields - 1))
 			{
-				GD_CORE_ERROR(":: Attempting to access a scalar field index that does not exist");  return;
+				GD_CORE_ERROR(":: Attempting to access a scalar field index that does not exist");  
+				return;
 			}
-			if (index == -1) { index = m_num_fields - 1; }
+
 			m_scalar_fields.erase(m_scalar_fields.begin() + index);
 			m_num_fields--;
 		}
+
+		inline void deleteFirstScalarField() { this->deleteScalarField(0); }
+		inline void deleteLastScalarField() { this->deleteScalarField(m_num_fields - 1); }
 
 		/** \brief Method for averaging specific scalar fields within a defined search radius, and at select corepoints*/
 		void averageScalarFieldSubset(float radius, int field_index, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);
