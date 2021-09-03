@@ -5,7 +5,8 @@ namespace GeoDetection
 //HELPERS
 
 	//Gets index mapping to the input vector if it was sorted by descending values
-	std::vector<size_t> sortIndices(const std::vector<float>& vec)
+	std::vector<size_t> 
+		sortIndices(const std::vector<float>& vec)
 	{
 		std::vector<size_t> idx(vec.size());
 		std::iota(idx.begin(), idx.end(), 0);
@@ -13,7 +14,8 @@ namespace GeoDetection
 		return idx;
 	}
 
-	float fieldSubsetAverage(const ScalarField& field, const std::vector<int>::iterator& iter_begin, const std::vector<int>::iterator& iter_end)
+	float 
+		fieldSubsetAverage(const ScalarField& field, const std::vector<int>::iterator& iter_begin, const std::vector<int>::iterator& iter_end)
 	{
 		float average = 0;
 		for (std::vector<int>::iterator iter = iter_begin; iter != iter_end; iter++)

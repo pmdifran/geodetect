@@ -30,7 +30,8 @@
 
 namespace GeoDetection
 {
-	void Cloud::averageScalarFieldSubset(float radius, int field_index, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints)
+	void 
+		Cloud::averageScalarFieldSubset(float radius, int field_index, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints)
 	{
 		//Check for correct inputs
 		if (field_index > m_num_fields - 1 || field_index < 0) 
@@ -45,26 +46,29 @@ namespace GeoDetection
 		m_scalar_fields[field_index] = std::move(averaged_fields);
 	}
 
-	void Cloud::averageScalarField(float radius, int field_index)
+	void 
+		Cloud::averageScalarField(float radius, int field_index)
 	{
 		auto corepoints = m_cloud;
 		this->averageScalarFieldSubset(radius, field_index, corepoints);
 	}
 
-	void Cloud::averageAllScalarFieldsSubset(float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints)
+	void 
+		Cloud::averageAllScalarFieldsSubset(float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints)
 	{
 		GD_CORE_TRACE(":: Averaging all scalar fields...");
 		for (int i = 0; i < m_num_fields; i++) { this->averageScalarFieldSubset(radius, i, corepoints); }
 		GD_CORE_TRACE(":: All fields averaged");
 	}
 
-	void Cloud::averageAllScalarFields(float radius)
+	void 
+		Cloud::averageAllScalarFields(float radius)
 	{
 		auto corepoints = m_cloud;
 		this->averageAllScalarFieldsSubset(radius, corepoints);
 	}
 
-	void
+	void 
 		Cloud::getKdTrees()
 	{
 		GD_CORE_TRACE(":: Constructing Search Trees");
@@ -80,7 +84,8 @@ namespace GeoDetection
 			GeoDetection::Time::getDuration(start));
 	}
 
-	std::vector<float> Cloud::getResolution(const int num_neighbors)
+	std::vector<float> 
+		Cloud::getResolution(const int num_neighbors)
 	{
 		GD_CORE_TRACE(":: Computing cloud resolution...");
 		GD_CORE_TRACE("--> k-nearest neighbors used for distances: {0}", num_neighbors);
@@ -119,7 +124,7 @@ namespace GeoDetection
 		return resolution;
 	}
 
-	pcl::PointCloud<pcl::Normal>::Ptr
+	pcl::PointCloud<pcl::Normal>::Ptr 
 		Cloud::getNormalsRadiusSearch(float radius)
 	{
 		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Normal scale {0}", radius);
@@ -206,7 +211,8 @@ namespace GeoDetection
 		return cloud_down;
 	}
 
-	void Cloud::voxelDownSample(float voxel_size)
+	void 
+		Cloud::voxelDownSample(float voxel_size)
 	{
 		auto corepoints = getVoxelDownSample(voxel_size);
 		double distance = (voxel_size/2) * sqrt(3); //averaging radius relative to distance from centre to corner of cube
@@ -269,7 +275,8 @@ namespace GeoDetection
 
 	}
 
-	void Cloud::distanceDownSample(float distance)
+	void 
+		Cloud::distanceDownSample(float distance)
 	{
 		GD_CORE_TITLE("Subsampling GeoDetection Cloud");
 		auto corepoints = this->getDistanceDownSample(distance);
@@ -299,7 +306,8 @@ namespace GeoDetection
 			GeoDetection::Time::getDuration(start));
 	}
 
-	void Cloud::updateTransformation(const Eigen::Matrix4f& transformation)
+	void 
+		Cloud::updateTransformation(const Eigen::Matrix4f& transformation)
 	{
 		GD_CORE_TRACE(":: Updating transformation...");
 		Eigen::Matrix4d temp = transformation.cast<double>(); //using doubles for more accurate arithmitic
@@ -383,7 +391,6 @@ namespace GeoDetection
 		ofs.close();
 	}
 
-	//IN DEVELOPMENT
 	void Cloud::writeAsASCII(const char* fname, bool write_normals /* = true */, bool write_scalarfields /* = true */)
 	{
 		GD_TITLE("Exporting GeoDetection Cloud...");
