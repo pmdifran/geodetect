@@ -126,11 +126,17 @@ namespace GeoDetection
 			m_num_fields--;
 		}
 
-		/** \brief Method for averaging specific scalar fields within a defined search radius.*/
-		void averageScalarField(const float radius, const int field_index);
+		/** \brief Method for averaging specific scalar fields within a defined search radius, and at select corepoints*/
+		void averageScalarFieldSubset(float radius, int field_index, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);
 
-		/** \brief Method for averaging scalar fields within a defined search radius.*/
-		void averageAllScalarFields(const float radius);
+		/** \brief Method for averaging specific scalar fields within a defined search radius, at all points (m_cloud) */
+		void averageScalarField(float radius, int field_index);
+
+		/** \brief Method for averaging scalar fields within a defined search radius, at select corepoints*/
+		void averageAllScalarFieldsSubset(float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);
+
+		/** \brief Method for averaging all scalar fields within a defined search radius, at all points (m_cloud) */
+		void averageAllScalarFields(float radius);
 
 		void getKdTrees();
 
@@ -140,17 +146,16 @@ namespace GeoDetection
 		*/
 		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearch(float radius);
 
-		/** \brief Calls getNormalsRadiusSearch and sets the member m_normals. 
-		* */
-		void setNormalsRadiusSearch(float radius);
-
 		/** \brief Method for computing normals. View point is set as 0,0,0 as default unless set with setView
 		* \param[in] k: # neighbors to use for normal estimation
 		* \return shared pointer to the computed normals.
 		*/
 		pcl::PointCloud<pcl::Normal>::Ptr getNormalsKSearch(const int k);
 
-		/** \brief Method for averaging normals within a defined search radius.*/
+		/** \brief Method for averaging normals within a defined search radius, at select subset of corepoints */
+		void averageNormalsSubset(const float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);
+
+		/** \brief Method for averaging normals within a defined search radius, at all points (m_cloud) */
 		void averageNormals(const float radius);
 
 		/** \brief Method for computing the local point cloud resolution (i.e. spacing).
