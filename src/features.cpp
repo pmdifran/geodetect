@@ -140,7 +140,7 @@ namespace GeoDetection
 		std::vector<float> volumes(scales.size());
 		for (size_t i = 0; i < scales.size(); i++)
 		{
-			volumes[i] = (4 / 3) / (M_PI * pow(scales[i], 3));
+			volumes[i] = (4.0f / 3.0f) * M_PI * pow(scales[i], 3);
 		}
 
 		//initialize 2d vector (scale, pointID)
@@ -175,7 +175,7 @@ namespace GeoDetection
 		computeAverageFieldMultiscale(const Cloud& geodetect, const ScalarField& field,
 			const std::vector<float> scales, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints /* = nullptr */)
 	{
-		GD_CORE_TRACE(":: Computing multiscale averaged field...");
+		GD_CORE_TRACE(":: Computing locally averaged fields from list of {0} scales...", scales.size());
 
 		auto cloud = geodetect.cloud();
 		auto flanntree = geodetect.flanntree();
@@ -183,8 +183,6 @@ namespace GeoDetection
 
 		//initialize 2d vector (scale, pointID)
 		std::vector<ScalarField> field_multiscale_averaged(scales.size(), std::vector<float>(cloud->size()));
-
-		return field_multiscale_averaged;
 
 #pragma omp parallel for
 		for (int64_t i = 0; i < cloud->size(); i++)
@@ -209,6 +207,8 @@ namespace GeoDetection
 				field_multiscale_averaged[sort_map[j]][i] = fieldSubsetAverage(field, indices.begin(), id_iter_end);
 			}
 		}
+
+		return field_multiscale_averaged;
 	}
 
 //FEATURES - SINGLE SCALE
@@ -242,7 +242,7 @@ namespace GeoDetection
 		auto flanntree = geodetect.flanntree();
 		auto normals = geodetect.normals();
 
-		double sphere_vol = (4 / 3) / (M_PI * pow(scale, 3));
+		double sphere_vol = (4.0f / 3.0f) * M_PI * pow(scale, 3);
 
 		GeoDetection::ScalarField densities(cloud->size());
 
