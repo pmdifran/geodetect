@@ -150,46 +150,46 @@ namespace GeoDetection
 		* \param[in] k: # neighbors to use for normal estimation
 		* \return shared pointer to the computed normals.
 		*/
-		pcl::PointCloud<pcl::Normal>::Ptr getNormalsKSearch(const int k);
+		pcl::PointCloud<pcl::Normal>::Ptr getNormalsKSearch(int k);
 
 		/** \brief Method for averaging normals within a defined search radius, at select subset of corepoints */
-		void averageNormalsSubset(const float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);
+		void averageNormalsSubset(float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);
 
 		/** \brief Method for averaging normals within a defined search radius, at all points (m_cloud) */
-		void averageNormals(const float radius);
+		void averageNormals(float radius);
 
 		/** \brief Method for computing the local point cloud resolution (i.e. spacing).
 		* \param[in] k: the number of neighbors to use for determining local resolution (default=2).
 		* \return Vector of local resolutions, consistent with point cloud indices.
 		Internal: updates member m_resolution (average cloud resolution).
 		*/
-		std::vector<float> getResolution(const int num_neighbors = 2);
+		std::vector<float> getResolution(int num_neighbors = 2);
 
 		/** \brief Method for generating a new, subsampled cloud, using a voxel filter. The local cloud should be dense relative to voxel size
 		{i.e. specify it based on the point cloud resolution from getResolution()}.
 		* \param[in] voxel_size: cubic voxel size used to create average-point locations.
 		* \return Shared pointer to the subsampeld cloud.
 		*/
-		pcl::PointCloud<pcl::PointXYZ>::Ptr getVoxelDownSample(const float voxel_size);
+		pcl::PointCloud<pcl::PointXYZ>::Ptr getVoxelDownSample(float voxel_size);
 
 		/** \brief Similar to getVoxelDownsample, but directly modifies member m_cloud, resets KdTrees, 
 		*    and averages normals/scalar fields.
 		* \param[in] distance: minimum distance between points
 		* \return Internal: modifies m_cloud, KdTrees, Normals, Scalar Fields
 		*/
-		void voxelDownSample(const float voxel_size);
+		void voxelDownSample(float voxel_size);
 
 		/** \brief Method for generating a new, subsampled cloud, using a minimum distance (similar to CloudCompare).
 		* \param[in] distance: minimum distance between points
 		* \return Shared pointer to the subsampled cloud.
 		*/
-		pcl::PointCloud<pcl::PointXYZ>::Ptr getDistanceDownSample(const float distance);
+		pcl::PointCloud<pcl::PointXYZ>::Ptr getDistanceDownSample(float distance);
 
 		/** \brief Similar to getDistanceDownsample, but directly modifies member m_cloud and resets normals/scalar fields.
 		* \param[in] distance: minimum distance between points
 		* \return Internal: Internal: modifies m_cloud, KdTrees, Normals, Scalar Fields
 		*/
-		void distanceDownSample(const float distance);
+		void distanceDownSample(float distance);
 
 		/** \brief Method for computing intrinsic shape signature keypoints.
 		* \return shared pointer to a pcl point cloud.

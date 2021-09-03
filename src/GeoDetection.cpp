@@ -172,20 +172,20 @@ namespace GeoDetection
 	}
 
 	void
-		Cloud::averageNormalsSubset(const float radius, pcl::PointCloud < pcl::PointXYZ>::Ptr corepoints)
+		Cloud::averageNormalsSubset(float radius, pcl::PointCloud < pcl::PointXYZ>::Ptr corepoints)
 	{
 		m_normals = computeAverageNormals(*this, radius, corepoints);
 	}
 
 	void
-		Cloud::averageNormals(const float radius)
+		Cloud::averageNormals(float radius)
 	{
 		auto corepoints = m_cloud;
 		m_normals = computeAverageNormals(*this, radius, corepoints);
 	}
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr
-		Cloud::getVoxelDownSample(const float voxel_size)
+		Cloud::getVoxelDownSample(float voxel_size)
 	{
 		GD_CORE_TRACE(":: Creating downsampled cloud with voxels...\
 			\n--> voxel filter size: {0}", voxel_size);
@@ -206,7 +206,7 @@ namespace GeoDetection
 		return cloud_down;
 	}
 
-	void Cloud::voxelDownSample(const float voxel_size)
+	void Cloud::voxelDownSample(float voxel_size)
 	{
 		auto corepoints = getVoxelDownSample(voxel_size);
 		double distance = (voxel_size/2) * sqrt(3); //averaging radius relative to distance from centre to corner of cube
@@ -221,7 +221,7 @@ namespace GeoDetection
 	}
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr
-		Cloud::getDistanceDownSample(const float distance)
+		Cloud::getDistanceDownSample(float distance)
 	{
 		GD_CORE_TRACE(":: Subsampling cloud by distance...\
 			\n--> Distance: {0}", distance);
@@ -269,7 +269,7 @@ namespace GeoDetection
 
 	}
 
-	void Cloud::distanceDownSample(const float distance)
+	void Cloud::distanceDownSample(float distance)
 	{
 		GD_CORE_TITLE("Subsampling GeoDetection Cloud");
 		auto corepoints = this->getDistanceDownSample(distance);

@@ -235,7 +235,7 @@ namespace GeoDetection
 
 	//Gets volumetric densities at a specified scale (scale)
 	GeoDetection::ScalarField
-		getVolumetricDensities(const Cloud& geodetect, const float scale)
+		getVolumetricDensities(const Cloud& geodetect, float scale)
 	{
 		GD_CORE_TRACE(":: Getting volumetric densities at scale: {0} ...", scale);
 		auto cloud = geodetect.cloud();
@@ -261,7 +261,7 @@ namespace GeoDetection
 
 
 	void
-		getVegetationScore(ScalarField& vegetation_scores, const float weight,
+		getVegetationScore(ScalarField& vegetation_scores, float weight,
 			ScalarField& curvatures, ScalarField& densities)
 
 	{

@@ -34,8 +34,8 @@ namespace GeoDetection
 	ScalarField NormalsToCurvature(const pcl::PointCloud<pcl::Normal>::Ptr normals);
 
 	//Gets volumetric densities at a specified scale (scale)
-	ScalarField getVolumetricDensities(const Cloud& geodetect, const float scale);
+	ScalarField getVolumetricDensities(const Cloud& geodetect, float scale);
 
-	void getVegetationScore(ScalarField& vegetation_scores, const float weight, ScalarField& curvatures, ScalarField& densities);
+	void getVegetationScore(ScalarField& vegetation_scores, float weight, ScalarField& curvatures, ScalarField& densities);
 
 }
