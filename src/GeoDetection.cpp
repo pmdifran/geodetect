@@ -1,5 +1,6 @@
 //GeoDetection
 #include "GeoDetection.h"
+#include "features.h" //for average scalar field compute
 
 #include <omp.h> //for Open MP
 
@@ -19,7 +20,6 @@
 #include <pcl/keypoints/iss_3d.h>
 #include <pcl/features/principal_curvatures.h>
 
-
 //filters
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/extract_indices.h>
@@ -30,20 +30,62 @@
 
 namespace GeoDetection
 {
-	void
+	void 
+		Cloud::averageScalarFieldSubset(float radius, int field_index, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints)
+	{
+		//Check for correct inputs
+		if (field_index > m_num_fields - 1 || field_index < 0) 
+		{
+			GD_CORE_ERROR(":: Invalid scalar field index accessed."); return;
+		}
+
+		GD_CORE_TRACE(":: Averaging scalar field index: {0} with name: {1}", field_index, m_scalar_fields[field_index].name);
+		GeoDetection::ScalarField averaged_fields;
+		averaged_fields = computeAverageField(*this, m_scalar_fields[field_index], radius, corepoints);
+
+		m_scalar_fields[field_index] = std::move(averaged_fields);
+	}
+
+	void 
+		Cloud::averageScalarField(float radius, int field_index)
+	{
+		auto corepoints = m_cloud;
+		this->averageScalarFieldSubset(radius, field_index, corepoints);
+	}
+
+	void 
+		Cloud::averageAllScalarFieldsSubset(float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints)
+	{
+		GD_CORE_TRACE(":: Averaging all scalar fields...");
+		for (int i = 0; i < m_num_fields; i++) { this->averageScalarFieldSubset(radius, i, corepoints); }
+		GD_CORE_TRACE(":: All fields averaged");
+	}
+
+	void 
+		Cloud::averageAllScalarFields(float radius)
+	{
+		auto corepoints = m_cloud;
+		this->averageAllScalarFieldsSubset(radius, corepoints);
+	}
+
+	void 
 		Cloud::getKdTrees()
 	{
 		GD_CORE_TRACE(":: Constructing Search Trees");
 		auto start = GeoDetection::Time::getStart();
 
 		m_kdtreeFLANN->setInputCloud(m_cloud);
+		m_kdtreeFLANN->setSortedResults(true); //explicit --> should be true by default construction
+
 		m_kdtree->setInputCloud(m_cloud);
+		m_kdtree->setSortedResults(true);
 
 		GD_CORE_WARN("--> KdTree construction time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
 	}
 
-	std::vector<float> Cloud::getResolution(int num_neighbors)
+	std::vector<float> 
+		Cloud::getResolution(const int num_neighbors)
 	{
 		GD_CORE_TRACE(":: Computing cloud resolution...");
 		GD_CORE_TRACE("--> k-nearest neighbors used for distances: {0}", num_neighbors);
@@ -82,10 +124,37 @@ namespace GeoDetection
 		return resolution;
 	}
 
-	pcl::PointCloud<pcl::Normal>::Ptr
-		Cloud::getNormals(float nrad, bool set_m_normals)
+	pcl::PointCloud<pcl::Normal>::Ptr 
+		Cloud::getNormalsRadiusSearch(float radius)
 	{
-		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Normal scale {0}", nrad);
+		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Normal scale {0}", radius);
+		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
+			omp_get_num_procs());
+		auto start = GeoDetection::Time::getStart();
+
+		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+		normals->reserve(m_cloud->size());
+
+		pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> calcnormals;
+
+		pcl::PointCloud<pcl::PointXYZ>* cloud;
+		calcnormals.setInputCloud(cloud);
+		calcnormals.setSearchMethod(m_kdtree);
+		calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
+		calcnormals.setRadiusSearch(radius);
+		calcnormals.setNumberOfThreads(omp_get_num_procs());
+		calcnormals.compute(*normals);
+
+		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
+			GeoDetection::Time::getDuration(start));
+
+		return normals;
+	}
+
+	pcl::PointCloud<pcl::Normal>::Ptr
+		Cloud::getNormalsKSearch(int k)
+	{
+		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Number of neighbors: {0}", k);
 		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
 			omp_get_num_procs());
 		auto start = GeoDetection::Time::getStart();
@@ -98,16 +167,27 @@ namespace GeoDetection
 		calcnormals.setInputCloud(m_cloud);
 		calcnormals.setSearchMethod(m_kdtree);
 		calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
-		calcnormals.setRadiusSearch(nrad);
+		calcnormals.setKSearch(k);
 		calcnormals.setNumberOfThreads(omp_get_num_procs());
 		calcnormals.compute(*normals);
 
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
 
-		if (set_m_normals) { m_normals = normals; }
-
 		return normals;
+	}
+
+	void
+		Cloud::averageNormalsSubset(float radius, pcl::PointCloud < pcl::PointXYZ>::Ptr corepoints)
+	{
+		m_normals = computeAverageNormals(*this, radius, corepoints);
+	}
+
+	void
+		Cloud::averageNormals(float radius)
+	{
+		auto corepoints = m_cloud;
+		m_normals = computeAverageNormals(*this, radius, corepoints);
 	}
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr
@@ -130,6 +210,21 @@ namespace GeoDetection
 			GeoDetection::Time::getDuration(start));
 
 		return cloud_down;
+	}
+
+	void 
+		Cloud::voxelDownSample(float voxel_size)
+	{
+		auto corepoints = getVoxelDownSample(voxel_size);
+		double distance = (voxel_size/2) * sqrt(3); //averaging radius relative to distance from centre to corner of cube
+
+		//Average the normals and scalar fields using the new cloud as core points.
+		if (this->hasNormals()) { this->averageNormalsSubset(distance, corepoints); }
+		if (this->hasScalarFields()) { this->averageAllScalarFieldsSubset(distance, corepoints); }
+
+		//set m_cloud to the corepoints and rebuild kdtrees
+		m_cloud = corepoints;
+		this->getKdTrees();
 	}
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr
@@ -178,6 +273,22 @@ namespace GeoDetection
 			GeoDetection::Time::getDuration(start));
 
 		return cloud_down;
+
+	}
+
+	void 
+		Cloud::distanceDownSample(float distance)
+	{
+		GD_CORE_TITLE("Subsampling GeoDetection Cloud");
+		auto corepoints = this->getDistanceDownSample(distance);
+
+		//Average the normals and scalar fields using the new cloud as core points.
+		if (this->hasNormals()) { this->averageNormalsSubset(distance, corepoints); }
+		if (this->hasScalarFields()) { this->averageAllScalarFieldsSubset(distance, corepoints); }
+
+		//set m_cloud to the corepoints and rebuild kdtrees
+		m_cloud = corepoints;
+		this->getKdTrees();
 	}
 
 	void
@@ -196,10 +307,12 @@ namespace GeoDetection
 			GeoDetection::Time::getDuration(start));
 	}
 
-	void Cloud::updateTransformation(const Eigen::Matrix4f& transformation)
+	void 
+		Cloud::updateTransformation(const Eigen::Matrix4f& transformation)
 	{
 		GD_CORE_TRACE(":: Updating transformation...");
 		Eigen::Matrix4d temp = transformation.cast<double>(); //using doubles for more accurate arithmitic
+		m_transformation = temp * m_transformation; //eigen matrix multiplication
 		m_transformation = temp * m_transformation; //eigen matrix multiplication
 	}
 
@@ -279,36 +392,24 @@ namespace GeoDetection
 		ofs.close();
 	}
 
-	//IN DEVELOPMENT
-	void Cloud::writeAsASCII(const char* fname, bool write_normals, bool write_scalarfields)
+	void Cloud::writeAsASCII(const char* fname, bool write_normals /* = true */, bool write_scalarfields /* = true */)
 	{
 		GD_TITLE("Exporting GeoDetection Cloud...");
 		auto start = GeoDetection::Time::getStart();
 
 		//Check for proper normals
-		if (write_normals)
+		if (!this->hasNormals())
 		{
-			if (m_normals->size() == 0)
-			{
-				GD_CORE_ERROR(":: Normals are nonexistent for the cloud and will not be written");
-				write_normals = false;
-			}
-			else if (m_normals->size() != m_cloud->size())
-			{
-				GD_CORE_ERROR(":: Normals of size {0} cannot be written alongside cloud of size {1}", 
-					m_normals->size(), m_cloud->size());
-				write_normals = false;
-			}
+			GD_CORE_ERROR(":: Normals of size {0} cannot be written alongside cloud of size {1}",
+				m_normals->size(), m_cloud->size());
+			write_normals = false;
 		}
 
 		//Check for proper scalar fields
-		if (write_scalarfields)
+		if (!this->hasScalarFields())
 		{
-			if (m_num_fields < 1)
-			{
-				GD_CORE_ERROR(":: Cannot write scalar fields. No scalar fields have been added to the cloud.");
-				write_scalarfields = false;
-			}
+			GD_CORE_ERROR(":: Cannot write scalar fields. No scalar fields have been added to the cloud.");
+			write_scalarfields = false;
 		}
 
 		static const auto BUFFER_SIZE = 16 * 1024;
@@ -321,7 +422,7 @@ namespace GeoDetection
 
 		//Once this works, spin into helper functions.
 		while (i < m_cloud->size()) {
-			
+
 			size_t increment = 0; //number of chars written by latest call of snprintf
 			size_t total_increment = 0; //number of chars needed for the current i-th point.
 			size_t cx = 0; //number of chars to be written (can be larger than BUFFER_SIZE)
@@ -335,7 +436,7 @@ namespace GeoDetection
 				total_increment = increment; //total_increment is reset here.
 
 				if (cx >= BUFFER_SIZE) { break; } //possible buffer overflow on next call of snprintf if this isn't checked.
-				
+
 				//Print normals to the buffer
 				if (write_normals)
 				{
@@ -352,15 +453,17 @@ namespace GeoDetection
 					bool buffer_full = false;
 					for (size_t sf = 0; sf < m_num_fields; sf++)
 					{
-						increment = snprintf(buf + cx, BUFFER_SIZE - cx, " %.8f", (*m_scalar_fields[sf])[i]);
+						increment = snprintf(buf + cx, BUFFER_SIZE - cx, " %.8f", m_scalar_fields[sf][i]);
 						cx += increment;
 						total_increment += increment;
 						if (cx >= BUFFER_SIZE) { buffer_full = true;  break; }
-					}	
+					}
 					if (buffer_full) { break; }
 				}
 
-				cx += snprintf(buf + cx, BUFFER_SIZE - cx, "\n");
+				increment = snprintf(buf + cx, BUFFER_SIZE - cx, "\n");
+				cx += increment;
+				total_increment += increment;
 				i++;
 
 				if (cx >= BUFFER_SIZE) { i--; break; }
@@ -377,11 +480,5 @@ namespace GeoDetection
 		fstream.close();
 
 		GD_WARN("--> Data export time: {0} ms", GeoDetection::Time::getDuration(start));
-	}
-
-	void
-		Cloud::writeAsPCD(const char* fname)
-	{
-
 	}
 }

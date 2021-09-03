@@ -15,17 +15,19 @@ set(SOURCE
     ${GeoDetection_source}/PCLreadASCII.cpp
     ${GeoDetection_source}/log.cpp
     ${GeoDetection_source}/segmentVegetation.cpp
+    ${GeoDetection_source}/ScalarField.cpp
+    ${GeoDetection_source}/features.cpp
 )
 
 set(HEADERS
     ${HEADERS}
     ${GeoDetection_source}/autoRegistration.h
-    ${GeoDetection_source}/fast_float.h
     ${GeoDetection_source}/GeoDetection.h
     ${GeoDetection_source}/PCLreadASCII.h
     ${GeoDetection_source}/log.h
     ${GeoDetection_source}/segmentVegetation.h
     ${GeoDetection_source}/ScalarField.h
+    ${GeoDetection_source}/features.h
 )
 
 add_executable( GeoDetection ${SOURCE} ${HEADERS} )

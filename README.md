@@ -2,24 +2,27 @@
 Tools for processing and extracting information from point clouds of natural environments. Under development, primarily for Windows. 
 
 ### Current features:
-- Fast c-style ascii import of LiDAR using the fast float library for parsing
-- GeoDetection Cloud class 
-  - Revolves around the Point Cloud Library (PCL)
-  - Methods aid with common point cloud processing objectives, and member variables store critical data structures (i.e. point cloud kd-trees) for reuse throughout object lifetime.
-- autoRegistration: module for coarse and icp point-set registration. 
-- macro-based logging implementation of spdlog
+- Macro-ized logging with spdlog implementation
+- Fast c-style ascii import of LiDAR
+
+- GeoDetection Cloud objects
+  - A wrapper around the Point Cloud Library cloud: pcl::PointCloud<pcl::PointXYZ>
+  - Contains core tools for point cloud operations
+  - Provides storage for frequently used pcl types (i.e KdTrees, normals)
+  - CloudCompare-esque scalar fields
+
+- Current GeoDetection modules:
+  - Auto Registration (global and icp)
+  - Vegetation segmentation
 
 ### To be added...
--  _IO_: Templated c-style ascii IO for custom point clouds with numerous scalar features.
 -  _IO_: Implementing LibLAS, LASLIB, or PDAL libary for importing .las pointclouds.
 -  _IO_: Implementing RIEGL laser intruments' SDK for .rdb IO
 -  _Method_: User-input with viz (i.e. selection camera position for orienting normals [m_view])
--  _Method_: Feature extraction (trees from lidar)
--  _Method_: Segmentation (supervoxels & region growing)
--  _Data struct_: Intuitive template for creating custom pcl point types (and perhaps templated GeoDetection objects).
--  _OVERALL_: Implementation of CUDA-PCL for rapid real-time processing
--  .... .... .... cross platform stuffs
+-  _Method_: Segmentation (supervoxels; region growing; object-based segmentation)
 
+-  _OVERALL_: Implementation of CUDA-PCL for rapid real-time processing
+-  .... .... .... making this cross platform at some point.
 
 ## Windows Build
 
