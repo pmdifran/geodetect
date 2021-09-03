@@ -28,7 +28,7 @@ namespace GeoDetection
 		for (int i = 0; i < weights.size(); i++)
 		{
 			//Compute features at their respective scales.
-			auto normals = geodetect.getNormalsRadiusSearch(curve_scales[i], false);
+			auto normals = geodetect.getNormalsRadiusSearch(curve_scales[i]);
 			GeoDetection::ScalarField curvatures = NormalsToCurvature(normals);
 			GeoDetection::ScalarField densities = getVolumetricDensities(geodetect, density_scales[i]);
 
@@ -37,7 +37,7 @@ namespace GeoDetection
 		}
 
 		//Push GeoDetection::ScalarField to GeoDetection::Cloud::m_scalar_fields.
-		geodetect.addScalarField(vegetation_scores);
+		geodetect.addScalarField(std::move(vegetation_scores));
 	}
 
 	void segmentVegetationSimplified(GeoDetection::Cloud& geodetect)
@@ -64,7 +64,7 @@ namespace GeoDetection
 		std::vector<GeoDetection::ScalarField> densities_multiscale = getVolumetricDensitiesMultiscale(geodetect, density_scales);
 
 		//Determine curvature at a small enough scale 
-		pcl::PointCloud<pcl::Normal>::Ptr normals = geodetect.getNormalsKSearch(12, false);
+		pcl::PointCloud<pcl::Normal>::Ptr normals = geodetect.getNormalsKSearch(12);
 		GeoDetection::ScalarField curvatures = NormalsToCurvature(normals);
 		normals = nullptr;
 
@@ -78,7 +78,7 @@ namespace GeoDetection
 		}
 
 		//Push GeoDetection::ScalarField to GeoDetection::Cloud::m_scalar_fields.
-		geodetect.addScalarField(vegetation_scores);
+		geodetect.addScalarField(std::move(vegetation_scores));
 	}
 
  }

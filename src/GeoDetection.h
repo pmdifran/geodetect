@@ -89,6 +89,12 @@ namespace GeoDetection
 		inline void setNormals(pcl::PointCloud<pcl::Normal>::Ptr& normals) { m_normals = std::move(normals); }
 		inline void setView(float x, float y, float z) { m_view[0] = x; m_view[1] = y; m_view[2] = z; }
 		void setScale(float scale) { m_scale = scale; }
+		
+		// Computes normals with radius search and sets the member m_normals.
+		void setNormalsRadiusSearch(float radius) { m_normals = this->getNormalsRadiusSearch(radius); }
+
+		// Computes normals with k nearest neighbor search and sets the member m_normals.
+		void setNormalsKSearch(int k) { m_normals = this->getNormalsKSearch(k); }
 
 		inline bool hasNormals() { return m_normals->size() > 0; }
 		inline bool hasScalarFields() { return m_num_fields > 0; }
@@ -130,17 +136,19 @@ namespace GeoDetection
 
 		/** \brief Method for computing normals. View point is set as 0,0,0 as default unless set with setView
 		* \param[in] radius: Radius for spherical neighbour search used for principle component analysis.
-		* \param[in] set_m_normals: Whether to set member m_normals to the result (default = true).
 		* \return shared pointer to the computed normals.
 		*/
-		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearch(const float radius, const bool set_m_normals = true);
+		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearch(float radius);
+
+		/** \brief Calls getNormalsRadiusSearch and sets the member m_normals. 
+		* */
+		void setNormalsRadiusSearch(float radius);
 
 		/** \brief Method for computing normals. View point is set as 0,0,0 as default unless set with setView
 		* \param[in] k: # neighbors to use for normal estimation
-		* \param[in] set_m_normals: Whether to set member m_normals to the result (default = true).
 		* \return shared pointer to the computed normals.
 		*/
-		pcl::PointCloud<pcl::Normal>::Ptr getNormalsKSearch(const int k, const bool set_m_normals = true);
+		pcl::PointCloud<pcl::Normal>::Ptr getNormalsKSearch(const int k);
 
 		/** \brief Method for averaging normals within a defined search radius.*/
 		void averageNormals(const float radius);

@@ -115,7 +115,7 @@ namespace GeoDetection
 	}
 
 	pcl::PointCloud<pcl::Normal>::Ptr
-		Cloud::getNormalsRadiusSearch(const float radius, const bool set_m_normals)
+		Cloud::getNormalsRadiusSearch(float radius)
 	{
 		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Normal scale {0}", radius);
 		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
@@ -137,13 +137,11 @@ namespace GeoDetection
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
 
-		if (set_m_normals) { m_normals = normals; }
-
 		return normals;
 	}
 
 	pcl::PointCloud<pcl::Normal>::Ptr
-		Cloud::getNormalsKSearch(const int k, const bool set_m_normals)
+		Cloud::getNormalsKSearch(int k)
 	{
 		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Number of neighbors: {0}", k);
 		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
@@ -164,8 +162,6 @@ namespace GeoDetection
 
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
-
-		if (set_m_normals) { m_normals = normals; }
 
 		return normals;
 	}
@@ -206,7 +202,7 @@ namespace GeoDetection
 		double averaging_radius = sqrt(pow(voxel_size/2, 2) * 3); //averaging radius relative to the voxel size.
 
 		if (this->hasNormals()) { this->averageNormals(averaging_radius); }
-		if (this->hasScalarFields()) { this->averageScalarFields(averaging_radius); }
+		if (this->hasScalarFields()) { this->averageAllScalarFields(averaging_radius); }
 	}
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr
@@ -264,7 +260,7 @@ namespace GeoDetection
 		m_cloud = this->getDistanceDownSample(distance);
 		this->getKdTrees();
 		if (this->hasNormals()) { this->averageNormals(distance); }
-		if (this->hasScalarFields()) { this->averageScalarFields(distance); }
+		if (this->hasScalarFields()) { this->averageAllScalarFields(distance); }
 	}
 
 	void

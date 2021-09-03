@@ -13,7 +13,7 @@ namespace GeoDetection
 		return idx;
 	}
 
-	float fieldSubsetAverage(const ScalarField& field, const std::vector<int>::iterator& iter_begin, const std::vector<int>::iterator& iter_end)
+	float fieldLocalAverage(const ScalarField& field, const std::vector<int>::iterator& iter_begin, const std::vector<int>::iterator& iter_end)
 	{
 		float average = 0;
 		for (std::vector<int>::iterator iter = iter_begin; iter != iter_end; iter++)
@@ -193,7 +193,7 @@ namespace GeoDetection
 			flanntree->radiusSearch(cloud->points[i], scales[sort_map[0]], indices, sqdistances);
 
 			//compute average field at max scale (i.e. sort_map[0])
-			field_multiscale_averaged[sort_map[0]][i] = fieldSubsetAverage(field, indices.begin(), indices.end());
+			field_multiscale_averaged[sort_map[0]][i] = fieldLocalAverage(field, indices.begin(), indices.end());
 
 			//Iterate through the smaller neighborhoods and compute average field as subset of the KdTree query.
 			for (int j = 1; j < scales.size(); j++)
@@ -204,7 +204,7 @@ namespace GeoDetection
 					{return x > sq_scale; });
 				std::vector<int>::iterator id_iter_end = indices.begin() + (iter_end - sqdistances.begin());
 
-				field_multiscale_averaged[sort_map[j]][i] = fieldSubsetAverage(field, indices.begin(), id_iter_end);
+				field_multiscale_averaged[sort_map[j]][i] = fieldLocalAverage(field, indices.begin(), id_iter_end);
 			}
 		}
 
