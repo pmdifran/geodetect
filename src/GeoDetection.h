@@ -99,7 +99,7 @@ namespace GeoDetection
 		* \param[in] new_fields: float vector which should be the same length as # of points (this is checked for).
 		* \return Internal: m_scalar_fields is modified to include an additional pointer to the fields.
 		*/
-		inline void addScalarField(ScalarField& new_fields)
+		inline void addScalarField(ScalarField&& new_fields)
 		{
 			if (new_fields.size() == m_cloud->size()) { m_scalar_fields.push_back(std::move(new_fields)); m_num_fields++; }
 			else { GD_CORE_ERROR(":: Scalar field size must agree with the cloud size"); }
@@ -120,8 +120,11 @@ namespace GeoDetection
 			m_num_fields--;
 		}
 
+		/** \brief Method for averaging specific scalar fields within a defined search radius.*/
+		void averageScalarField(const float radius, const int field_index);
+
 		/** \brief Method for averaging scalar fields within a defined search radius.*/
-		void averageScalarFields(const float radius, int index = -1);
+		void averageAllScalarFields(const float radius);
 
 		void getKdTrees();
 

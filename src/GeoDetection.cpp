@@ -30,38 +30,33 @@
 
 namespace GeoDetection
 {
-	void Cloud::averageScalarFields(const float radius, int field_index /* = -1 */)
+	void Cloud::averageScalarField(const float radius, const int field_index)
 	{
-		//Set whether to average all of the scalar fields
-		bool average_all = false;
-		if (field_index == -1) { average_all = true; }
-
 		//Check for correct inputs
-		if (m_num_fields == 0) { GD_CORE_ERROR(":: There is no scalar field to average"); return; }
-		if (field_index > m_num_fields - 1) { GD_CORE_ERROR(":: Invalid scalar field index accessed."); return; }
-
-		//Average scalarfields as new fields.
-		if (!average_all)
+		if (field_index > m_num_fields - 1 || field_index < 0) 
 		{
-			GD_CORE_TRACE(":: Averaging scalar field index: {0} with name: {1}", field_index, m_scalar_fields[field_index].name);
+			GD_CORE_ERROR(":: Invalid scalar field index accessed."); return;
+		}
+
+		GD_CORE_TRACE(":: Averaging scalar field index: {0} with name: {1}", field_index, m_scalar_fields[field_index].name);
+		GeoDetection::ScalarField averaged_fields;
+		averaged_fields = computeAverageField(*this, m_scalar_fields[field_index], radius);
+
+		m_scalar_fields[field_index] = std::move(averaged_fields);
+	}
+
+	void Cloud::averageAllScalarFields(const float radius)
+	{
+		GD_CORE_TRACE(":: Averaging all scalar fields...");
+
+		for (int i = 0; i < m_num_fields; i++)
+		{
+			GD_CORE_TRACE(":: Averaging scalar field index: {0} with name: {1}", i, m_scalar_fields[i].name);
 			GeoDetection::ScalarField averaged_fields;
-			averaged_fields = computeAverageField(*this, m_scalar_fields[field_index], radius);
-
-			m_scalar_fields[field_index] = std::move(averaged_fields);
+			averaged_fields = computeAverageField(*this, m_scalar_fields[i], radius);
+			m_scalar_fields[i] = std::move(averaged_fields);
 		}
-
-		else
-		{
-			for (int i = 0; i < m_num_fields; i++)
-			{
-				GD_CORE_TRACE(":: Averaging scalar field index: {0} with name: {1}", i, m_scalar_fields[i].name);
-				GeoDetection::ScalarField averaged_fields;
-				averaged_fields = computeAverageField(*this, m_scalar_fields[field_index], radius);
-				m_scalar_fields[i] = std::move(averaged_fields);
-			}
-			GD_CORE_TRACE(":: All fields averaged");
-		}
-
+		GD_CORE_TRACE(":: All fields averaged");
 	}
 
 	void
