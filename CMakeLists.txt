@@ -17,6 +17,8 @@ set(SOURCE
     ${GeoDetection_source}/segmentVegetation.cpp
     ${GeoDetection_source}/ScalarField.cpp
     ${GeoDetection_source}/features.cpp
+    ${GeoDetection_source}/readascii_core.cpp
+    ${GeoDetection_source}/readascii.cpp
 )
 
 set(HEADERS
@@ -28,6 +30,8 @@ set(HEADERS
     ${GeoDetection_source}/segmentVegetation.h
     ${GeoDetection_source}/ScalarField.h
     ${GeoDetection_source}/features.h
+    ${GeoDetection_source}/readascii_core.h
+    ${GeoDetection_source}/readascii.h
 )
 
 add_executable( GeoDetection ${SOURCE} ${HEADERS} )

@@ -69,7 +69,7 @@ namespace GeoDetection
 	}
 
 	void 
-		Cloud::getKdTrees()
+		Cloud::buildKdTrees()
 	{
 		GD_CORE_TRACE(":: Constructing Search Trees");
 		auto start = GeoDetection::Time::getStart();
@@ -136,9 +136,7 @@ namespace GeoDetection
 		normals->reserve(m_cloud->size());
 
 		pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> calcnormals;
-
-		pcl::PointCloud<pcl::PointXYZ>* cloud;
-		calcnormals.setInputCloud(cloud);
+		calcnormals.setInputCloud(m_cloud);
 		calcnormals.setSearchMethod(m_kdtree);
 		calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
 		calcnormals.setRadiusSearch(radius);
@@ -224,7 +222,7 @@ namespace GeoDetection
 
 		//set m_cloud to the corepoints and rebuild kdtrees
 		m_cloud = corepoints;
-		this->getKdTrees();
+		this->buildKdTrees();
 	}
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr
@@ -288,7 +286,7 @@ namespace GeoDetection
 
 		//set m_cloud to the corepoints and rebuild kdtrees
 		m_cloud = corepoints;
-		this->getKdTrees();
+		this->buildKdTrees();
 	}
 
 	void

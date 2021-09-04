@@ -36,7 +36,7 @@ namespace GeoDetection
 		pcl::PointCloud<pcl::Normal>::Ptr m_normals;
 
 		//Transformation Matrix
-		Eigen::Matrix4d m_transformation;
+		Eigen::Matrix4d m_transformation = Eigen::Matrix4d::Identity();
 		std::array<float, 3> m_view = { 0, 0, 0 };
 
 		//Scale and resoluton
@@ -47,18 +47,26 @@ namespace GeoDetection
 
 	//Constructors and assignments
 	public:
+		Cloud()
+			: m_name("Cloud Default"),
+			m_cloud(new pcl::PointCloud<pcl::PointXYZ>),
+			m_kdtreeFLANN(new pcl::KdTreeFLANN<pcl::PointXYZ>),
+			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
+			m_normals(new pcl::PointCloud<pcl::Normal>)
+		{
+			GD_CORE_TRACE("Empty GeoDetection Cloud Constructed");
+		}
+
 		Cloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string name = "Cloud Default")
 			: m_name(name),
 			m_cloud(cloud),
 			m_kdtreeFLANN(new pcl::KdTreeFLANN<pcl::PointXYZ>),
 			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
-			m_normals(new pcl::PointCloud<pcl::Normal>),
-			m_transformation(Eigen::Matrix4d::Identity())
-
+			m_normals(new pcl::PointCloud<pcl::Normal>)
 		{
 			GD_CORE_TITLE("GeoDetection Cloud Construction");
 			GD_CORE_TRACE("Creating GeoDetection Cloud Object: '{0}' with {1} points", m_name, m_cloud->size());
-			getKdTrees();
+			buildKdTrees();
 			GD_CORE_INFO("--> GeoDetection Cloud Created\n");
 		}
 
@@ -77,7 +85,7 @@ namespace GeoDetection
 		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr const tree() const { return m_kdtree; }
 		inline pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr const flanntree() const { return m_kdtreeFLANN; }
 		inline pcl::PointCloud<pcl::Normal>::Ptr const normals() const { return m_normals; }
-		inline const std::vector <ScalarField> scalarfields() const { return m_scalar_fields; }
+		inline std::vector <ScalarField>* const scalarfields() { return &m_scalar_fields; }
 		inline Eigen::Matrix4d transformation() const { return m_transformation; }
 		inline double resolution() const { return m_resolution; }
 
@@ -85,7 +93,7 @@ namespace GeoDetection
 	public:
 		//Sets the cloud to a new pcl::PointCloud, updates the KdTrees, and clears the normals. 
 		inline void setScalarFields(std::vector<ScalarField> sf) { std::copy(sf.begin(), sf.end(), m_scalar_fields.begin()); }
-		inline void setCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) { m_cloud = std::move(cloud); getKdTrees(); m_normals->clear(); }
+		inline void setCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) { m_cloud = std::move(cloud); buildKdTrees(); m_normals->clear(); }
 		inline void setNormals(pcl::PointCloud<pcl::Normal>::Ptr& normals) { m_normals = std::move(normals); }
 		inline void setView(float x, float y, float z) { m_view[0] = x; m_view[1] = y; m_view[2] = z; }
 		void setScale(float scale) { m_scale = scale; }
@@ -142,7 +150,7 @@ namespace GeoDetection
 		/** \brief Method for averaging all scalar fields within a defined search radius, at all points (m_cloud) */
 		void averageAllScalarFields(float radius);
 
-		void getKdTrees();
+		void buildKdTrees();
 
 		/** \brief Method for computing normals. View point is set as 0,0,0 as default unless set with setView
 		* \param[in] radius: Radius for spherical neighbour search used for principle component analysis.
