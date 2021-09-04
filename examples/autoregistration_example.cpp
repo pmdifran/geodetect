@@ -1,3 +1,4 @@
+#include "readascii.h"
 #include "GeoDetection.h"
 #include "autoRegistration.h"
 #include "log.h"
@@ -17,9 +18,13 @@ int main(int argc, char* argv[])
 	GD_TRACE("Source name: {0}", source_file);
 	GD_TRACE("Reference name: {0}", reference_file);
 
-	////Import point clouds into GeoDetection Cloud objects
-	GeoDetection::Cloud source(GeoDetection::PCLreadASCIIxyz(source_file), "Source");
-	GeoDetection::Cloud reference(GeoDetection::PCLreadASCIIxyz(reference_file), "Reference");
+
+	GeoDetection::AsciiReader reader;
+	reader.setFilename(source_file);
+	GeoDetection::Cloud source = reader.import();
+	
+	reader.setFilename(reference_file);
+	GeoDetection::Cloud reference = reader.import();
 
 	//Subsample the clouds
 	source.distanceDownSample(0.15);

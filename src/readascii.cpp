@@ -4,27 +4,10 @@
 
 namespace GeoDetection
 {
-	//Helpers
-	void
-		reserveCloudSpace(const char* fname, bool header_present,
-			pcl::PointCloud<pcl::PointXYZ>::Ptr cloudptr)
-	{
-		size_t num_points = getLineCount(fname);
-		if (num_points < 2) {
-			GD_ERROR("Needs more than 2 points to create a point cloud object");
-			return;
-		}
-
-		if (header_present) { num_points--; }
-
-		cloudptr->points.reserve(num_points);
-		GD_TRACE(":: Number of points: {0}", num_points);
-	}
-
 	//Parses the file and returns a GeoDetection Cloud. Currently only imports scalar fields and XYZ coordinates.
 	//Option for normals will be added later.
 	Cloud 
-		parseData(FILE* file, size_t num_points, size_t num_columns, char* buf, const int64_t BUFFER_SIZE)
+		parseData(FILE* file, size_t num_points, size_t num_columns, bool header_present)
 	{
 		GD_CORE_TRACE(":: Parsing ascii file...");
 		size_t num_fields = num_columns - 3;
@@ -46,6 +29,15 @@ namespace GeoDetection
 		pcl::PointXYZ xyz;
 		pcl::Normal n;
 		float sf; 
+		
+		//initialize buffer
+		static const int64_t BUFFER_SIZE = 16 * 1024;
+		char buf[BUFFER_SIZE + 1];
+
+		//If there's a header, skip the first line.
+		if (header_present) {
+			char* str = fgets(buf, BUFFER_SIZE, file);
+		}
 		
 		//Fill buffer until the file is read.
 		while (size_t bytes_read = fread(&buf, 1, BUFFER_SIZE, file)) {
@@ -101,10 +93,6 @@ namespace GeoDetection
 			GD_TITLE("Ascii Data Import");
 			auto start = GeoDetection::Time::getStart();
 
-			//initialize buffer
-			static const int64_t BUFFER_SIZE = 16 * 1024;
-			char buf[BUFFER_SIZE + 1];
-
 			//Get number of points in the file, and reduce by one if header is present.
 			bool header_present = hasHeader(m_filename);
 			size_t num_points = getLineCount(m_filename) - (int)header_present;
@@ -125,17 +113,13 @@ namespace GeoDetection
 				std::exit(EXIT_FAILURE);
 			}
 
-			//If there's a header, skip the first line.
-			if (header_present) {
-				char* str = fgets(buf, BUFFER_SIZE, file);
-			}
-
 			//Parse the data and create a GeoDetection object
-			Cloud geodetect = parseData(file, num_points, num_columns, buf, BUFFER_SIZE);
+			Cloud geodetect = parseData(file, num_points, num_columns, header_present);
 
 			fclose(file);
 			GD_WARN("--> Data import time: {0} ms", GeoDetection::Time::getDuration(start));
 
+			geodetect.buildKdTrees();
 			return geodetect;
 	}
 

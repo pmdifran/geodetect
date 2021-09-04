@@ -10,17 +10,15 @@
 
 namespace GeoDetection
 {
-	class ReadAscii
+	class AsciiReader
 	{
 		const char* m_filename;
 
 	public: 
-		ReadAscii(const char* f) : m_filename(f)
-		{
-		}
+		AsciiReader(const char* f) : m_filename(f) {}
 
+		inline void setFilename(const char* fname) { m_filename = fname; }
 		GeoDetection::Cloud import();
-
 	};
 
 }

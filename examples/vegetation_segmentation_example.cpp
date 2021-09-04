@@ -1,6 +1,6 @@
 
 //GeoDetection includes
-#include "PCLreadASCII.h"
+#include "readascii.h"
 #include "GeoDetection.h"
 #include "autoRegistration.h"
 #include "segmentVegetation.h"
@@ -15,7 +15,9 @@ int main(int argc, char* argv[])
 	auto start = GeoDetection::Time::getStart();
 
 	const char* source_file = "treez_test.txt"; //hardcoded - if using this for other than testing, provide command line arguments.
-	GeoDetection::Cloud source(GeoDetection::PCLreadASCIIxyz(source_file), "Source");
+
+	GeoDetection::AsciiReader reader(source_file);
+	GeoDetection::Cloud source = reader.import()
 
 	source.distanceDownSample(0.1);
 

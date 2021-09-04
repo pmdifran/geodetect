@@ -109,7 +109,7 @@ hasHeader(char const* fname)
 	iss.imbue(std::locale(std::locale(), new csv_reader())); //using locale that treats CSV delimiters as whitesapce.
 
 	if (iss >> xyz[0] >> xyz[1] >> xyz[2]) { // stream extraction returns false if a non-numeric value is entered
-		std::cout << ":: No header detected." << std::endl;
+		GD_TRACE(":: No header detected.");
 		return false;
 	}
 	else {

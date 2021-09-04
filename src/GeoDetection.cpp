@@ -69,7 +69,7 @@ namespace GeoDetection
 	}
 
 	void 
-		Cloud::getKdTrees()
+		Cloud::buildKdTrees()
 	{
 		GD_CORE_TRACE(":: Constructing Search Trees");
 		auto start = GeoDetection::Time::getStart();
@@ -222,7 +222,7 @@ namespace GeoDetection
 
 		//set m_cloud to the corepoints and rebuild kdtrees
 		m_cloud = corepoints;
-		this->getKdTrees();
+		this->buildKdTrees();
 	}
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr
@@ -286,7 +286,7 @@ namespace GeoDetection
 
 		//set m_cloud to the corepoints and rebuild kdtrees
 		m_cloud = corepoints;
-		this->getKdTrees();
+		this->buildKdTrees();
 	}
 
 	void
