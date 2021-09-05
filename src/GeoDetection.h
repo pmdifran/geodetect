@@ -26,8 +26,7 @@ namespace GeoDetection
 		std::string m_name;
 
 		//Scalar Fields
-		int m_num_fields = 0;
-		std::vector<ScalarField> m_scalar_fields;
+		std::vector<ScalarField> m_scalarfields;
 
 		//PCL Data Structures
 		pcl::PointCloud<pcl::PointXYZ>::Ptr m_cloud;
@@ -54,7 +53,7 @@ namespace GeoDetection
 			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
 			m_normals(new pcl::PointCloud<pcl::Normal>)
 		{
-			GD_CORE_TRACE("Empty GeoDetection Cloud Constructed");
+			GD_CORE_TRACE(":: Constructing empty GeoDetection Cloud...");
 		}
 
 		Cloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string name = "Cloud Default")
@@ -85,14 +84,14 @@ namespace GeoDetection
 		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr const tree() const { return m_kdtree; }
 		inline pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr const flanntree() const { return m_kdtreeFLANN; }
 		inline pcl::PointCloud<pcl::Normal>::Ptr const normals() const { return m_normals; }
-		inline std::vector <ScalarField>* const scalarfields() { return &m_scalar_fields; }
+		inline std::vector <ScalarField>* const scalarfields() { return &m_scalarfields; }
 		inline Eigen::Matrix4d transformation() const { return m_transformation; }
 		inline double resolution() const { return m_resolution; }
 
 		//Setters and checks
 	public:
 		//Sets the cloud to a new pcl::PointCloud, updates the KdTrees, and clears the normals. 
-		inline void setScalarFields(std::vector<ScalarField> sf) { std::copy(sf.begin(), sf.end(), m_scalar_fields.begin()); }
+		inline void setScalarFields(std::vector<ScalarField> sf) { std::copy(sf.begin(), sf.end(), m_scalarfields.begin()); }
 		inline void setCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) { m_cloud = std::move(cloud); buildKdTrees(); m_normals->clear(); }
 		inline void setNormals(pcl::PointCloud<pcl::Normal>::Ptr& normals) { m_normals = std::move(normals); }
 		inline void setView(float x, float y, float z) { m_view[0] = x; m_view[1] = y; m_view[2] = z; }
@@ -105,38 +104,37 @@ namespace GeoDetection
 		void setNormalsKSearch(int k) { m_normals = this->getNormalsKSearch(k); }
 
 		inline bool hasNormals() { return m_normals->size() > 0; }
-		inline bool hasScalarFields() { return m_num_fields > 0; }
+		inline bool hasScalarFields() { return m_scalarfields.size() > 0; }
 
 		//Methods
 	public:
 		/** \brief Method for adding another column of scalar fields
 		* \param[in] new_fields: float vector which should be the same length as # of points (this is checked for).
-		* \return Internal: m_scalar_fields is modified to include an additional pointer to the fields.
+		* \return Internal: m_scalarfields is modified to include an additional pointer to the fields.
 		*/
 		inline void addScalarField(ScalarField&& new_fields)
 		{
-			if (new_fields.size() == m_cloud->size()) { m_scalar_fields.push_back(std::move(new_fields)); m_num_fields++; }
+			if (new_fields.size() == m_cloud->size()) { m_scalarfields.push_back(std::move(new_fields)); }
 			else { GD_CORE_ERROR(":: Scalar field size must agree with the cloud size"); }
 		}
 
 		/** \brief Method for removing column of scalar fields
 		* \param[in] index: index of scalar field to remove (removes the largest index by default).
-		* \return Internal: m_scalar_fields is modified to remove an pointer to a fields column.
+		* \return Internal: m_scalarfields is modified to remove an pointer to a fields column.
 		*/
 		inline void deleteScalarField(int index)
 		{
-			if (index < 0 || m_num_fields == 0 || index > (m_num_fields - 1))
+			if (index < 0 || m_scalarfields.size() == 0 || index > (m_scalarfields.size() - 1))
 			{
 				GD_CORE_ERROR(":: Attempting to access a scalar field index that does not exist");  
 				return;
 			}
 
-			m_scalar_fields.erase(m_scalar_fields.begin() + index);
-			m_num_fields--;
+			m_scalarfields.erase(m_scalarfields.begin() + index);
 		}
 
 		inline void deleteFirstScalarField() { this->deleteScalarField(0); }
-		inline void deleteLastScalarField() { this->deleteScalarField(m_num_fields - 1); }
+		inline void deleteLastScalarField() { this->deleteScalarField(m_scalarfields.size() - 1); }
 
 		/** \brief Method for averaging specific scalar fields within a defined search radius, and at select corepoints*/
 		void averageScalarFieldSubset(float radius, int field_index, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);

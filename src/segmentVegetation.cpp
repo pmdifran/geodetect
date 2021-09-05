@@ -36,7 +36,7 @@ namespace GeoDetection
 			getVegetationScore(vegetation_scores, weights[i], curvatures, densities);
 		}
 
-		//Push GeoDetection::ScalarField to GeoDetection::Cloud::m_scalar_fields.
+		//Push GeoDetection::ScalarField to GeoDetection::Cloud::m_scalarfields.
 		geodetect.addScalarField(std::move(vegetation_scores));
 	}
 
@@ -77,7 +77,7 @@ namespace GeoDetection
 			getVegetationScore(vegetation_scores, weights[i], curvatures_multiscale[i], densities_multiscale[i]);
 		}
 
-		//Push GeoDetection::ScalarField to GeoDetection::Cloud::m_scalar_fields.
+		//Push GeoDetection::ScalarField to GeoDetection::Cloud::m_scalarfields.
 		geodetect.addScalarField(std::move(vegetation_scores));
 	}
 

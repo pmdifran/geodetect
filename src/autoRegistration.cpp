@@ -24,11 +24,11 @@ namespace GeoDetection
 		auto start = GeoDetection::Time::getStart();
 
 		if (!reference.hasNormals()) {
-			reference.setNormals(reference.getNormalsRadiusSearch(1.0));
+			reference.setNormalsRadiusSearch(1.0);
 		}
 
 		if (!source.hasNormals()) {
-			source.setNormals(source.getNormalsRadiusSearch(1.0));
+			source.setNormalsRadiusSearch(1.0);
 		}
 
 		//Compute ISS keypoints
@@ -97,11 +97,11 @@ namespace GeoDetection
 
 		//Compute the normals if they are not already computed.
 		if (!reference.hasNormals()) {
-			reference.setNormals(reference.getNormalsRadiusSearch(radius));
+			reference.setNormalsRadiusSearch(1.0);
 		}
 
 		if (!source.hasNormals()) {
-			source.setNormals(source.getNormalsRadiusSearch(radius));
+			source.setNormalsRadiusSearch(1.0);
 		}
 
 		pcl::GeneralizedIterativeClosestPoint <pcl::PointXYZ, pcl::PointXYZ> gicp;

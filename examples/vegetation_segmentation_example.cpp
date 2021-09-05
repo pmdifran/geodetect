@@ -14,18 +14,16 @@ int main(int argc, char* argv[])
 	GeoDetection::Log::Init();
 	auto start = GeoDetection::Time::getStart();
 
-	const char* source_file = "treez_test.txt"; //hardcoded - if using this for other than testing, provide command line arguments.
-
+	const char* source_file = "test_out.txt";
 	GeoDetection::AsciiReader reader(source_file);
-	GeoDetection::Cloud source = reader.import()
+	GeoDetection::Cloud source = reader.import();
 
 	source.distanceDownSample(0.1);
-
+		
 	GeoDetection::segmentVegetationSimplified(source);
-	source.writeAsASCII("test_out.txt");
+	source.writeAsASCII("test_out2.txt");
 
-
-	GD_WARN("Total time: {0} s \n", GeoDetection::Time::getDuration(start) / 1000);
+	GD_WARN("Total time: {0} s \n", GeoDetection::Time::getDuration(start)/1000);
 
 }
 

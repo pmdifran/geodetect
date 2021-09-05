@@ -9,7 +9,6 @@ namespace GeoDetection
 	Cloud 
 		parseData(FILE* file, size_t num_points, size_t num_columns, bool header_present)
 	{
-		GD_CORE_TRACE(":: Parsing ascii file...");
 		size_t num_fields = num_columns - 3;
 
 		//Get pointers to all of the member variables, which we will fill. 
@@ -22,14 +21,21 @@ namespace GeoDetection
 		cloud->points.reserve(num_points);
 		normals->points.reserve(num_points);
 
-		scalarfields->reserve(num_fields); // if normals too, -6. --> add this later. 
-		for (size_t i = 0; i < num_fields; i++) { scalarfields[i].reserve(num_points); }
+		std::vector<std::vector<float>> myvec;
+		myvec.emplace_back().reserve(1000);
+
+		// reserve space for all the scalar fields
+		for (size_t i = 0; i < num_fields; i++) 
+		{ 
+			scalarfields->emplace_back().data.reserve(num_points);
+		}
 
 		//temporary containers for parsing and pushing into classes
 		pcl::PointXYZ xyz;
 		pcl::Normal n;
 		float sf; 
 		
+		GD_CORE_TRACE(":: Parsing ascii file and filling empty GeoDetection Cloud...\n \n");
 		//initialize buffer
 		static const int64_t BUFFER_SIZE = 16 * 1024;
 		char buf[BUFFER_SIZE + 1];
@@ -55,13 +61,13 @@ namespace GeoDetection
 				//Parse first 3 columns (xyz)
 				auto result = fast_float::from_chars(p, p_next, xyz.x);
 				result = fast_float::from_chars(result.ptr + 1, p_next, xyz.y);
-				fast_float::from_chars(result.ptr + 1, p_next, xyz.z);
+				result = fast_float::from_chars(result.ptr + 1, p_next, xyz.z);
 				cloud->points.push_back(xyz);
 
 				for (size_t i = 0; i < num_fields; i++)
 				{
 					result = fast_float::from_chars(result.ptr + 1, p_next, sf);
-					scalarfields[i].push_back(sf);
+					scalarfields->at(i).data.push_back(sf);
 				}
 
 				p = p_next + 1;
@@ -88,7 +94,7 @@ namespace GeoDetection
 	}
 
 	Cloud 
-		ReadAscii::import()
+		AsciiReader::import()
 	{
 			GD_TITLE("Ascii Data Import");
 			auto start = GeoDetection::Time::getStart();

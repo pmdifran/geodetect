@@ -34,16 +34,16 @@ namespace GeoDetection
 		Cloud::averageScalarFieldSubset(float radius, int field_index, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints)
 	{
 		//Check for correct inputs
-		if (field_index > m_num_fields - 1 || field_index < 0) 
+		if (field_index > m_scalarfields.size() - 1 || field_index < 0)
 		{
 			GD_CORE_ERROR(":: Invalid scalar field index accessed."); return;
 		}
 
-		GD_CORE_TRACE(":: Averaging scalar field index: {0} with name: {1}", field_index, m_scalar_fields[field_index].name);
+		GD_CORE_TRACE(":: Averaging scalar field index: {0} with name: {1}", field_index, m_scalarfields[field_index].name);
 		GeoDetection::ScalarField averaged_fields;
-		averaged_fields = computeAverageField(*this, m_scalar_fields[field_index], radius, corepoints);
+		averaged_fields = computeAverageField(*this, m_scalarfields[field_index], radius, corepoints);
 
-		m_scalar_fields[field_index] = std::move(averaged_fields);
+		m_scalarfields[field_index] = std::move(averaged_fields);
 	}
 
 	void 
@@ -57,7 +57,7 @@ namespace GeoDetection
 		Cloud::averageAllScalarFieldsSubset(float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints)
 	{
 		GD_CORE_TRACE(":: Averaging all scalar fields...");
-		for (int i = 0; i < m_num_fields; i++) { this->averageScalarFieldSubset(radius, i, corepoints); }
+		for (int i = 0; i < m_scalarfields.size(); i++) { this->averageScalarFieldSubset(radius, i, corepoints); }
 		GD_CORE_TRACE(":: All fields averaged");
 	}
 
@@ -449,9 +449,9 @@ namespace GeoDetection
 				if (write_scalarfields)
 				{
 					bool buffer_full = false;
-					for (size_t sf = 0; sf < m_num_fields; sf++)
+					for (size_t sf = 0; sf < m_scalarfields.size(); sf++)
 					{
-						increment = snprintf(buf + cx, BUFFER_SIZE - cx, " %.8f", m_scalar_fields[sf][i]);
+						increment = snprintf(buf + cx, BUFFER_SIZE - cx, " %.8f", m_scalarfields[sf][i]);
 						cx += increment;
 						total_increment += increment;
 						if (cx >= BUFFER_SIZE) { buffer_full = true;  break; }

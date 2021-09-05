@@ -2,6 +2,7 @@ cmake_minimum_required( VERSION 3.0 )
 
 set(GeoDetection_source ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(GeoDetection_vendor ${CMAKE_CURRENT_SOURCE_DIR}/vendor) 
+set(CMAKE_CXX_STANDARD 23)
 
 # Create Project
 project( GeoDetection LANGUAGES CXX)
@@ -19,6 +20,7 @@ set(SOURCE
     ${GeoDetection_source}/features.cpp
     ${GeoDetection_source}/readascii_core.cpp
     ${GeoDetection_source}/readascii.cpp
+    ${GeoDetection_source}/maskclassify.cpp
 )
 
 set(HEADERS
@@ -32,6 +34,7 @@ set(HEADERS
     ${GeoDetection_source}/features.h
     ${GeoDetection_source}/readascii_core.h
     ${GeoDetection_source}/readascii.h
+    ${GeoDetection_source}/maskclassify.h
 )
 
 add_executable( GeoDetection ${SOURCE} ${HEADERS} )
@@ -63,8 +66,7 @@ if (PDAL_FOUND)
     message("\nPDAL FOUND\n")
     include_directories(${PDAL_INCLUDE_DIRS})
     link_directories(${PDAL_LIBRARY_DIRS})
-    add_definitions(${PDAL_DEFINITIONS})
-    #set(CMAKE_CXX_FLAGS "-std=c++11") 
+    add_definitions(${PDAL_DEFINITIONS}) 
 ##This flag is not compatible with AVX, so FPFH will be prone to heap corruption... Hopefully pdal works without
 endif()
 

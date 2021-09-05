@@ -15,7 +15,9 @@ namespace GeoDetection
 		const char* m_filename;
 
 	public: 
+		AsciiReader() = default;
 		AsciiReader(const char* f) : m_filename(f) {}
+		
 
 		inline void setFilename(const char* fname) { m_filename = fname; }
 		GeoDetection::Cloud import();
