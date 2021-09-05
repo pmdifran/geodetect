@@ -8,7 +8,13 @@
 #include "log.h"
 
 //stdlib includes
-#include <iomanip>
+#include <iomanip> //for set_precision.
+
+//Command line interfacing with CLI11
+#include "CLI/App.hpp"
+#include "CLI/Formatter.hpp"
+#include "CLI/Config.hpp"
+
 
 int main (int argc, char* argv[])
 {

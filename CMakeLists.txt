@@ -13,7 +13,6 @@ set(SOURCE
     ${GeoDetection_source}/main.cpp
     ${GeoDetection_source}/autoRegistration.cpp
     ${GeoDetection_source}/GeoDetection.cpp
-    ${GeoDetection_source}/PCLreadASCII.cpp
     ${GeoDetection_source}/log.cpp
     ${GeoDetection_source}/segmentVegetation.cpp
     ${GeoDetection_source}/ScalarField.cpp
@@ -27,7 +26,6 @@ set(HEADERS
     ${HEADERS}
     ${GeoDetection_source}/autoRegistration.h
     ${GeoDetection_source}/GeoDetection.h
-    ${GeoDetection_source}/PCLreadASCII.h
     ${GeoDetection_source}/log.h
     ${GeoDetection_source}/segmentVegetation.h
     ${GeoDetection_source}/ScalarField.h
@@ -52,7 +50,7 @@ if(OpenMP_CXX_FOUND)
     target_compile_options(GeoDetection PUBLIC "${OpenMP_CXX_FLAGS}")
 endif()
 
-#Other dependencies
+#PDAL
 #######################################################################################
 if (NOT DEFINED dependencies_DIR)
     set(dependencies_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies)
@@ -60,7 +58,7 @@ endif()
 
 # Find PDAL - in development
 set(PDAL_DIR ${dependencies_DIR}/pdal/Library/lib/cmake/PDAL)
-find_package(PDAL 1.0.0 REQUIRED CONFIG)
+find_package(PDAL 1.0.0 CONFIG)
 
 if (PDAL_FOUND)
     message("\nPDAL FOUND\n")
@@ -94,12 +92,19 @@ if( PCL_FOUND )
   target_link_libraries( GeoDetection PUBLIC ${PCL_LIBRARIES} )
 endif()
 
-#Include GeoDetection 3rdPartys
+#Include GeoDetection 3rdPartys (via git submodules)
+#######################################################################################
 #spdlog
 include_directories(${GeoDetection_vendor}/spdlog/include)
+
 #fast_float
 include_directories(${GeoDetection_vendor}/fast_float/include)
 
+#CLI11
+include_directories(${GeoDetection_vendor}/CLI11/include)
+
+#MSVS output directories
+#######################################################################################
 #Set output directories (to coincide with PCL libraries and binaries - i.e. "../PCL 1.12/bin/")
 if ( MSVC )
     message([STATUS] "MSVS Detected... Setting output directories...")
@@ -120,7 +125,9 @@ if ( MSVC )
 
 endif ( MSVC )
 
-#Enable Advanced Vector Extensions (AVX)
+#Enable Advanced Vector Extensions (AVX) (otherwise some PCL features might cause heap corruption)
+#######################################################################################
+
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_OPT_ARCH_NATIVE_SUPPORTED)
 
