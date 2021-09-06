@@ -1,5 +1,8 @@
+//#define LOG_ALL_OFF  //set to have no logging
+//#define LOG_CORE_OFF //set to have no core messages
+//#define LOG_CORE_OFF //set to have no higher-level app messages.
 
-//#define LOG_ALL_OFF
+
 //GeoDetection includes
 #include "GeoDetection.h"
 #include "readascii.h"
