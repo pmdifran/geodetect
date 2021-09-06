@@ -97,6 +97,7 @@ namespace GeoDetection
 		AsciiReader::import()
 	{
 			GD_TITLE("Ascii Data Import");
+			GD_TRACE(":: File: {}", m_filename);
 			auto start = GeoDetection::Time::getStart();
 
 			//Get number of points in the file, and reduce by one if header is present.
@@ -109,7 +110,6 @@ namespace GeoDetection
 			GD_TRACE(":: Number of columns: {0}",  num_columns);
 
 			//Open the c-style file for reading
-			GD_TRACE(":: Opening File: {0}...", m_filename);
 			FILE* file;
 			errno_t err;
 

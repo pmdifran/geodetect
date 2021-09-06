@@ -233,7 +233,7 @@ namespace GeoDetection
 		*/
 		void writeTransformation(const char* fname);
 
-		void writeAsASCII(const char* fname, bool write_normals = true, bool write_scalarfields = true);
+		void writeAsASCII(const std::string& filename_str, bool write_normals = true, bool write_scalarfields = true);
 	};
 
 }

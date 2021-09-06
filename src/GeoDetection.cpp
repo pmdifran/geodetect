@@ -390,10 +390,14 @@ namespace GeoDetection
 		ofs.close();
 	}
 
-	void Cloud::writeAsASCII(const char* fname, bool write_normals /* = true */, bool write_scalarfields /* = true */)
+	void Cloud::writeAsASCII(const std::string& filename_str, bool write_normals /* = true */, bool write_scalarfields /* = true */)
 	{
-		GD_TITLE("Exporting GeoDetection Cloud...");
+		GD_TITLE("Exporting GeoDetection Cloud");
+		GD_TRACE(":: File: {}", filename_str);
 		auto start = GeoDetection::Time::getStart();
+
+		//Using c-string for c-style IO
+		const char* filename = filename_str.c_str();
 
 		//Check for proper normals
 		if (!this->hasNormals())
@@ -414,7 +418,7 @@ namespace GeoDetection
 		char buf[BUFFER_SIZE + 1];
 
 		std::fstream fstream;
-		fstream.open(fname, std::ios::out | std::ios::binary | std::ios::trunc);
+		fstream.open(filename, std::ios::out | std::ios::binary | std::ios::trunc);
 
 		size_t i = 0;
 
