@@ -38,6 +38,8 @@ Tools for processing and extracting information from point clouds of natural env
 ```
 $ cd C:/Dev
 $ git clone https://github.com/pmdifran/GeoDetection.git
+$ git submodule init
+$ git submodule update --recursive
 ```
 
 3. Download the PCL-AllInOne installer from the PCL releases on github (i.e. `PCL-1.12.0-AllInOne-msvc2019-win64.exe`).
