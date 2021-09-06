@@ -32,7 +32,8 @@ int main (int argc, char* argv[])
 	auto input_opt = app.add_option("-i,--input", source_filename, "Input source cloud filename.");
 	auto mask_opt = app.add_option("-m,--mask", mask_filename, "Input mask file (classification as last field)"); //ADD OPTION FOR COLUMN
 	auto batch_opt = app.add_option("-b,--batch", batch_directory,
-		"Input directory containing *only* input source files (ascii) for batch processing. Ignores -i if set.");
+		"Input directory containing *only* input source files (ascii) for batch processing. "
+		"Ignores -i if set. Use '-b .' for current directory, or '-b ..' for parent directory.");
 
 	//Set option requirements
 	mask_opt->required();
