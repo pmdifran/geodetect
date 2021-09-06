@@ -1,12 +1,6 @@
 [submodule "vendor/spdlog"]
 	path = vendor/spdlog
 	url = https://github.com/gabime/spdlog
-[submodule "fast_float"]
-	path = fast_float
-	url = https://github.com/fastfloat/fast_float
 [submodule "vendor/fast_float"]
 	path = vendor/fast_float
 	url = https://github.com/fastfloat/fast_float
-[submodule "CLI11"]
-	path = vendor/CLI11
-	url = https://github.com/CLIUtils/CLI11.git
