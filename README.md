@@ -1,9 +1,10 @@
 # GeoDetection
-Tools for processing and extracting information from point clouds of natural environments. Under development, primarily for Windows. 
+Tools for processing and extracting information from point clouds of natural environments. Under development, tested for Windows. 
 
 ### Current features:
-- Macro-ized logging with spdlog implementation
-- Fast c-style ascii import of LiDAR
+- Macro-ized logging using spdlog.
+- Fast c-style ascii import of LiDAR.
+- Command line interfacing for single and batch processing, using CLI11.
 
 - GeoDetection Cloud objects
   - A wrapper around the Point Cloud Library cloud: pcl::PointCloud<pcl::PointXYZ>
@@ -14,9 +15,10 @@ Tools for processing and extracting information from point clouds of natural env
 - Current GeoDetection modules:
   - Auto Registration (global and icp)
   - Vegetation segmentation
+  - Mask classification
 
 ### To be added...
--  _IO_: Implementing LibLAS, LASLIB, or PDAL libary for importing .las pointclouds.
+-  _IO_: Implementing PDAL for importing .las and .laz files.
 -  _IO_: Implementing RIEGL laser intruments' SDK for .rdb IO
 -  _Method_: User-input with viz (i.e. selection camera position for orienting normals [m_view])
 -  _Method_: Segmentation (supervoxels; region growing; object-based segmentation)
@@ -61,24 +63,4 @@ cmake -Ddependencies_DIR=C:/Dev/dependencies ../GeoDetection
 
 ## Linux; MacOS; Windows (custom)
 
-**Requirements:** \
-*Look at PCL documentation for minimum required versions*
-- Git
-- CMake
-- Boost (download and build with cmake)
-- FLANN (github release download and build with cmake)
-- qhull (download and build)
-- Eigen (header only --> download)
-- VTK
-- Qt is neccessary for some visualization libraries if you want to use them.\
---> Qt itself is huge - double check which parts of Qt are required.\
-
-1. Point CMake to the dependencies. Check out PCL build guides for details @ www.pointclouds.org
-2. Configure and Build
-
-The GeoDetection CMakeLists.txt is not yet written for the custom build. In the project file you will have to:\
---> Add includes\
---> Add library dependency folder\
---> Add .lib to linker inputs.\
---> Build to the same bin folder as pcl, or write some post-build events to copy over the .dll's (or unix-like equivalents)\
---> Configure OpenMP (/openmp)
+Refer to https://pcl.readthedocs.io/projects/tutorials/en/latest/# for building yourself on Windows 10, or on POSIX compliant systems.
