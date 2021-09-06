@@ -24,7 +24,7 @@ Tools for processing and extracting information from point clouds of natural env
 -  _Method_: Segmentation (supervoxels; region growing; object-based segmentation)
 
 -  _OVERALL_: Implementation of CUDA-PCL for rapid real-time processing
--  .... .... .... making this cross platform at some point.
+-  Ensuring this is cross platform at some point
 
 ## Windows Build
 
