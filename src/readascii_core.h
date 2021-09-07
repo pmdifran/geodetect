@@ -10,15 +10,15 @@
 #include <locale> //for csv reader locale
 #include <cstdlib> //for exit()
 
-size_t getNumColumns(const char* fname);
+size_t getNumColumns(const std::string& fname);
 
-void checkIfXYZ(char const* fname);
+void checkIfXYZ(const std::string& fname);
 
-uintmax_t getLineCount(char const* fname);
+uintmax_t getLineCount(const std::string& fname);
 
-bool hasHeader(char const* fname);
+bool hasHeader(const std::string& fname);
 
-char getDelimeter(const char* fname);
+char getDelimeter(const std::string& fname);
 
 //Locale to treat commas, spaces, and newlines as whitespace. 
 struct csv_reader : std::ctype<char>

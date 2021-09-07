@@ -63,6 +63,9 @@ namespace GeoDetection
 		const std::vector<float>::const_iterator begin() const { return data.begin(); }
 		const std::vector<float>::const_iterator end() const { return data.end(); }
 
+		const std::vector<float>::const_reverse_iterator rbegin() const { return data.rbegin(); }
+		const std::vector<float>::const_reverse_iterator rend() const { return data.rend(); }
+
 		//Modifyers
 	public:
 		//Modify scalar field data with min-max normalization

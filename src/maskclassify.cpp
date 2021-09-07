@@ -1,51 +1,16 @@
 #include "maskclassify.h"
 #include "features.h" 
-
-std::vector<float> getUniqueList(std::vector<float>& fields)
-{
-	//Get list of classes in the SF
-	std::vector<float> class_list(fields.size());
-	std::partial_sort_copy(fields.begin(), fields.end(), class_list.begin(), class_list.end());
-	auto new_end = std::unique(class_list.begin(), class_list.end());
-	
-	class_list.resize(new_end - class_list.begin());
-
-	return class_list;
-}
-
-float computeMode(std::vector<int>::iterator& begin_it, std::vector<int>::iterator& end_it, GeoDetection::ScalarField& sf)
-{
-	//Get the query of classes into a separete vector
-	std::vector<float> classes(end_it - begin_it);
-	for (auto it = begin_it; it != end_it; it++)
-	{
-		classes.push_back(sf[*it]);
-	}
-
-	//Get list of unique classes to search for as mode and count number of times they're repeated.
-	std::vector<float> mode_candidates = getUniqueList(classes);
-	std::vector<int> counts(mode_candidates.size(), 0);
-
-	//Compute counts for each mode candidate
-	for (size_t i = 0; i < classes.size(); i++)
-	{
-		for (size_t j = 0; j < mode_candidates.size(); j++)
-		{
-			if (classes[i] == mode_candidates[j]) { counts[j]++; }
-		}
-	}
-	
-	return *(std::max_element(counts.begin(), counts.end()));
-}
+#include "core.h"
 
 namespace GeoDetection
 {
-	void classify(Cloud& mask, Cloud& source, int num_neighbors, size_t mask_field_index /* = 0 */)
+	void classifyPoints(Cloud& mask, Cloud& source, int num_neighbors, size_t mask_field_index /* = 0 */)
 	{
 		if (num_neighbors % 2) { num_neighbors++; } //hard classification using mode(neighborhood) --> always use odd numbers.
-
 		
 		auto source_cloud = source.cloud();
+		auto source_scalarfields = source.scalarfields();
+
 		std::vector<float> classification(source_cloud->size());
 
 		//Get pointers to mask members
@@ -53,9 +18,10 @@ namespace GeoDetection
 		auto mask_tree = mask.tree();
 		auto mask_scalarfields = mask.scalarfields();
 
-		//Get pointer to classes
-		ScalarField* mask_classes = &mask_scalarfields->at(mask_field_index);
-
+		//mask must have scalar fields. Assumed classes are the last scalar field.
+		if (mask_scalarfields->size() == 0) { GD_ERROR("Mask cloud must have scalar fields of classes (last field assumed"); }
+		ScalarField& mask_classes = mask_scalarfields->back();
+		
 		//Initialize containers
 		std::vector<float> sqdistances(num_neighbors);
 		std::vector<int> indices(num_neighbors);
@@ -66,9 +32,62 @@ namespace GeoDetection
 		for (size_t i = 0; i < source_cloud->size(); i++)
 		{
 			mask_tree->nearestKSearch(source_cloud->points[i], num_neighbors, indices, sqdistances);
-			classification[i] = computeMode(begin_it, end_it, *mask_classes);
+			classification[i] = computeModeFromIndices<int, float>(indices, mask_classes.data);
 		}
+
+		source.addScalarField(std::move(classification));
 	}
 
+	//Assumes clusters are sorted. Need to write a GeoDetection method which:
+											//sorts all fields, points, normals, based on the entries of a single scalarfield. 
+	void classifyClusters(Cloud& mask, Cloud& source, int num_neighbors, size_t mask_field_index /* = 0 */)
+	{
+		ScalarField clusters_classified(source.cloud()->size());
+		auto source_scalarfields = source.scalarfields(); //source scalar fields (clusterID is the last field).
+
+		//classify the points based on nearest neighbor analysis. 
+		classifyPoints(mask, source, num_neighbors, mask_field_index);
+
+		//get references to the classes and cluster ids, last and second to last, respectively.
+		ScalarField& classes = source_scalarfields->rbegin()[0];
+		ScalarField& clusters = source_scalarfields->rbegin()[1];
+
+		//get list of clusters
+		std::vector<float> cluster_ids = getUniqueList(clusters.data);
+
+//#pragma omp parallel for
+		for (int64_t i = 0; i < cluster_ids.size(); i++)
+		{
+			float current_id = cluster_ids[i];
+
+			//Get the array bounds of the current cluster
+			std::vector<float>::const_iterator begin_it = std::find_if(clusters.begin(), clusters.end(), 
+				[&current_id](float id) {return id == current_id; });
+
+			std::vector<float>::const_iterator end_it = std::find_if(clusters.rbegin(), clusters.rend(), 
+				[&current_id](float id) {return id == current_id; }).base();
+
+			//get indices
+			size_t index_begin = begin_it - clusters.begin();
+			size_t index_end = end_it - clusters.begin();
+
+			//get iterators to class bounds
+			begin_it = classes.begin() + index_begin;
+			end_it = classes.begin() + index_end;
+
+			//compute cluster class
+			float mode = computeMode<float>(begin_it, end_it);
+			
+			//set cluster classes.
+			size_t index = index_begin;
+			while (index < index_end)
+			{
+				clusters_classified[index] = mode;
+				index++;
+			}
+		}
+
+		source.addScalarField(std::move(clusters_classified));
+	}
 
 }

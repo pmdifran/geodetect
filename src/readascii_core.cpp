@@ -2,13 +2,12 @@
 
 //HELPER FUNCTIONS
 size_t
-getNumColumns(const char* fname)
+getNumColumns(const std::string& fname)
 {
 	size_t num_columns = 0;
 
 	//input filestream
-	std::string fnamestr(fname);
-	std::ifstream in(fnamestr);
+	std::ifstream in(fname);
 
 	//objects for parsing
 	float token = 0;
@@ -31,7 +30,7 @@ getNumColumns(const char* fname)
 }
 
 void
-checkIfXYZ(char const* fname)
+checkIfXYZ(const std::string& fname)
 {
 	//Check that there is XYZ data
 	size_t num_columns = getNumColumns(fname);
@@ -43,19 +42,20 @@ checkIfXYZ(char const* fname)
 }
 
 uintmax_t
-getLineCount(char const* fname)
+getLineCount(const std::string& fname)
 {
+	const char* fname_cstr = fname.c_str();
 	FILE* file;
 	errno_t err;
 
-	if ((err = fopen_s(&file, fname, "r")) != 0)
+	if ((err = fopen_s(&file, fname_cstr, "r")) != 0)
 	{
-		GD_ERROR("Failed to open file: {0} \n", fname);
+		GD_ERROR("Failed to open file: {0} \n", fname_cstr);
 	}
 
 	static const auto BUFFER_SIZE = 16 * 1024;
 	char buf[BUFFER_SIZE + 1];
-	uintmax_t lines = 1;
+	uintmax_t num_lines = 1;
 
 	while (size_t bytes_read = fread(&buf, 1, BUFFER_SIZE, file)) {
 
@@ -66,7 +66,7 @@ getLineCount(char const* fname)
 
 		//memchr searches first x bytes of buffer and returns pointer to the first instance of '\n'. If none found, returns nullptr
 		for (char* p = buf; (p = (char*)memchr(p, '\n', (buf + bytes_read) - p)); p++)				// --> nullptr is implictly converted into booleans false, which terminates the loop :)
-			lines++;								  // ^^^^^^^^^^^^^^^^^ Gets the remaining # of addresses in our buffer
+			num_lines++;								  // ^^^^^^^^^^^^^^^^^ Gets the remaining # of addresses in our buffer
 	}
 
 	fclose(file);
@@ -82,14 +82,14 @@ getLineCount(char const* fname)
 	in.seekg(-1, std::ios_base::end);
 	in.get(ch);
 
-	if (ch == '\n') { lines--; }
+	if (ch == '\n') { num_lines--; }
 
 	in.close();
-	return lines;
+	return num_lines;
 }
 
 bool
-hasHeader(char const* fname)
+hasHeader(const std::string& fname)
 {
 	//input filestream
 	std::ifstream in(fname);
@@ -110,22 +110,23 @@ hasHeader(char const* fname)
 
 	if (iss >> xyz[0] >> xyz[1] >> xyz[2]) { // stream extraction returns false if a non-numeric value is entered
 		GD_TRACE(":: No header detected.");
+		in.close();
 		return false;
 	}
 	else {
 		GD_TRACE(":: Header found.");
+		in.close();
 		return true;
 	}
 }
 
 char
-getDelimeter(const char* fname)
+getDelimeter(const std::string& fname)
 {
 	const char delimeters[] = { ',', ' ', ';', 0 };
 
 	//input filestream
-	std::string fnamestr(fname);
-	std::ifstream in(fnamestr);
+	std::ifstream in(fname);
 
 	//objects for parsing
 	float temp = 0;

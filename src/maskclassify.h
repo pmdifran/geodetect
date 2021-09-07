@@ -3,5 +3,7 @@
 
 namespace GeoDetection
 {
-	void classify(Cloud& mask, Cloud& source, int num_neighbors, size_t mask_field_index = 0);
+	void classifyPoints(Cloud& mask, Cloud& source, int num_neighbors, size_t mask_field_index = 0);
+
+	void classifyClusters(Cloud& mask, Cloud& source, int num_neighbors, size_t mask_field_index = 0);
 }

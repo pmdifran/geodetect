@@ -14,16 +14,15 @@ namespace GeoDetection
 {
 	class AsciiReader
 	{
-		//Import() uses c-style IO, so we need to provide filenames as c-strings
-		const char* m_filename;
+		std::string m_filename;
 
 	public: 
 		AsciiReader() = default;
-		AsciiReader(const char* f) : m_filename(f) {}
-		AsciiReader(std::string fname_str) : m_filename(fname_str.c_str()) {}
+		AsciiReader(const char* f) : m_filename(std::string(f)) {}
+		AsciiReader(std::string f) : m_filename(f) {}
 		
-		inline void setFilename(const char* fname) { m_filename = fname; }
-		inline void setFilename(const std::string fname_str) { m_filename = fname_str.c_str(); }
+		inline void setFilename(const char* fname) { m_filename = std::string(fname); }
+		inline void setFilename(const std::string fname) { m_filename = fname; }
 
 		GeoDetection::Cloud import();
 	};

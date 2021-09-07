@@ -20,6 +20,7 @@ set(SOURCE
     ${GeoDetection_source}/readascii_core.cpp
     ${GeoDetection_source}/readascii.cpp
     ${GeoDetection_source}/maskclassify.cpp
+    ${GeoDetection_source}/core.cpp
 )
 
 set(HEADERS
@@ -33,9 +34,13 @@ set(HEADERS
     ${GeoDetection_source}/readascii_core.h
     ${GeoDetection_source}/readascii.h
     ${GeoDetection_source}/maskclassify.h
+    ${GeoDetection_source}/core.h
+    ${GeoDetection_source}/core.hpp
 )
 
+#Create target
 add_executable( GeoDetection ${SOURCE} ${HEADERS} )
+include_directories(${GeoDetection_source})
 
 #Append 'd' to debug builds.
 set_target_properties(GeoDetection PROPERTIES DEBUG_POSTFIX d)

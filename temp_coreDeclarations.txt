@@ -1,0 +1,20 @@
+	//Get an index-mapping which corresponds to a sorted vector (descending)
+	std::vector<size_t> sortIndicesDescending(const std::vector<float>& vec);
+
+	//Get an index-mapping which corresponds to a sorted vector (ascending)
+	std::vector<size_t> sortIndicesAscending(const std::vector<float>& vec);
+
+	//Get unique lists from a sorted vector
+	template <typename T>
+	std::vector<T> getUniqueList(std::vector<T>& vec);
+
+	//Compute the mode across the range of an input vector.
+	template <typename T> T computeMode(std::vector<T>& vec);
+
+	//Compute the mode across the contiguous range of a vector given by iterators.
+	template <typename T>
+	T computeMode(typename std::vector<T>::const_iterator begin_it, typename std::vector<T>::const_iterator end_it);
+
+	//Compute the mode on an unordered subset fields, given by a vector of indices
+	template <typename T_index, typename T_field>
+	T_field computeModeFromIndices(std::vector<T_index>& indices, std::vector<T_field>& field);

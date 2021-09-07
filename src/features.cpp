@@ -1,19 +1,9 @@
 #include "features.h"
+#include "core.h"
 
 namespace GeoDetection
 {
 //HELPERS
-
-	//Gets index mapping to the input vector if it was sorted by descending values
-	std::vector<size_t> 
-		sortIndices(const std::vector<float>& vec)
-	{
-		std::vector<size_t> idx(vec.size());
-		std::iota(idx.begin(), idx.end(), 0);
-		std::stable_sort(idx.begin(), idx.end(), [&vec](size_t i1, size_t i2) {return vec[i1] > vec[i2]; });
-		return idx;
-	}
-
 	float 
 		fieldSubsetAverage(const ScalarField& field, const std::vector<int>::iterator& iter_begin, const std::vector<int>::iterator& iter_end)
 	{
@@ -136,7 +126,7 @@ namespace GeoDetection
 		auto cloud = geodetect.cloud();
 		auto flanntree = geodetect.flanntree();
 		auto normals = geodetect.normals();
-		std::vector<size_t> sort_map = sortIndices(scales); //Get index mapping to sorted version of radii
+		std::vector<size_t> sort_map = sortIndicesDescending(scales); //Get index mapping to sorted version of radii
 
 		//Get sphere volumes for each scale
 		std::vector<float> volumes(scales.size());
@@ -181,7 +171,7 @@ namespace GeoDetection
 
 		auto cloud = geodetect.cloud();
 		auto flanntree = geodetect.flanntree();
-		std::vector<size_t> sort_map = sortIndices(scales); //Get index mapping to sorted version of radii
+		std::vector<size_t> sort_map = sortIndicesDescending(scales); //Get index mapping to sorted version of radii
 
 		//initialize 2d vector (scale, pointID)
 		std::vector<ScalarField> field_multiscale_averaged(scales.size(), std::vector<float>(cloud->size()));
@@ -216,11 +206,11 @@ namespace GeoDetection
 //FEATURES - SINGLE SCALE
 
 //Gets a vector of curvatures, taken from normals.
-	GeoDetection::ScalarField
+	ScalarField
 		NormalsToCurvature(const pcl::PointCloud<pcl::Normal>::Ptr normals)
 	{
 		GD_CORE_TRACE(":: Getting rate of change curvatures from normals...");
-		GeoDetection::ScalarField curvatures(normals->size());
+		ScalarField curvatures(normals->size());
 
 #pragma omp parallel for
 		for (int64_t i = 0; i < normals->size(); i++)
@@ -236,7 +226,7 @@ namespace GeoDetection
 	}
 
 	//Gets volumetric densities at a specified scale (scale)
-	GeoDetection::ScalarField
+	ScalarField
 		getVolumetricDensities(const Cloud& geodetect, float scale)
 	{
 		GD_CORE_TRACE(":: Getting volumetric densities at scale: {0} ...", scale);
@@ -246,7 +236,7 @@ namespace GeoDetection
 
 		double sphere_vol = (4.0f / 3.0f) * M_PI * pow(scale, 3);
 
-		GeoDetection::ScalarField densities(cloud->size());
+		ScalarField densities(cloud->size());
 
 #pragma omp parallel for
 		for (int64_t i = 0; i < cloud->size(); i++)

@@ -110,10 +110,11 @@ namespace GeoDetection
 			GD_TRACE(":: Number of columns: {0}",  num_columns);
 
 			//Open the c-style file for reading
+			const char* fname_cstr = m_filename.c_str();
 			FILE* file;
 			errno_t err;
 
-			if ((err = fopen_s(&file, m_filename, "r")) != 0)
+			if ((err = fopen_s(&file, fname_cstr, "r")) != 0)
 			{
 				GD_ERROR("Failed to open file: {0} \n", m_filename);
 				std::exit(EXIT_FAILURE);
