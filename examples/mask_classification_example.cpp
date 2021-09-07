@@ -19,12 +19,18 @@
 
 int main (int argc, char* argv[])
 {
+	//Initialize logger and start timer.
+	GeoDetection::Log::Init();
+	auto start = GeoDetection::Time::getStart();
+
 	// COMMAND LINE INTERFACING.....................................................................................
-	//User-inputted file names
-	std::string source_filename, mask_filename, batch_directory;
+	if (argc == 1) { GD_ERROR("No arguments passed. Use argument -h or --help for instructions."); return 0; }
 	
 	//CLI parsing object
 	CLI::App app{ "Mask Classification" };
+
+	//Declare inputs
+	std::string source_filename, mask_filename, batch_directory;
 
 	//Add options (CLI::Option*)
 	auto input_opt = app.add_option("-i,--input", source_filename, "Input source cloud filename.");
@@ -39,10 +45,7 @@ int main (int argc, char* argv[])
 
 	CLI11_PARSE(app, argc, argv);
 	
-	// GEODETECTION .................................................................................................
-	//Initialize logger and start timer.
-	GeoDetection::Log::Init();
-	auto start = GeoDetection::Time::getStart();
+	// PROCESSING ...................................................................................................
 	GD_TITLE("GeoDetection");
 	
 	//Construct AsciiReader

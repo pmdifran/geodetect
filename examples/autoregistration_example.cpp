@@ -22,7 +22,13 @@ int main(int argc, char* argv[])
 #define SUBSAMPLE_DISTANCE 0.1f
 #define NORMAL_RADIUS 1.0f
 
+	//Initialize logger and start timer.
+	GeoDetection::Log::Init();
+	auto start = GeoDetection::Time::getStart();
+
 	// COMMAND LINE INTERFACING.....................................................................................
+	if (argc == 1) { GD_ERROR("No arguments passed. Use argument -h or --help for instructions."); return 0; }
+
 	//User-inputted file names
 	std::string source_filename, reference_filename, batch_directory;
 
@@ -43,9 +49,6 @@ int main(int argc, char* argv[])
 	CLI11_PARSE(app, argc, argv);
 
 	// GEODETECTION .................................................................................................
-	//Initialize logger and start timer.
-	GeoDetection::Log::Init();
-	auto start = GeoDetection::Time::getStart();
 	GD_TITLE("GeoDetection");
 
 	//Construct AsciiReader
