@@ -36,6 +36,7 @@ set(HEADERS
     ${GeoDetection_source}/maskclassify.h
     ${GeoDetection_source}/core.h
     ${GeoDetection_source}/core.hpp
+    ${GeoDetection_source}/registration_cloud.h
 )
 
 #Create target

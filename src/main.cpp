@@ -1,9 +1,9 @@
 
 //#define LOG_ALL_OFF
 //GeoDetection includes
-#include "GeoDetection.h"
 #include "readascii.h"
-#include "maskclassify.h"
+#include "GeoDetection.h"
+#include "autoRegistration.h"
 #include "log.h"
 
 //stdlib includes
@@ -19,16 +19,19 @@
 
 int main (int argc, char* argv[])
 {
+#define SUBSAMPLE_DISTANCE 0.1f
+#define NORMAL_RADIUS 1.0f
+
 	// COMMAND LINE INTERFACING.....................................................................................
 	//User-inputted file names
-	std::string source_filename, mask_filename, batch_directory;
+	std::string source_filename, reference_filename, batch_directory;
 	
 	//CLI parsing object
-	CLI::App app{ "Mask Classification" };
+	CLI::App app{ "Auto Registration" };
 
 	//Add options (CLI::Option*)
 	auto input_opt = app.add_option("-i,--input", source_filename, "Input source cloud filename.");
-	auto mask_opt = app.add_option("-m,--mask", mask_filename, "Input mask file (classification as last field)"); //ADD OPTION FOR COLUMN
+	auto mask_opt = app.add_option("-r,--reference", reference_filename, "Input reference file (stays constant in batch mode).");
 	auto batch_opt = app.add_option("-b,--batch", batch_directory,
 		"Input directory containing *only* input source files (ascii) for batch processing. "
 		"Ignores -i if set. Use '-b .' for current directory, or '-b ..' for parent directory.");
@@ -47,18 +50,21 @@ int main (int argc, char* argv[])
 	
 	//Construct AsciiReader
 	GeoDetection::AsciiReader reader; 
-
-	//Import mask
-	GD_TRACE("Mask file name: {0}", mask_filename);
-	reader.setFilename(mask_filename);
-	GeoDetection::Cloud mask = reader.import();
 	
-	//if batch file mode is on, batch process!
+	//If batch file mode is on, batch process!
 	if (*batch_opt)
 	{
+		//Import reference as a Registration Cloud and downsample
+		GD_TRACE("Reference file name: {0}", reference_filename);
+		reader.setFilename(reference_filename);
+
+		GeoDetection::Cloud reference = reader.import();
+		reference.distanceDownSample(SUBSAMPLE_DISTANCE);
+
 		//Get list of files in directory. 
 		const std::filesystem::path dir(batch_directory);
 
+		//Iterate through batch directory files
 		for (auto const& file : std::filesystem::directory_iterator{ dir })
 		{
 			//get file strings
@@ -69,23 +75,27 @@ int main (int argc, char* argv[])
 			//skip over binaries, and mask file
 			if (ext_string == ".dll") { continue; }
 			if (ext_string == ".exe") { continue; }
-			GD_TRACE("File string: {0}  |   Mask filename: {1}", file_string, mask_filename);
-			if ((file_name_string + ext_string) == mask_filename) { continue; }
+			if ((file_name_string + ext_string) == reference_filename) { continue; }
 
 			//set output file name
-			std::string out_filename = file_name_string + "_Classified" + ext_string;
+			std::string out_filename = file_name_string + "_Registered" + ext_string;
+			std::string out_transformation_filename = file_name_string + "_transformationMAT" + ".DAT";
 
-			//Import file
+			//Import source file and distance downsample
 			reader.setFilename(file_string);
 			GeoDetection::Cloud source = reader.import();
+			source.distanceDownSample(SUBSAMPLE_DISTANCE);
 
-			//Classify
-			GeoDetection::classifyClusters(mask, source, 7);
+			//Auto Register
+			GeoDetection::getGlobalRegistration(reference, source, NORMAL_RADIUS);
+			GeoDetection::getICPRegistration(reference, source);
 
-			//Export
-			source.writeAsASCII(out_filename);
+			//Export                              //remember - the cloud is subsampled. 
+			source.writeAsASCII(out_filename); // If you want to check alignment quality with full res, 
+												// --> apply tranformation matrix to full resolution cloud in CloudCompare/ RiSCAN 
+												
+			source.writeTransformation(out_transformation_filename);
 		}
-		
 	}
 
 	else if (*input_opt)
@@ -96,12 +106,18 @@ int main (int argc, char* argv[])
 		std::string file_name_string = source_path.stem().string();
 		std::string ext_string = source_path.extension().string();
 
-		//Import file
+		//Import files and downsample
+		reader.setFilename(reference_filename);
+		GeoDetection::Cloud reference = reader.import();
+		reference.distanceDownSample(SUBSAMPLE_DISTANCE);
+
 		reader.setFilename(source_filename);
 		GeoDetection::Cloud source = reader.import();
+		source.distanceDownSample(SUBSAMPLE_DISTANCE);
 
-		//Classify
-		GeoDetection::classifyClusters(mask, source, 7);
+		//Auto Register
+		GeoDetection::getGlobalRegistration(reference, source, NORMAL_RADIUS);
+		GeoDetection::getICPRegistration(reference, source);
 
 		//Output file
 		std::string out_filename = file_name_string + "_Classified" + ext_string;

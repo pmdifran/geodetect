@@ -10,6 +10,7 @@
 #include <pcl/search/kdtree.h>
 
 //Filters
+//Filters
 #include <pcl/filters/extract_indices.h>
 
 #include <array>
@@ -103,6 +104,7 @@ namespace GeoDetection
 		// Computes normals with k nearest neighbor search and sets the member m_normals.
 		void setNormalsKSearch(int k) { m_normals = this->getNormalsKSearch(k); }
 
+		inline bool hasCloud() { return m_cloud->size() > 0; }
 		inline bool hasNormals() { return m_normals->size() > 0; }
 		inline bool hasScalarFields() { return m_scalarfields.size() > 0; }
 
@@ -209,7 +211,7 @@ namespace GeoDetection
 		/** \brief Method for computing fast point feature histograms
 		* \param[in] shared pointer to a pcl point cloud containing keypoints
 		*/
-		pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints);
+		pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints);
 
 		/** \brief Method for transforming the cloud and updating the object's final transformation matrix
 		* \param[in] transformation: affine matrix.
@@ -231,7 +233,7 @@ namespace GeoDetection
 		/* \brief Method for writing the transformation matrix to an ascii file.
 		* \param[in] fname: Output file path/name.
 		*/
-		void writeTransformation(const char* fname);
+		void writeTransformation(std::string& fname);
 
 		void writeAsASCII(const std::string& filename_str, bool write_normals = true, bool write_scalarfields = true);
 	};

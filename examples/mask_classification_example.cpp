@@ -1,8 +1,5 @@
-//#define LOG_ALL_OFF  //set to have no logging
-//#define LOG_CORE_OFF //set to have no core messages
-//#define LOG_CORE_OFF //set to have no higher-level app messages.
 
-
+//#define LOG_ALL_OFF
 //GeoDetection includes
 #include "GeoDetection.h"
 #include "readascii.h"
@@ -46,11 +43,13 @@ int main (int argc, char* argv[])
 	//Initialize logger and start timer.
 	GeoDetection::Log::Init();
 	auto start = GeoDetection::Time::getStart();
+	GD_TITLE("GeoDetection");
 	
 	//Construct AsciiReader
 	GeoDetection::AsciiReader reader; 
 
 	//Import mask
+	GD_TRACE("Mask file name: {0}", mask_filename);
 	reader.setFilename(mask_filename);
 	GeoDetection::Cloud mask = reader.import();
 	
@@ -62,21 +61,28 @@ int main (int argc, char* argv[])
 
 		for (auto const& file : std::filesystem::directory_iterator{ dir })
 		{
+			//get file strings
 			std::string file_string = file.path().string();
+			std::string file_name_string = file.path().stem().string();
+			std::string ext_string = file.path().extension().string();
+
+			//skip over binaries, and mask file
+			if (ext_string == ".dll") { continue; }
+			if (ext_string == ".exe") { continue; }
+			GD_TRACE("File string: {0}  |   Mask filename: {1}", file_string, mask_filename);
+			if ((file_name_string + ext_string) == mask_filename) { continue; }
+
+			//set output file name
+			std::string out_filename = file_name_string + "_Classified" + ext_string;
+
+			//Import file
 			reader.setFilename(file_string);
 			GeoDetection::Cloud source = reader.import();
 
-			GeoDetection::classify(mask, source, 7);
+			//Classify
+			GeoDetection::classifyClusters(mask, source, 7);
 
-			//get file extension
-			size_t ext_index = file_string.find('.');
-			std::string ext_string = file_string.substr(ext_index);
-
-			//********************Do some sort of of extension check earlier on.********************************
-
-			//Create new outfile name
-			std::string out_filename = file_string.substr(0, ext_index) + "_Classified" + '.' + ext_string;
-			
+			//Export
 			source.writeAsASCII(out_filename);
 		}
 		
@@ -84,22 +90,23 @@ int main (int argc, char* argv[])
 
 	else if (*input_opt)
 	{
+		//get file strings
+		std::filesystem::path source_path(source_filename);
+		std::string file_string = source_path.string();
+		std::string file_name_string = source_path.stem().string();
+		std::string ext_string = source_path.extension().string();
+
+		//Import file
 		reader.setFilename(source_filename);
 		GeoDetection::Cloud source = reader.import();
 
-		GeoDetection::classify(mask, source, 7);
+		//Classify
+		GeoDetection::classifyClusters(mask, source, 7);
 
-		//get file extension
-		size_t ext_index = source_filename.find('.');
-		std::string ext_string = source_filename.substr(ext_index);
-
-		//********************Do some sort of of extension check earlier on.********************************
-
-		//Create new outfile name
-		std::string out_filename = source_filename.substr(0, ext_index) + "_Classified" + '.' + ext_string;
-
+		//Output file
+		std::string out_filename = file_name_string + "_Classified" + ext_string;
 		source.writeAsASCII(out_filename);
 	}
 
-	GD_WARN("Total time: {0} s \n", GeoDetection::Time::getDuration(start)/1000);
+	GD_WARN("Total time: {0} s \n", (GeoDetection::Time::getDuration(start)/1000));
 }

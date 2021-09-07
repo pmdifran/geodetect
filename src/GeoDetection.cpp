@@ -345,7 +345,7 @@ namespace GeoDetection
 
 	//Enable AVX in Properties --> C/C++ --> Enable Enhanced Instruction Set --> /arch:AVX
 	pcl::PointCloud<pcl::FPFHSignature33>::Ptr
-		Cloud::getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr& keypoints)
+		Cloud::getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints)
 	{
 		GD_CORE_TRACE("Computing fast point feature histograms...");
 		auto start = GeoDetection::Time::getStart();
@@ -380,7 +380,7 @@ namespace GeoDetection
 	}
 
 	void
-		Cloud::writeTransformation(const char* fname)
+		Cloud::writeTransformation(std::string& fname)
 	{
 		GD_CORE_TRACE(":: Writing RT file...\n");
 
