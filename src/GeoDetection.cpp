@@ -124,9 +124,11 @@ namespace GeoDetection
 		return resolution;
 	}
 
-	pcl::PointCloud<pcl::Normal>::Ptr 
+	 pcl::PointCloud<pcl::Normal>::Ptr 
 		Cloud::getNormalsRadiusSearch(float radius)
 	{
+		GD_CORE_ERROR("ERROR: This method will produce unreliable normals, if neighborhoods are far away from the origin.\
+					Ongoing fix... Use getNormalsRadiusSearchDemeaned instead for now...");
 		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Normal scale {0}", radius);
 		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
 			omp_get_num_procs());
@@ -149,9 +151,61 @@ namespace GeoDetection
 		return normals;
 	}
 
+	 pcl::PointCloud<pcl::Normal>::Ptr
+		 Cloud::getNormalsRadiusSearchDemeaned(float radius)
+	 {
+		 pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+		 normals->resize(m_cloud->size());
+		 //compute3DCentroid(*cloud_in, centroid);
+
+		 // Iterate through each point and compute normals from demeaned neighborhoods.
+#pragma omp parallel for
+		 for (int i = 0; i < m_cloud->size(); i++)
+		 {
+			 //Create local variables
+			 pcl::PointCloud<pcl::PointXYZ> cloud_demeaned;  // tmp cloud for demeaning
+
+			 std::vector<int> indices;
+			 std::vector<float> sqdistances;
+
+			 //Get neighborhood and copy it into the new temp cloud (0th index corresponds to i)
+			 m_kdtree->radiusSearch(m_cloud->points[i], radius, indices, sqdistances);
+			 cloud_demeaned.reserve(indices.size());
+
+			 for (int j = 0; j < indices.size(); j++)
+			 {
+				 cloud_demeaned.push_back(m_cloud->points[indices[j]]);
+			 }
+
+			 // De-mean the whole tmp cloud by point i's coordinates to center it on 0,0,0
+			 Eigen::Affine3d transform = Eigen::Affine3d::Identity();
+			 transform.translation() << -m_cloud->points[i].x, -m_cloud->points[i].y, -m_cloud->points[i].z;
+			 pcl::transformPointCloud(cloud_demeaned, cloud_demeaned, transform);
+
+			 // Compute the point normal
+			 float curvature;
+			 Eigen::Vector4f n;
+			 pcl::computePointNormal(cloud_demeaned, n, curvature);
+
+			 // Flip normals so they consistently point in one direction (towards centroid)
+			 pcl::flipNormalTowardsViewpoint(m_cloud->points[i], m_view[0], m_view[1], m_view[2], n);
+
+			 // Set the normal to the result
+			 pcl::Normal& pnormal = normals->points[i];
+			 pnormal.normal_x = n[0];
+			 pnormal.normal_y = n[1];
+			 pnormal.normal_z = n[2];
+			 pnormal.curvature = curvature;
+		 }
+
+		 return normals;
+	 }
+
 	pcl::PointCloud<pcl::Normal>::Ptr
 		Cloud::getNormalsKSearch(int k)
 	{
+		GD_CORE_ERROR("ERROR: This method will produce unreliable normals, if neighborhoods are far away from the origin.\
+					Ongoing fix... Use getNormalsKSearchDemeaned instead for now...");
 		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Number of neighbors: {0}", k);
 		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
 			omp_get_num_procs());
@@ -171,6 +225,55 @@ namespace GeoDetection
 
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
+
+		return normals;
+	}
+
+	pcl::PointCloud<pcl::Normal>::Ptr
+		Cloud::getNormalsKSearchDemeaned(int k)
+	{
+		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+		normals->resize(m_cloud->size());
+		//compute3DCentroid(*cloud_in, centroid);
+
+		// Iterate through each point and compute normals from demeaned neighborhoods.
+#pragma omp parallel for
+		for (int i = 0; i < m_cloud->points.size(); i++)
+		{
+			//Create local variables
+			pcl::PointCloud<pcl::PointXYZ> cloud_demeaned(k, 1);  // cloud for local demaned neighborhood
+
+			std::vector<int> indices(k);
+			std::vector<float> sqdistances(k);
+
+			//Get neighborhood and copy it into the new temp cloud (0th index corresponds to i)
+			m_kdtree->nearestKSearch(m_cloud->points[i], k, indices, sqdistances);
+
+			for (int j = 0; j < indices.size(); j++)
+			{
+				cloud_demeaned.push_back(m_cloud->points[indices[j]]);
+			}
+
+			// De-mean the whole tmp cloud by point i's coordinates to center it on 0,0,0
+			Eigen::Affine3d transform = Eigen::Affine3d::Identity();
+			transform.translation() << -m_cloud->points[i].x, -m_cloud->points[i].y, -m_cloud->points[i].z;
+			pcl::transformPointCloud(cloud_demeaned, cloud_demeaned, transform);
+
+			// Compute the point normal
+			float curvature;
+			Eigen::Vector4f n;
+			pcl::computePointNormal(cloud_demeaned, n, curvature);
+
+			// Flip normals so they consistently point in one direction (towards centroid)
+			pcl::flipNormalTowardsViewpoint(m_cloud->points[i], m_view[0], m_view[1], m_view[2], n);
+
+			// Set the normal to the result
+			pcl::Normal& pnormal = normals->points[i];
+			pnormal.normal_x = n[0];
+			pnormal.normal_y = n[1];
+			pnormal.normal_z = n[2];
+			pnormal.curvature = curvature;
+		}
 
 		return normals;
 	}

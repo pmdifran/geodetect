@@ -158,11 +158,44 @@ namespace GeoDetection
 		*/
 		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearch(float radius);
 
+		/** \brief Method for computing normals, for neighborhoods that are far away from the origin. 
+		* \View point is set as 0,0,0 as default unless set with setView
+		* \param[in] radius: Radius for spherical neighbour search used for principle component analysis.
+		* \return shared pointer to the computed normals.
+		*/
+		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearchDemeaned(float radius);
+
 		/** \brief Method for computing normals. View point is set as 0,0,0 as default unless set with setView
 		* \param[in] k: # neighbors to use for normal estimation
 		* \return shared pointer to the computed normals.
 		*/
 		pcl::PointCloud<pcl::Normal>::Ptr getNormalsKSearch(int k);
+
+		/** \brief Method for computing normals, for neighborhoods that are far away from the origin.
+		* \View point is set as 0,0,0 as default unless set with setView
+		* \param[in] radius: Radius for spherical neighbour search used for principle component analysis.
+		* \return shared pointer to the computed normals.
+		*/
+		pcl::PointCloud<pcl::Normal>::Ptr getNormalsKSearchDemeaned(int k);
+
+		/** \calls getNormalsRadiusSearch and sets member normals to the result.
+		* \param[in] radius: Radius for spherical neighbour search used for principle component analysis.
+		*/
+		inline void updateNormalsRadiusSearch(float radius) 
+		{
+			auto new_normals = this->getNormalsRadiusSearch(radius); 
+			this->setNormals(new_normals);
+		}
+
+		/** \calls getNormalsKSearch and sets member normals to the result.
+		* \param[in] k: # neighbors to use for normal estimation
+		*/
+		inline void updateNormalsRadiusSearch(int k)
+		{
+			auto new_normals = this->getNormalsKSearch(k);
+			this->setNormals(new_normals);
+		}
+
 
 		/** \brief Method for averaging normals within a defined search radius, at select subset of corepoints */
 		void averageNormalsSubset(float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);
