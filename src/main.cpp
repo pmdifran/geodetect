@@ -1,13 +1,16 @@
 
 //#define LOG_ALL_OFF
 //GeoDetection includes
-#include "GeoDetection.h"
 #include "readascii.h"
-#include "maskclassify.h"
+#include "GeoDetection.h"
+#include "segmentVegetation.h"
 #include "log.h"
 
 //stdlib includes
 #include <iomanip> //for set_precision.
+
+//testing includes
+#include "features.h"
 
 //Command line interfacing with CLI11
 #include "CLI/App.hpp"
@@ -26,44 +29,41 @@ int main(int argc, char* argv[])
 	// COMMAND LINE INTERFACING.....................................................................................
 	if (argc == 1) { GD_ERROR("No arguments passed. Use argument -h or --help for instructions."); return 0; }
 
-	//CLI parsing object
-	CLI::App app{ "Mask Classification" };
+	//User-inputs
+	std::string source_filename, batch_directory;
+	float num_neighbors_normals = 25;
 
-	//Declare inputs
-	std::string source_filename, mask_filename, batch_directory;
+	//CLI parsing object
+	CLI::App app{ "Auto Registration" };
 
 	//Add options (CLI::Option*)
 	auto input_opt = app.add_option("-i,--input", source_filename, "Input source cloud filename.");
-	auto mask_opt = app.add_option("-m,--mask", mask_filename, "Input mask file (classification as last field)"); //ADD OPTION FOR COLUMN
+	auto neighbors_opt = app.add_option("-n,--neighbors", num_neighbors_normals, "Input number of neighbors for normals.");
 	auto batch_opt = app.add_option("-b,--batch", batch_directory,
 		"Input directory containing *only* input source files (ascii) for batch processing. "
 		"Ignores -i if set. Use '-b .' for current directory, or '-b ..' for parent directory.");
 
 	//Set option requirements
-	mask_opt->required();
 	input_opt->excludes(batch_opt); //input option ignored if a batch location is provided. 
-
 	CLI11_PARSE(app, argc, argv);
 
-	// PROCESSING ...................................................................................................
+	// PROCESSING.. .................................................................................................
 	GD_TITLE("GeoDetection");
 
 	//Construct AsciiReader
 	GeoDetection::AsciiReader reader;
 
-	//Import mask
-	GD_TRACE("Mask file name: {0}", mask_filename);
-	reader.setFilename(mask_filename);
-	GeoDetection::Cloud mask = reader.import();
-
-	//if batch file mode is on, batch process!
+	//If batch file mode is on, batch process!
 	if (*batch_opt)
 	{
 		//Get list of files in directory. 
 		const std::filesystem::path dir(batch_directory);
 
+		//Iterate through batch directory files
 		for (auto const& file : std::filesystem::directory_iterator{ dir })
 		{
+			if (file.is_directory()) { continue; }
+
 			//get file strings
 			std::string file_string = file.path().string();
 			std::string file_name_string = file.path().stem().string();
@@ -72,23 +72,21 @@ int main(int argc, char* argv[])
 			//skip over binaries, and mask file
 			if (ext_string == ".dll") { continue; }
 			if (ext_string == ".exe") { continue; }
-			GD_TRACE("File string: {0}  |   Mask filename: {1}", file_string, mask_filename);
-			if ((file_name_string + ext_string) == mask_filename) { continue; }
 
 			//set output file name
-			std::string out_filename = file_name_string + "_Classified" + ext_string;
+			std::string out_filename = file_name_string + "_vegetationSegmented" + ext_string;
 
-			//Import file
+			//Import source file and distance downsample
 			reader.setFilename(file_string);
 			GeoDetection::Cloud source = reader.import();
 
-			//Classify
-			GeoDetection::classifyClusters(mask, source, 7);
+			//Segment vegetation
+			GeoDetection::segmentVegetation(source);
 
-			//Export
+			//Export                              
 			source.writeAsASCII(out_filename);
-		}
 
+		}
 	}
 
 	else if (*input_opt)
@@ -99,15 +97,18 @@ int main(int argc, char* argv[])
 		std::string file_name_string = source_path.stem().string();
 		std::string ext_string = source_path.extension().string();
 
-		//Import file
+		//Import files
 		reader.setFilename(source_filename);
 		GeoDetection::Cloud source = reader.import();
 
-		//Classify
-		GeoDetection::classifyClusters(mask, source, 7);
+		//testing curvature
+		auto normals = source.getNormalsKSearchDemeaned(200);
+		GeoDetection::ScalarField curvatures = GeoDetection::NormalsToCurvature(normals);
+		source.setNormals(normals);
+		source.addScalarField(std::move(curvatures));
 
 		//Output file
-		std::string out_filename = file_name_string + "_Classified" + ext_string;
+		std::string out_filename = file_name_string + "_test_output" + ext_string;
 		source.writeAsASCII(out_filename);
 	}
 

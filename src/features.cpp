@@ -1,6 +1,8 @@
 #include "features.h"
 #include "core.h"
 
+#include <pcl/features/normal_3d.h>
+
 namespace GeoDetection
 {
 //HELPERS
@@ -16,6 +18,30 @@ namespace GeoDetection
 		return average;
 	}
 
+//NORMALS-ORIENTING
+
+//	void 
+//		orientNormalsWithViewpoint(pcl::PointCloud<pcl::PointXYZ> cloud, pcl::PointCloud<pcl::Normal> normals_in, 
+//			pcl::PointCloud<pcl::Normal> normals_out, float vp_x, float vp_y, float vp_z)
+//	{
+//		if (cloud.size() != normals_in.size())
+//		{
+//			GD_CORE_ERROR("Cannot flip normals that do not share the same dimensions: {0} as the cloud: {1}",
+//				normals_in.size(), cloud.size());
+//		}
+//
+//		if (&normals_in != &normals_out)
+//		{
+//			pcl::copyPointCloud(normals_in, normals_out);
+//		}
+//
+//#pragma omp parallel for
+//		for (int64_t i = 0; i < normals_in.size(); i++)
+//		{
+//			pcl::Normal& n = normals_out[i];
+//			pcl::flipNormalTowardsViewpoint(cloud[i], vp_x, vp_y, vp_z, n.normal_x, n.normal_y, n.normal_z);
+//		}
+//	}
 //FEATURE-AVERAGING
 
 	pcl::PointCloud<pcl::Normal>::Ptr
