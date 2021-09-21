@@ -9,9 +9,6 @@
 //stdlib includes
 #include <iomanip> //for set_precision.
 
-//testing includes
-#include "features.h"
-
 //Command line interfacing with CLI11
 #include "CLI/App.hpp"
 #include "CLI/Formatter.hpp"
@@ -19,6 +16,10 @@
 
 //File handling 
 #include <filesystem>
+
+//pcl testing
+//Octree
+#include <pcl/octree/octree_search.h>
 
 int main(int argc, char* argv[])
 {
@@ -29,16 +30,14 @@ int main(int argc, char* argv[])
 	// COMMAND LINE INTERFACING.....................................................................................
 	if (argc == 1) { GD_ERROR("No arguments passed. Use argument -h or --help for instructions."); return 0; }
 
-	//User-inputs
-	std::string source_filename, batch_directory;
-	float num_neighbors_normals = 25;
+	//User-inputted file names
+	std::string source_filename, reference_filename, batch_directory;
 
 	//CLI parsing object
 	CLI::App app{ "Auto Registration" };
 
 	//Add options (CLI::Option*)
 	auto input_opt = app.add_option("-i,--input", source_filename, "Input source cloud filename.");
-	auto neighbors_opt = app.add_option("-n,--neighbors", num_neighbors_normals, "Input number of neighbors for normals.");
 	auto batch_opt = app.add_option("-b,--batch", batch_directory,
 		"Input directory containing *only* input source files (ascii) for batch processing. "
 		"Ignores -i if set. Use '-b .' for current directory, or '-b ..' for parent directory.");
@@ -62,8 +61,6 @@ int main(int argc, char* argv[])
 		//Iterate through batch directory files
 		for (auto const& file : std::filesystem::directory_iterator{ dir })
 		{
-			if (file.is_directory()) { continue; }
-
 			//get file strings
 			std::string file_string = file.path().string();
 			std::string file_name_string = file.path().stem().string();
@@ -72,6 +69,7 @@ int main(int argc, char* argv[])
 			//skip over binaries, and mask file
 			if (ext_string == ".dll") { continue; }
 			if (ext_string == ".exe") { continue; }
+			if ((file_name_string + ext_string) == reference_filename) { continue; }
 
 			//set output file name
 			std::string out_filename = file_name_string + "_vegetationSegmented" + ext_string;
@@ -97,18 +95,15 @@ int main(int argc, char* argv[])
 		std::string file_name_string = source_path.stem().string();
 		std::string ext_string = source_path.extension().string();
 
-		//Import files
 		reader.setFilename(source_filename);
 		GeoDetection::Cloud source = reader.import();
 
-		//testing curvature
-		auto normals = source.getNormalsKSearchDemeaned(200);
-		GeoDetection::ScalarField curvatures = GeoDetection::NormalsToCurvature(normals);
+		//Segment Vegetation
+		auto normals = source.getNormalsRadiusSearchDemeaned(2);
 		source.setNormals(normals);
-		source.addScalarField(std::move(curvatures));
 
 		//Output file
-		std::string out_filename = file_name_string + "_test_output" + ext_string;
+		std::string out_filename = file_name_string + "_normals_radiusSearchDemeaned" + ext_string;
 		source.writeAsASCII(out_filename);
 	}
 
