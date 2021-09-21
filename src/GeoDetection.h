@@ -5,7 +5,7 @@
 //PCL core
 #include <pcl/point_types.h>
 
-//KdTrees
+//KdTree
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/search/kdtree.h>
 
@@ -88,6 +88,7 @@ namespace GeoDetection
 		inline std::vector <ScalarField>* const scalarfields() { return &m_scalarfields; }
 		inline Eigen::Matrix4d transformation() const { return m_transformation; }
 		inline double resolution() const { return m_resolution; }
+		inline std::array<float, 3> view() const { return m_view; }
 
 		//Setters and checks
 	public:

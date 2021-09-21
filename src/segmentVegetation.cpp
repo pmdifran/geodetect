@@ -25,15 +25,16 @@ namespace GeoDetection
 				curve_scales.size(), density_scales.size(), weights.size());
 		}
 
+		//Calculate volumetric densities for all scales and store in a 2D vector.
+		std::vector<GeoDetection::ScalarField> densities_multiscale = getVolumetricDensitiesMultiscale(geodetect, density_scales);
+		std::vector<GeoDetection::ScalarField> curvatures_multiscale = getCurvaturesMultiscale(geodetect, curve_scales);
+
 		for (int i = 0; i < weights.size(); i++)
 		{
-			//Compute features at their respective scales.
-			auto normals = geodetect.getNormalsRadiusSearch(curve_scales[i]);
-			GeoDetection::ScalarField curvatures = NormalsToCurvature(normals);
-			GeoDetection::ScalarField densities = getVolumetricDensities(geodetect, density_scales[i]);
+			curvatures_multiscale[i].NaNtoMax(); //set NaN curvatures to max value.
 
 			//Calculate TREEZ index
-			getVegetationScore(vegetation_scores, weights[i], curvatures, densities);
+			getVegetationScore(vegetation_scores, weights[i], curvatures_multiscale[i], densities_multiscale[i]);
 		}
 
 		//Push GeoDetection::ScalarField to GeoDetection::Cloud::m_scalarfields.
@@ -64,7 +65,7 @@ namespace GeoDetection
 		std::vector<GeoDetection::ScalarField> densities_multiscale = getVolumetricDensitiesMultiscale(geodetect, density_scales);
 
 		//Determine curvature at a small enough scale 
-		pcl::PointCloud<pcl::Normal>::Ptr normals = geodetect.getNormalsKSearch(12);
+		pcl::PointCloud<pcl::Normal>::Ptr normals = geodetect.getNormalsKSearchDemeaned(12);
 		GeoDetection::ScalarField curvatures = NormalsToCurvature(normals);
 		normals = nullptr;
 
