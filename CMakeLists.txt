@@ -35,7 +35,7 @@ set(HEADERS
     ${GeoDetection_source}/readascii.h
     ${GeoDetection_source}/maskclassify.h
     ${GeoDetection_source}/core.h
-    ${GeoDetection_source}/core.hpp
+    ${GeoDetection_source}/core_impl.h
     ${GeoDetection_source}/registration_cloud.h
 )
 
