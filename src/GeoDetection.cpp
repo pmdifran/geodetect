@@ -95,7 +95,7 @@ namespace GeoDetection
 				local_resolution += sq_distances[j];
 			}
 
-			local_resolution /= (double)num_neighbors;
+			local_resolution = sqrt(local_resolution / (double)num_neighbors);
 			resolution[i] = local_resolution;
 			avg_resolution += local_resolution; //thread-safe with omp reduction
 		}
