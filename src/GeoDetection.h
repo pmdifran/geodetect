@@ -13,7 +13,6 @@
 #include <pcl/octree/octree_search.h>
 
 //Filters
-//Filters
 #include <pcl/filters/extract_indices.h>
 
 #include <array>
@@ -29,23 +28,24 @@ namespace GeoDetection
 	private:
 		std::string m_name;
 
-		//Scalar Fields
-		std::vector<ScalarField> m_scalarfields;
-
-		//PCL Data Structures
+		//PCL XYZ Points and Normals
 		pcl::PointCloud<pcl::PointXYZ>::Ptr m_cloud;
-		pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr m_kdtreeFLANN;
-		pcl::search::KdTree<pcl::PointXYZ>::Ptr m_kdtree;
 		pcl::PointCloud<pcl::Normal>::Ptr m_normals;
 
+		//Scalar Fields (ScalarField is a wrapper around std::vector<float>)
+		std::vector<ScalarField> m_scalarfields;
+
+		//PCL Search Trees
+		pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr m_kdtreeFLANN;
+		pcl::search::KdTree<pcl::PointXYZ>::Ptr m_kdtree;
 		pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> m_octree;
 
-		//Transformation Matrix
-		Eigen::Matrix4d m_transformation = Eigen::Matrix4d::Identity();
-		std::array<float, 3> m_view = { 0, 0, 0 };
+		//Cloud properties
+		Eigen::Matrix4d m_transformation = Eigen::Matrix4d::Identity(); //transformation matrix
+		std::array<float, 3> m_view = { 0, 0, 0 }; //view for normal orientation
 
 		//Scale and resoluton
-		double m_resolution = 0.0; //average resolution of the point cloud.
+		double m_resolution = 0.0; //average resolution (i.e. point spacing) of the point cloud.
 		double m_scale = 0.0;
 
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW //So that dynamic allocation returns aligned pointer.
@@ -55,9 +55,9 @@ namespace GeoDetection
 		Cloud()
 			: m_name("Cloud Default"),
 			m_cloud(new pcl::PointCloud<pcl::PointXYZ>),
+			m_normals(new pcl::PointCloud<pcl::Normal>),
 			m_kdtreeFLANN(new pcl::KdTreeFLANN<pcl::PointXYZ>),
 			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
-			m_normals(new pcl::PointCloud<pcl::Normal>),
 			m_octree(0.1f)
 		{
 			GD_CORE_TRACE(":: Constructing empty GeoDetection Cloud...");
@@ -66,9 +66,9 @@ namespace GeoDetection
 		Cloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string name = "Cloud Default")
 			: m_name(name),
 			m_cloud(cloud),
+			m_normals(new pcl::PointCloud<pcl::Normal>),
 			m_kdtreeFLANN(new pcl::KdTreeFLANN<pcl::PointXYZ>),
 			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
-			m_normals(new pcl::PointCloud<pcl::Normal>),
 			m_octree(0.1f)
 		{
 			GD_CORE_TITLE("GeoDetection Cloud Construction");
@@ -89,12 +89,13 @@ namespace GeoDetection
 		//Accessors
 	public:
 		inline std::string name() { return m_name; }
+		inline std::vector <ScalarField>* const scalarfields() { return &m_scalarfields; }
+		inline pcl::PointCloud<pcl::Normal>::Ptr const normals() const { return m_normals; }
 		inline pcl::PointCloud<pcl::PointXYZ>::Ptr const cloud() const { return m_cloud; }
 		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr const tree() const { return m_kdtree; }
 		inline pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr const flanntree() const { return m_kdtreeFLANN; }
 		inline const pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>& octree() const { return m_octree; }
-		inline pcl::PointCloud<pcl::Normal>::Ptr const normals() const { return m_normals; }
-		inline std::vector <ScalarField>* const scalarfields() { return &m_scalarfields; }
+
 		inline Eigen::Matrix4d transformation() const { return m_transformation; }
 		inline double resolution() const { return m_resolution; }
 		inline std::array<float, 3> view() const { return m_view; }
