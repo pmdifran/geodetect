@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
 		GeoDetection::Cloud source = reader.import();
 
 		//Segment Vegetation
-		auto normals = source.getNormalsRadiusSearchDemeaned(2);
+		auto normals = source.getNormalsRadiusSearchDemeanedOctree(1.0);
 		source.setNormals(normals);
 
 		//Output file

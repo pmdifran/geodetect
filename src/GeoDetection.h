@@ -9,6 +9,9 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/search/kdtree.h>
 
+//Octree
+#include <pcl/octree/octree_search.h>
+
 //Filters
 //Filters
 #include <pcl/filters/extract_indices.h>
@@ -35,6 +38,8 @@ namespace GeoDetection
 		pcl::search::KdTree<pcl::PointXYZ>::Ptr m_kdtree;
 		pcl::PointCloud<pcl::Normal>::Ptr m_normals;
 
+		pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> m_octree;
+
 		//Transformation Matrix
 		Eigen::Matrix4d m_transformation = Eigen::Matrix4d::Identity();
 		std::array<float, 3> m_view = { 0, 0, 0 };
@@ -52,7 +57,8 @@ namespace GeoDetection
 			m_cloud(new pcl::PointCloud<pcl::PointXYZ>),
 			m_kdtreeFLANN(new pcl::KdTreeFLANN<pcl::PointXYZ>),
 			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
-			m_normals(new pcl::PointCloud<pcl::Normal>)
+			m_normals(new pcl::PointCloud<pcl::Normal>),
+			m_octree(0.1f)
 		{
 			GD_CORE_TRACE(":: Constructing empty GeoDetection Cloud...");
 		}
@@ -62,11 +68,13 @@ namespace GeoDetection
 			m_cloud(cloud),
 			m_kdtreeFLANN(new pcl::KdTreeFLANN<pcl::PointXYZ>),
 			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
-			m_normals(new pcl::PointCloud<pcl::Normal>)
+			m_normals(new pcl::PointCloud<pcl::Normal>),
+			m_octree(0.1f)
 		{
 			GD_CORE_TITLE("GeoDetection Cloud Construction");
 			GD_CORE_TRACE("Creating GeoDetection Cloud Object: '{0}' with {1} points", m_name, m_cloud->size());
 			buildKdTrees();
+			buildOctree();
 			GD_CORE_INFO("--> GeoDetection Cloud Created\n");
 		}
 
@@ -84,6 +92,7 @@ namespace GeoDetection
 		inline pcl::PointCloud<pcl::PointXYZ>::Ptr const cloud() const { return m_cloud; }
 		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr const tree() const { return m_kdtree; }
 		inline pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr const flanntree() const { return m_kdtreeFLANN; }
+		inline const pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>& octree() const { return m_octree; }
 		inline pcl::PointCloud<pcl::Normal>::Ptr const normals() const { return m_normals; }
 		inline std::vector <ScalarField>* const scalarfields() { return &m_scalarfields; }
 		inline Eigen::Matrix4d transformation() const { return m_transformation; }
@@ -153,11 +162,15 @@ namespace GeoDetection
 
 		void buildKdTrees();
 
+		void buildOctree();
+
 		/** \brief Method for computing normals. View point is set as 0,0,0 as default unless set with setView
 		* \param[in] radius: Radius for spherical neighbour search used for principle component analysis.
 		* \return shared pointer to the computed normals.
 		*/
 		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearch(float radius);
+
+		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearchOctree(float radius);
 
 		/** \brief Method for computing normals, for neighborhoods that are far away from the origin. 
 		* \View point is set as 0,0,0 as default unless set with setView
@@ -165,6 +178,8 @@ namespace GeoDetection
 		* \return shared pointer to the computed normals.
 		*/
 		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearchDemeaned(float radius);
+
+		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearchDemeanedOctree(float radius);
 
 		/** \brief Method for computing normals. View point is set as 0,0,0 as default unless set with setView
 		* \param[in] k: # neighbors to use for normal estimation
