@@ -6,22 +6,9 @@
 
 namespace GeoDetection
 {
-//HELPERS//Make all NaN data equal to the max
-	float 
-		fieldSubsetAverage(const ScalarField& field, const std::vector<int>::iterator& iter_begin, const std::vector<int>::iterator& iter_end)
-	{
-		float average = 0;
-		for (std::vector<int>::iterator iter = iter_begin; iter != iter_end; iter++)
-		{
-			average += field[*iter];
-		}
-		average /= iter_end - iter_begin;
-		return average;
-	}
-
-
-//FEATURE CALCULATION
-
+/***********************************************************************************************************************************************//**
+*  Helpers
+***************************************************************************************************************************************************/
 	//Create centered subcloud, with input point becoming the new origin for neighborhood of indices.
 	pcl::PointCloud<pcl::PointXYZ> demeanSubcloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, const std::vector<int>& indices, const pcl::PointXYZ& point)
 	{
@@ -36,12 +23,30 @@ namespace GeoDetection
 		Eigen::Affine3d transform = Eigen::Affine3d::Identity();
 		transform.translation() << -point.x, -point.y, -point.z;
 		pcl::transformPointCloud(cloud_centered, cloud_centered, transform);
-		
+
 		return cloud_centered;
 	}
 
+	//Get the average of fields, given iterators to indices (i.e. pointing to a particular neighborhood subset).
+	float 
+		fieldSubsetAverage(const ScalarField& field, const std::vector<int>::iterator& iter_begin, const std::vector<int>::iterator& iter_end)
+	{
+		float average = 0;
+		for (std::vector<int>::iterator iter = iter_begin; iter != iter_end; iter++)
+		{
+			average += field[*iter];
+		}
+		average /= iter_end - iter_begin;
+		return average;
+	}
 
-	void 
+/***********************************************************************************************************************************************//**
+*  Normal calculation
+***************************************************************************************************************************************************/
+	//Computes the normal vector for a neighborhood of points, by transforming the neighborhood to the origin prior to demeaning.
+	//Prevents catostrophic cancellation that can occur during demeaning, when computing covariance matrix.
+	//--> catostrophic cancellation can occur since eigen uses floats to compute the covariance matrix.
+	void
 		computeNormalDemeaned(const Cloud& geodetect, pcl::Normal& normal, const std::vector<int>& indices, const std::array<float, 3>& view)
 	{
 		//get subcloud with indices[0] being moved at the origin
@@ -66,7 +71,7 @@ namespace GeoDetection
 	}
 
 
-	void 
+	void
 		computeDemeanedNormalRadiusSearch(const Cloud& geodetect, float radius, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
 	{
 		auto cloud = geodetect.cloud();
@@ -81,7 +86,7 @@ namespace GeoDetection
 		computeNormalDemeaned(geodetect, normal, indices, view);
 	}
 
-	void 
+	void
 		computeDemeanedNormalRadiusSearchOctree(const Cloud& geodetect, float radius, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
 	{
 		auto cloud = geodetect.cloud();
@@ -97,11 +102,11 @@ namespace GeoDetection
 			normal.curvature = std::numeric_limits<float>::quiet_NaN();
 			return;
 		}
-		
+
 		computeNormalDemeaned(geodetect, normal, indices, view);
 	}
 
-	void 
+	void
 		computeDemeanedNormalKSearch(const Cloud& geodetect, int k, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
 	{
 		auto cloud = geodetect.cloud();
@@ -116,8 +121,9 @@ namespace GeoDetection
 		computeNormalDemeaned(geodetect, normal, indices, view);
 	}
 
-//FEATURE-AVERAGING
-
+/***********************************************************************************************************************************************//**
+*  Feature Averaging
+***************************************************************************************************************************************************/
 	pcl::PointCloud<pcl::Normal>::Ptr
 		computeAverageNormals(const Cloud& geodetect,
 			float scale, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints /* = nullptr */)
@@ -216,8 +222,71 @@ namespace GeoDetection
 		return averaged_field;
 	}
 
-//FEATURE CALCULATION - MULTISCALE
+/***********************************************************************************************************************************************//**
+*  Feature Calculaton
+***************************************************************************************************************************************************/
+//Gets a vector of curvatures, taken from normals.
+	ScalarField
+		NormalsToCurvature(const pcl::PointCloud<pcl::Normal>::Ptr normals)
+	{
+		GD_CORE_TRACE(":: Getting rate of change curvatures from normals...\n");
+		ScalarField curvatures(normals->size());
 
+#pragma omp parallel for
+		for (int64_t i = 0; i < normals->size(); i++)
+		{
+			curvatures[i] = normals->points[i].curvature;
+		}
+		return curvatures;
+	}
+
+	//Gets volumetric densities at a specified scale (scale)
+	ScalarField
+		getVolumetricDensities(const Cloud& geodetect, float scale)
+	{
+		GD_CORE_TRACE(":: Getting volumetric densities at scale: {0} ...\n", scale);
+		auto cloud = geodetect.cloud();
+		auto flanntree = geodetect.flanntree();
+		auto normals = geodetect.normals();
+
+		double sphere_vol = (4.0f / 3.0f) * M_PI * pow(scale, 3);
+
+		ScalarField densities(cloud->size());
+
+#pragma omp parallel for
+		for (int64_t i = 0; i < cloud->size(); i++)
+		{
+			std::vector<float> distances;
+			std::vector<int> indices;
+
+			int num_points = flanntree->radiusSearch(cloud->points[i], scale, indices, distances);
+			densities[i] = num_points / sphere_vol;
+		}
+
+		return densities;
+	}
+
+
+	void
+		getVegetationScore(ScalarField& vegetation_scores, float weight,
+			ScalarField& curvatures, ScalarField& densities)
+
+	{
+		curvatures.normalizeMinMax();
+		densities.normalizeMinMax();
+
+#pragma omp parallel for
+		for (int64_t i = 0; i < vegetation_scores.size(); i++)
+		{
+			float score = weight * (curvatures[i] - densities[i]);
+			vegetation_scores[i] += score; //scores can increase with each set of scales.
+		}
+	}
+
+
+/***********************************************************************************************************************************************//**
+*  Feature Calculaton - Multiscale
+***************************************************************************************************************************************************/
 	//Gets normals at numerous scales, using the largest scale query for the other scales.
 	std::vector<ScalarField>
 		getCurvaturesMultiscale(const Cloud& geodetect, const std::vector<float>& scales)
@@ -318,8 +387,9 @@ namespace GeoDetection
 		return all_densities;
 	}
 
-//FEATURE AVERAGING - MULTISCALE
-
+/***********************************************************************************************************************************************//**
+*  Feature Averaging - Multiscale
+***************************************************************************************************************************************************/
 	std::vector<ScalarField>
 		computeAverageFieldMultiscale(const Cloud& geodetect, const ScalarField& field,
 			const std::vector<float> scales, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints /* = nullptr */)
@@ -360,63 +430,4 @@ namespace GeoDetection
 		return field_multiscale_averaged;
 	}
 
-//FEATURES - SINGLE SCALE
-
-//Gets a vector of curvatures, taken from normals.
-	ScalarField
-		NormalsToCurvature(const pcl::PointCloud<pcl::Normal>::Ptr normals)
-	{
-		GD_CORE_TRACE(":: Getting rate of change curvatures from normals...\n");
-		ScalarField curvatures(normals->size());
-
-#pragma omp parallel for
-		for (int64_t i = 0; i < normals->size(); i++)
-		{
-			curvatures[i] = normals->points[i].curvature;
-		}
-		return curvatures;
-	}
-
-	//Gets volumetric densities at a specified scale (scale)
-	ScalarField
-		getVolumetricDensities(const Cloud& geodetect, float scale)
-	{
-		GD_CORE_TRACE(":: Getting volumetric densities at scale: {0} ...\n", scale);
-		auto cloud = geodetect.cloud();
-		auto flanntree = geodetect.flanntree();
-		auto normals = geodetect.normals();
-
-		double sphere_vol = (4.0f / 3.0f) * M_PI * pow(scale, 3);
-
-		ScalarField densities(cloud->size());
-
-#pragma omp parallel for
-		for (int64_t i = 0; i < cloud->size(); i++)
-		{
-			std::vector<float> distances;
-			std::vector<int> indices;
-
-			int num_points = flanntree->radiusSearch(cloud->points[i], scale, indices, distances);
-			densities[i] = num_points / sphere_vol;
-		}
-
-		return densities;
-	}
-
-
-	void
-		getVegetationScore(ScalarField& vegetation_scores, float weight,
-			ScalarField& curvatures, ScalarField& densities)
-
-	{
-		curvatures.normalizeMinMax();
-		densities.normalizeMinMax();
-
-#pragma omp parallel for
-		for (int64_t i = 0; i < vegetation_scores.size(); i++)
-		{
-			float score = weight * (curvatures[i] - densities[i]);
-			vegetation_scores[i] +=  score; //scores can increase with each set of scales.
-		}
-	}
 }
