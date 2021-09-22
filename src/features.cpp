@@ -70,7 +70,7 @@ namespace GeoDetection
 		normal.curvature = curvature;
 	}
 
-
+	//Computes the normal vector for a neighborhood of points, by transforming the neighborhood to the origin prior to demeaning.
 	void
 		computeDemeanedNormalRadiusSearch(const Cloud& geodetect, float radius, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
 	{
@@ -106,6 +106,7 @@ namespace GeoDetection
 		computeNormalDemeaned(geodetect, normal, indices, view);
 	}
 
+	//Computes the normal vector for a point using a radius search, with transformation of the neighborhood to the origin prior to demeaning.
 	void
 		computeDemeanedNormalKSearch(const Cloud& geodetect, int k, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
 	{
@@ -124,6 +125,8 @@ namespace GeoDetection
 /***********************************************************************************************************************************************//**
 *  Feature Averaging
 ***************************************************************************************************************************************************/
+	//Average - out normals around a given scale of core points. Entire cloud used by default. 
+	//Uses OpenMP.
 	pcl::PointCloud<pcl::Normal>::Ptr
 		computeAverageNormals(const Cloud& geodetect,
 			float scale, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints /* = nullptr */)
@@ -180,7 +183,8 @@ namespace GeoDetection
 		return averaged_normals;
 	}
 
-
+	//Average-out scalar field around a given scale of core points. Entire cloud used by default.
+	//Uses OpenMP.
 	ScalarField
 		computeAverageField(const Cloud& geodetect, const ScalarField& field, float scale,
 			pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints /* = nullptr */)
@@ -225,7 +229,7 @@ namespace GeoDetection
 /***********************************************************************************************************************************************//**
 *  Feature Calculaton
 ***************************************************************************************************************************************************/
-//Gets a vector of curvatures, taken from normals.
+//Returns a ScalarField of curvatures, taken from input normals.
 	ScalarField
 		NormalsToCurvature(const pcl::PointCloud<pcl::Normal>::Ptr normals)
 	{
@@ -240,7 +244,7 @@ namespace GeoDetection
 		return curvatures;
 	}
 
-	//Gets volumetric densities at a specified scale (scale)
+	//Returns a ScalarField of volumetric densities, determined at a particular scale (i.e. radius).
 	ScalarField
 		getVolumetricDensities(const Cloud& geodetect, float scale)
 	{
@@ -266,7 +270,9 @@ namespace GeoDetection
 		return densities;
 	}
 
-
+	//Computes the vegetation index from the weight, curvatures, and volumetric densities.The vegetation indices are summed
+	// --> hence, why you need to pass them into the function for computing (i.e. calculation happens inside the container).
+	//Thus, different weights, curvatures, and volumetric densities should be provided for each scale.
 	void
 		getVegetationScore(ScalarField& vegetation_scores, float weight,
 			ScalarField& curvatures, ScalarField& densities)
@@ -288,6 +294,7 @@ namespace GeoDetection
 *  Feature Calculaton - Multiscale
 ***************************************************************************************************************************************************/
 	//Gets normals at numerous scales, using the largest scale query for the other scales.
+	//Reuses the largest search neighborhood to reduce the search times. 
 	std::vector<ScalarField>
 		getCurvaturesMultiscale(const Cloud& geodetect, const std::vector<float>& scales)
 	{
@@ -337,7 +344,8 @@ namespace GeoDetection
 		return all_curvatures;
 	}
 
-		//Gets volumetric densities at numerous scales, using the largest scale query for the other scales.
+	//Gets volumetric densities at numerous scales, using the largest scale query for the other scales.
+	//Reuses the largest search neighborhood to reduce the search times. 
 	std::vector<ScalarField>
 		getVolumetricDensitiesMultiscale(const Cloud & geodetect, const std::vector<float>&scales)
 	{
@@ -390,6 +398,8 @@ namespace GeoDetection
 /***********************************************************************************************************************************************//**
 *  Feature Averaging - Multiscale
 ***************************************************************************************************************************************************/
+	//Averages - out scalar fields around a given scale of core points, at numerous scales.
+	//Reuses the largest search neighborhood to reduce the search times. 
 	std::vector<ScalarField>
 		computeAverageFieldMultiscale(const Cloud& geodetect, const ScalarField& field,
 			const std::vector<float> scales, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints /* = nullptr */)
