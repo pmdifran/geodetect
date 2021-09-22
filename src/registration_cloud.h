@@ -34,7 +34,14 @@ namespace GeoDetection
 		inline bool hasKeypoints() { return m_keypoints->size() > 0; }
 		inline bool hasFPFH() { return m_fpfh->size() > 0; }
 
-		inline void updateKeypoints() { this->getKeyPoints(); }
+		/**
+		* Compute keypoints with current cloud.
+		*/
+		inline void updateKeypoints() { m_keypoints = this->getKeyPoints(); }
+
+		/**
+		* Compute fpfh with current keypoints and cloud.
+		*/
 		inline void updateFPFH()
 		{
 			if (this->hasKeypoints()) { this->getFPFH(m_keypoints); }

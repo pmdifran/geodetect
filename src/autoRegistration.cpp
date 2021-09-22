@@ -17,8 +17,10 @@
 
 namespace GeoDetection
 {
+	//Transforms source cloud using a global registration determined with keypoint fast point feature histogram correspondences.
+	//Default norml radius = 1.0. Not used if the cloud already has normals.
 	Eigen::Matrix4f getGlobalRegistration(GeoDetection::Cloud& reference,
-		GeoDetection::Cloud& source, float radius, float subres)
+		GeoDetection::Cloud& source, float radius /* = 1.0 */)
 	{
 		GD_TITLE("Auto Registration --Global");
 		auto start = GeoDetection::Time::getStart();
@@ -69,8 +71,11 @@ namespace GeoDetection
 		pcl::transformPointCloud(*src_keypoints, *src_keypoints, transformation);
 
 		double mse = 0;
-		for (const auto& corr : *remaining_correspondences)
+
+#pragma omp parallel for reduction(+: mse)
+		for (int64_t i = 0; i < remaining_correspondences->size(); i++)
 		{
+			pcl::Correspondence& corr = (*remaining_correspondences)[i];
 			float distance = pcl::euclideanDistance(src_keypoints->at(corr.index_query),
 				ref_keypoints->at(corr.index_match));
 
@@ -87,8 +92,12 @@ namespace GeoDetection
 		return transformation;
 	}
 
+	//Transforms source cloud using a global registration determined with keypoint fast point feature histogram correspondences.
+	//Default norml radius = 1.0. Not used if the cloud already has normals.
+	//This overload uses RegistrationCloud: which preserves the keypoints and fast point feature histograms,
+	//--> so that they are not recalculated in a batched registration pipeline. 
 	Eigen::Matrix4f getGlobalRegistration(GeoDetection::RegistrationCloud& reference,
-		GeoDetection::Cloud& source, float radius, float subres)
+		GeoDetection::Cloud& source, float radius /* = 1.0 */)
 	{
 		GD_TITLE("Auto Registration --Global");
 		auto start = GeoDetection::Time::getStart();
@@ -159,8 +168,9 @@ namespace GeoDetection
 		return transformation;
 	}
 
+	//Transforms source cloud using a fine generalized ICP registration (i.e. plane-to-plane).
 	Eigen::Matrix4f getICPRegistration(GeoDetection::Cloud& reference,
-		GeoDetection::Cloud& source, float radius)
+		GeoDetection::Cloud& source, float radius /* = 1.0 */)
 	{
 		GD_TITLE("Auto Registration --ICP");
 		auto start = GeoDetection::Time::getStart();

@@ -42,6 +42,7 @@ namespace GeoDetection
 		return vec;
 	}
 
+	//Returns a sorted copy of the vector, given begin and end iterators.
 	template <typename T>
 	std::vector<T> vectorSortedCopy(typename std::vector<T>::const_iterator begin_it, typename std::vector<T>::const_iterator end_it)
 	{
@@ -51,7 +52,7 @@ namespace GeoDetection
 		return vec;
 	}
 
-	//Get unique lists from a sorted vector
+	//Gets a unique list from a sorted vector.
 	template <typename T>
 	std::vector<T> getUniqueList(const std::vector<T>& vec)
 	{
@@ -65,6 +66,7 @@ namespace GeoDetection
 	}
 
 	//Compute the mode across the range of an input vector.
+	//The input vector is sorted when we determine the unique_list (i.e. input can be unsorted).
 	template <typename T>
 	T
 		computeMode(std::vector<T>& vec)
@@ -93,7 +95,8 @@ namespace GeoDetection
 		return mode;
 	}
 
-	//Compute the mode across the contiguous range of a vector given by iterators.
+	//Compute the mode across the contiguous range of a vector, of type T, given by iterators.
+	//The input is sorted when we determine the unique_list (i.e. input can be unsorted).
 	template <typename T>
 	T
 		computeMode(typename std::vector<T>::const_iterator begin_it, typename std::vector<T>::const_iterator end_it)
@@ -122,6 +125,8 @@ namespace GeoDetection
 		return mode;
 	}
 
+	//Compute the mode for a subset of a vector, with the subset indices given.
+	//The input is sorted when we determine the unique_list (i.e. input can be unsorted).
 	template <typename T_index, typename T_field>
 	T_field
 		computeModeFromIndices(std::vector<T_index>& indices, std::vector<T_field>& field)

@@ -1,11 +1,11 @@
 #include "readascii_core.h"
 #include "readascii.h"
-#include <fast_float/fast_float.h> // for fast parsing
+#include <fast_float/fast_float.h> // for fast parsing (similar to atof).
 
 namespace GeoDetection
 {
-	//Parses the file and returns a GeoDetection Cloud. Currently only imports scalar fields and XYZ coordinates.
-	//Option for normals will be added later.
+	//Helper to parse the file and return a GeoDetection Cloud. Currently only imports scalar fields and XYZ coordinates.
+	//@TODO: Add option for inputing normals, and specifying their location.
 	Cloud 
 		parseData(FILE* file, size_t num_points, size_t num_columns, bool header_present)
 	{
@@ -93,8 +93,10 @@ namespace GeoDetection
 		return geodetect;
 	}
 
+	//Import ASCII data at m_filename, using c - style file reading.
+	//Mainly uses the parse data function above, and some read ascii core functions for getting line count, number of columns etc. 
 	Cloud 
-		AsciiReader::import()
+		AsciiReader::import() const
 	{
 			GD_TITLE("Ascii Data Import");
 			GD_TRACE(":: File: {}", m_filename);

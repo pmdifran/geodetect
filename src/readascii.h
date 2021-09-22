@@ -6,7 +6,7 @@
 
 #include <string>
 
-
+//PCL point cloud and point types.
 #include <pcl\point_types.h>
 #include <pcl\point_cloud.h>
 
@@ -24,7 +24,10 @@ namespace GeoDetection
 		inline void setFilename(const char* fname) { m_filename = std::string(fname); }
 		inline void setFilename(const std::string fname) { m_filename = fname; }
 
-		GeoDetection::Cloud import();
+		/**
+		* Import ASCII data at m_filename, using c-style file reading.
+		*/
+		GeoDetection::Cloud import() const;
 	};
 
 }

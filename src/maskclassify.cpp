@@ -4,7 +4,10 @@
 
 namespace GeoDetection
 {
-	void classifyPoints(Cloud& mask, Cloud& source, int num_neighbors, size_t mask_field_index /* = 0 */)
+	//Classifies points with respect to a mask.
+	//Classifies based on the mode of a local neighborhood (odd #) of nearest neighbors.
+	//@TODO: Add option to specify location of mask classifications. 
+	void classifyPoints(Cloud& mask, Cloud& source, int num_neighbors)
 	{
 		if (num_neighbors % 2) { num_neighbors++; } //hard classification using mode(neighborhood) --> always use odd numbers.
 		
@@ -38,15 +41,19 @@ namespace GeoDetection
 		source.addScalarField(std::move(classification));
 	}
 
-	//Assumes clusters are sorted. Need to write a GeoDetection method which:
-											//sorts all fields, points, normals, based on the entries of a single scalarfield. 
-	void classifyClusters(Cloud& mask, Cloud& source, int num_neighbors, size_t mask_field_index /* = 0 */)
+	//Classifies clusters with respect to a mask. 
+	//Classifies based on the mode of a local neighborhood (odd #) of nearest neighbors.
+	//@TODO: Add option to specify location of mask classifications. 
+	//Assumes clusters are sorted (i.e. 1111, 2222, 33, 44444)
+	//@TODO: Write a GeoDetection method which:
+											//sorts all fields, points, normals, based on the entries of a single scalarfield (i.e. for cluster #). 
+	void classifyClusters(Cloud& mask, Cloud& source, int num_neighbors)
 	{
 		ScalarField clusters_classified(source.cloud()->size());
 		auto source_scalarfields = source.scalarfields(); //source scalar fields (clusterID is the last field).
 
 		//classify the points based on nearest neighbor analysis. 
-		classifyPoints(mask, source, num_neighbors, mask_field_index);
+		classifyPoints(mask, source, num_neighbors);
 
 		//get references to the classes and cluster ids, last and second to last, respectively.
 		ScalarField& classes = source_scalarfields->rbegin()[0];
@@ -55,7 +62,7 @@ namespace GeoDetection
 		//get list of clusters
 		std::vector<float> cluster_ids = getUniqueList(clusters.data);
 
-//#pragma omp parallel for
+#pragma omp parallel for
 		for (int64_t i = 0; i < cluster_ids.size(); i++)
 		{
 			float current_id = cluster_ids[i];
