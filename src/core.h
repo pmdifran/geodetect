@@ -38,7 +38,7 @@ namespace GeoDetection
 	std::vector<T> vectorSortedCopy(typename std::vector<T>::const_iterator begin_it, typename std::vector<T>::const_iterator end_it);
 
 	/**
-	* Get unique lists from a sorted vector
+	* Gets a unique list from a sorted vector.
 	* @param vec: Sorted vector of type T.
 	* @return A vector of type T, containing the unique entries.
 	*/
