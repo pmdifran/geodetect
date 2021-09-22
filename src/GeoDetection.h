@@ -131,11 +131,11 @@ namespace GeoDetection
 		inline bool hasResolution() const { return m_resolution > 0; }
 
 	//METHODS
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	public:
-		/** \brief Method for adding another column of scalar fields
-		* \param[in] new_fields: float vector which should be the same length as # of points (this is checked for).
-		* \return Internal: m_scalarfields is modified to include an additional pointer to the fields.
+
+		/*
+		* Appends another column of ScalarFields to member.
+		*@param new_fields: ScalarField (needs to be the same length as m_cloud).
 		*/
 		inline void addScalarField(ScalarField&& new_fields)
 		{
@@ -143,9 +143,9 @@ namespace GeoDetection
 			else { GD_CORE_ERROR(":: Scalar field size must agree with the cloud size"); }
 		}
 
-		/** \brief Method for removing column of scalar fields
-		* \param[in] index: index of scalar field to remove (removes the largest index by default).
-		* \return Internal: m_scalarfields is modified to remove an pointer to a fields column.
+		/**
+		* Removes column of scalar fields given an index.
+		* @param index: Index of scalar field to remove (removes the largest index by default).
 		*/
 		inline void deleteScalarField(int index)
 		{
@@ -161,54 +161,84 @@ namespace GeoDetection
 		inline void deleteFirstScalarField() { this->deleteScalarField(0); }
 		inline void deleteLastScalarField() { this->deleteScalarField(m_scalarfields.size() - 1); }
 
-		/** \brief Method for averaging specific scalar fields within a defined search radius, and at select corepoints*/
+		/**
+		* Averages specific subset scalar fields within a defined search radius. Reduces size of fields to the subset size.
+		* @param radius: Spatial averaging radius.
+		* @param corepoints: Subset corepoints at which to average scalar fields.
+		* @param field_index: i-th column of scalar fields.
+		*/
 		void averageScalarFieldSubset(float radius, int field_index, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);
 
-		/** \brief Method for averaging specific scalar fields within a defined search radius, at all points (m_cloud) */
+		/**
+		* Averages specific scalar fields within a defined search radius, at all points. m_scalar_fields.size() remains constant.
+		* @param radius: Spatial averaging radius.
+		* @param field_index: i-th column of scalar fields.
+		*/
 		void averageScalarField(float radius, int field_index);
 
-		/** \brief Method for averaging scalar fields within a defined search radius, at select corepoints*/
+		/** 
+		* Averages specific subset all scalar field columns, within a defined search radius. Reduces size of fields to the subset size.
+		* @param radius: Spatial averaging radius.
+		* @param corepoints: Subset corepoints at which to average scalar fields.
+		*/
 		void averageAllScalarFieldsSubset(float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);
 
-		/** \brief Method for averaging all scalar fields within a defined search radius, at all points (m_cloud) */
+		/**
+		* Averages all scalar fields within a defined search radius, at all points (m_cloud).
+		* @param radius: Spatial averaging radius.
+		*/
 		void averageAllScalarFields(float radius);
 
+		/**
+		* Constructs K-dimensional search trees for the point cloud.
+		*/
 		void buildKdTrees();
 
+		/**
+		* Constructs octree search trees for the point cloud.
+		*/
 		void buildOctree();
 
-		/** \brief Method for computing normals. View point is set as 0,0,0 as default unless set with setView
-		* \param[in] radius: Radius for spherical neighbour search used for principle component analysis.
-		* \return shared pointer to the computed normals.
+		/**
+		* Compute normals with a radius search using octree. Uses OpenMP. Uses viewpoint <m_view> for orienting normals.
+		* **Should not be used when the point clouds are far from the origin.
+		* @param radius: Radius for spherical neighbour search used for principle component analysis.
+		* @return shared pointer to the computed normals.
 		*/
 		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearch(float radius);
 
-		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearchOctree(float radius);
-
-		/** \brief Method for computing normals, for neighborhoods that are far away from the origin. 
-		* \View point is set as 0,0,0 as default unless set with setView
-		* \param[in] radius: Radius for spherical neighbour search used for principle component analysis.
-		* \return shared pointer to the computed normals.
+		/**
+		* Compute normals with a radius search using octree. Uses OpenMP. Uses viewpoint <m_view> for orienting normals.
+		* Neighborhoods are demeaned (i.e. moved to the origin) prior to covariance matrix and EVD calculations.
+		* Safe to use for point clouds that are far from the origin. 
+		* @param radius: Radius for spherical neighbour search used for principle component analysis.
+		* @return shared pointer to the computed normals.
 		*/
 		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearchDemeaned(float radius);
 
-		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearchDemeanedOctree(float radius);
+		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearchDemeanedOctree(float radius); //not this commit- but this function is going to replace the one above.
 
-		/** \brief Method for computing normals. View point is set as 0,0,0 as default unless set with setView
-		* \param[in] k: # neighbors to use for normal estimation
-		* \return shared pointer to the computed normals.
+		/**
+		* Compute normals from k-nearest neighbors, search using octree. Uses OpenMP. Uses viewpoint <m_view> for orienting normals.
+		* Neighborhoods are demeaned (i.e. moved to the origin) prior to covariance matrix and EVD calculations.
+		* Safe to use for point clouds that are far from the origin.
+		* @param radius: Radius for spherical neighbour search used for principle component analysis.
+		* @return shared pointer to the computed normals.
 		*/
 		pcl::PointCloud<pcl::Normal>::Ptr getNormalsKSearch(int k);
 
-		/** \brief Method for computing normals, for neighborhoods that are far away from the origin.
-		* \View point is set as 0,0,0 as default unless set with setView
-		* \param[in] radius: Radius for spherical neighbour search used for principle component analysis.
-		* \return shared pointer to the computed normals.
+		/**
+		* Compute normals from k-nearest neighbors, search using octree. Uses OpenMP. Uses viewpoint <m_view> for orienting normals.
+		* Neighborhoods are demeaned (i.e. moved to the origin) prior to covariance matrix and EVD calculations.
+		* Safe to use for point clouds that are far from the origin.
+		* @param radius: Radius for spherical neighbour search used for principle component analysis.
+		* @return shared pointer to the computed normals.
 		*/
 		pcl::PointCloud<pcl::Normal>::Ptr getNormalsKSearchDemeaned(int k);
 
-		/** \calls getNormalsRadiusSearch and sets member normals to the result.
-		* \param[in] radius: Radius for spherical neighbour search used for principle component analysis.
+		/**
+		* calls getNormalsRadiusSearch and sets member normals to the result.
+		* @param radius: Radius for spherical neighbour search used for principle component analysis.
 		*/
 		inline void updateNormalsRadiusSearch(float radius) 
 		{
@@ -216,8 +246,9 @@ namespace GeoDetection
 			this->setNormals(new_normals);
 		}
 
-		/** \calls getNormalsKSearch and sets member normals to the result.
-		* \param[in] k: # neighbors to use for normal estimation
+		/**
+		* calls getNormalsKSearch and sets member normals to the result.
+		* @param radius: Radius for spherical neighbour search used for principle component analysis.
 		*/
 		inline void updateNormalsRadiusSearch(int k)
 		{
@@ -225,79 +256,101 @@ namespace GeoDetection
 			this->setNormals(new_normals);
 		}
 
-
-		/** \brief Method for averaging normals within a defined search radius, at select subset of corepoints */
+		/**
+		* Averages member normals (m_normals) within a defined search radius, at select subset of corepoints 
+		* @pararm radius: Spatial averaging radius.
+		* @param corepoints: Subset corepoints at which to average scalar fields.
+		*/
 		void averageNormalsSubset(float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);
 
-		/** \brief Method for averaging normals within a defined search radius, at all points (m_cloud) */
+		/**
+		* Averages member normals (m_normals) within a defined search radius, at all points (m_cloud).
+		* @pararm radius: Spatial averaging radius.
+		*/
 		void averageNormals(float radius);
 
-		/** \brief Method for computing the local point cloud resolution (i.e. spacing).
-		* \param[in] k: the number of neighbors to use for determining local resolution (default=2).
-		* \return Vector of local resolutions, consistent with point cloud indices.
-		Internal: updates member m_resolution (average cloud resolution).
+		/**
+		* Computes the local point cloud resolution (i.e. spacing), from a specified number of neighbors.
+		* Internal: updates member m_resolution (average cloud resolution).
+		* @param k: the number of neighbors to use for determining local resolution (default=2).
+		* @return Vector of local resolutions, consistent with point cloud indices.
 		*/
 		std::vector<float> getResolution(int num_neighbors = 2);
 
-		/** \brief Method for generating a new, subsampled cloud, using a voxel filter. The local cloud should be dense relative to voxel size
-		{i.e. specify it based on the point cloud resolution from getResolution()}.
-		* \param[in] voxel_size: cubic voxel size used to create average-point locations.
+		/**
+		* Generates a new, subsampled cloud, using a voxel filter that replaces voxel-level samples with their centroid.
+		* Therefore, the output points will NOT be true measurements. (This is useful for downsampling in autoregistration).
+		* The local cloud should be dense relative to the input voxel size.
+		* @param voxel_size: voxel size used to filter. The filtering 
 		* \return Shared pointer to the subsampeld cloud.
 		*/
 		pcl::PointCloud<pcl::PointXYZ>::Ptr getVoxelDownSample(float voxel_size);
 
-		/** \brief Similar to getVoxelDownsample, but directly modifies member m_cloud, resets KdTrees, 
-		*    and averages normals/scalar fields.
-		* \param[in] distance: minimum distance between points
-		* \return Internal: modifies m_cloud, KdTrees, Normals, Scalar Fields
+		/**
+		* getVoxelDownsample, but directly modifies member m_cloud, resets KdTrees, and averages normals/scalar fields.
+		* Internal: modifies m_cloud, KdTrees, Normals, Scalar Fields
+		* @param distance: minimum distance between points
 		*/
 		void voxelDownSample(float voxel_size);
 
-		/** \brief Method for generating a new, subsampled cloud, using a minimum distance (similar to CloudCompare).
-		* \param[in] distance: minimum distance between points
+		/**
+		* Generates a new, subsampled cloud, using a minimum distance (similar to CloudCompare).
+		* @param distance: minimum distance between points
 		* \return Shared pointer to the subsampled cloud.
 		*/
 		pcl::PointCloud<pcl::PointXYZ>::Ptr getDistanceDownSample(float distance);
 
-		/** \brief Similar to getDistanceDownsample, but directly modifies member m_cloud and resets normals/scalar fields.
-		* \param[in] distance: minimum distance between points
-		* \return Internal: Internal: modifies m_cloud, KdTrees, Normals, Scalar Fields
+		/**
+		* getDistanceDownsample, but directly modifies member m_cloud, resets KdTrees, and averages normals/scalar fields.
+		* Internal: modifies m_cloud, KdTrees, Normals, Scalar Fields.
+		* @param distance: minimum distance between points
 		*/
 		void distanceDownSample(float distance);
 
-		/** \brief Method for computing intrinsic shape signature keypoints.
-		* \return shared pointer to a pcl point cloud.
+		/**
+		* Computes intrinsic shape signature keypoints.
+		* @return shared pointer to a pcl point cloud of ISS keypoints.
 		*/
 		pcl::PointCloud<pcl::PointXYZ>::Ptr getKeyPoints();
 
-		/** \brief Method for computing fast point feature histograms
-		* \param[in] shared pointer to a pcl point cloud containing keypoints
+		/**
+		* Computes fast point feature histograms.
+		* @param keypoints: shared pointer to a pcl point cloud containing keypoints, at which fpf histograms are calculated for.
+		* @return shared pointer to point cloud with fast point feature histograms.
 		*/
 		pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints);
 
-		/** \brief Method for transforming the cloud and updating the object's final transformation matrix
-		* \param[in] transformation: affine matrix.
-		* \return Internal: updates m_transformation and repositions m_cloud.
+		/**
+		* Transforms the GeoDetection::Cloud and updates <m_transformation> matrix.
+		* @param transformation: Eigen affine transformation matrix.
 		*/
 		void applyTransformation(const Eigen::Matrix4f& transformation);
 
-		/** \brief Method for ONLY updating the object's final transformation matrix.
-		* Should be called if a function has transformed the cloud without updating the matrix (i.e. generalized icp)
-		* \param[in] transformation: affine matrix.
-		* \return Internal: updates m_transformation.
+		/**
+		* Updates the GeoDetection::Cloud <m_transformation> matrix, without translating the cloud.
+		* Should be called if a function has transformed the cloud without updating the matrix (i.e. pcl::GeneralizedIterativeClosestPoint)
+		* @param transformation: Eigen affine transformation matrix.
 		*/
 		void updateTransformation(const Eigen::Matrix4f& transformation);
 
-		/* \brief Method for filtering NaN values from the point cloud.
+		/*
+		* Filters NaN values from the point cloud.
 		*/
 		void removeNaN();
 
-		/* \brief Method for writing the transformation matrix to an ascii file.
-		* \param[in] fname: Output file path/name.
+		/**
+		* Writes the final transformation matrix to an ascii file. (Precision = 16)
+		* @param filename: Output file path/name.
 		*/
-		void writeTransformation(std::string& fname);
+		void writeTransformation(std::string& filename);
 
-		void writeAsASCII(const std::string& filename_str, bool write_normals = true, bool write_scalarfields = true);
+		/**
+		* Writes the GeoDetection::Cloud to an ASCII file (c-style)
+		* @param filename: Output file path/name.
+		* @param write_normals: Whether to write normals Nx, Ny, Nz (default=true)
+		* @param write_scalarfields: Whether to write scalar fields (default=true)
+		*/
+		void writeAsASCII(const std::string& filename, bool write_normals = true, bool write_scalarfields = true);
 	};
 
 }
