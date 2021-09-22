@@ -331,17 +331,17 @@ namespace GeoDetection
 *  Registration
 ***************************************************************************************************************************************************/
 		/**
-		* Transforms the GeoDetection::Cloud and updates <m_transformation> matrix.
-		* @param transformation: Eigen affine transformation matrix.
-		*/
-		void applyTransformation(const Eigen::Matrix4f& transformation);
-
-		/**
 		* Updates the GeoDetection::Cloud <m_transformation> matrix, without translating the cloud.
 		* Should be called if a function has transformed the cloud without updating the matrix (i.e. pcl::GeneralizedIterativeClosestPoint)
 		* @param transformation: Eigen affine transformation matrix.
 		*/
 		void updateTransformation(const Eigen::Matrix4f& transformation);
+
+		/**
+		* Transforms the GeoDetection::Cloud and updates <m_transformation> matrix.
+		* @param transformation: Eigen affine transformation matrix.
+		*/
+		void applyTransformation(const Eigen::Matrix4f& transformation);
 
 		/**
 		* Computes intrinsic shape signature keypoints.

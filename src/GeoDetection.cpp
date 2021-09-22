@@ -30,6 +30,10 @@
 
 namespace GeoDetection
 {
+/************************************************************************************************************************************************//**
+*  Search Tree Construction
+****************************************************************************************************************************************************/
+	// Constructs K-dimensional search trees for the point cloud.
 	void
 		Cloud::buildKdTrees()
 	{
@@ -46,6 +50,8 @@ namespace GeoDetection
 			GeoDetection::Time::getDuration(start));
 	}
 
+	//Constructs octree search trees for the point cloud.
+	//Uses dynamic depth, for maximum number of points in a leaf (dynamic depth), as well as a specified lead resolution.
 	void
 		Cloud::buildOctree()
 	{
@@ -59,45 +65,12 @@ namespace GeoDetection
 			GeoDetection::Time::getDuration(start));
 	}
 
-	void 
-		Cloud::averageScalarFieldSubset(float radius, int field_index, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints)
-	{
-		//Check for correct inputs
-		if (field_index > m_scalarfields.size() - 1 || field_index < 0)
-		{
-			GD_CORE_ERROR(":: Invalid scalar field index accessed."); return;
-		}
-
-		GD_CORE_TRACE(":: Averaging scalar field index: {0} with name: {1}", field_index, m_scalarfields[field_index].name);
-		GeoDetection::ScalarField averaged_fields;
-		averaged_fields = computeAverageField(*this, m_scalarfields[field_index], radius, corepoints);
-
-		m_scalarfields[field_index] = std::move(averaged_fields);
-	}
-
-	void 
-		Cloud::averageScalarField(float radius, int field_index)
-	{
-		auto corepoints = m_cloud;
-		this->averageScalarFieldSubset(radius, field_index, corepoints);
-	}
-
-	void 
-		Cloud::averageAllScalarFieldsSubset(float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints)
-	{
-		GD_CORE_TRACE(":: Averaging all scalar fields...");
-		for (int i = 0; i < m_scalarfields.size(); i++) { this->averageScalarFieldSubset(radius, i, corepoints); }
-		GD_CORE_TRACE(":: All fields averaged");
-	}
-
-	void 
-		Cloud::averageAllScalarFields(float radius)
-	{
-		auto corepoints = m_cloud;
-		this->averageAllScalarFieldsSubset(radius, corepoints);
-	}
-
-	std::vector<float> 
+/************************************************************************************************************************************************//**
+*  Resolution, Downsampling, and Filtering
+****************************************************************************************************************************************************/
+	//Computes the local point cloud resolution(i.e.spacing), from a specified number of neighbors, with OpenMP.
+	//Returns a vector of the point resolutions (can be added to ScalarFields), and updates m_resolution with the average.
+	std::vector<float>
 		Cloud::getResolution(const int num_neighbors)
 	{
 		GD_CORE_TRACE(":: Computing cloud resolution...");
@@ -137,7 +110,132 @@ namespace GeoDetection
 		return resolution;
 	}
 
-	 pcl::PointCloud<pcl::Normal>::Ptr 
+	//Generates a new, subsampled cloud, using a voxel filter that replaces voxel - level samples with their centroid.
+	//Resulting points are not "true" or "original" measurements.
+	pcl::PointCloud<pcl::PointXYZ>::Ptr
+		Cloud::getVoxelDownSample(float voxel_size)
+	{
+		GD_CORE_TRACE(":: Creating downsampled cloud with voxels...\
+			\n--> voxel filter size: {0}", voxel_size);
+		auto start = GeoDetection::Time::getStart();
+
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_down(new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::VoxelGrid<pcl::PointXYZ> grid;
+		grid.setInputCloud(m_cloud);
+		grid.setLeafSize(voxel_size, voxel_size, voxel_size);
+		grid.filter(*cloud_down);
+
+		GD_CORE_WARN("-->   Full cloud size: {0}\n --> Downsampled cloud size: {1}",
+			m_cloud->size(), cloud_down->size());
+
+		GD_CORE_WARN("--> Downsample time: {0} ms\n",
+			GeoDetection::Time::getDuration(start));
+
+		return cloud_down;
+	}
+
+	//Calls getVoxelDownSample but modifies members rather than returning a new point cloud.
+	//Modifies cloud, trees, normals (averaged), and scalarfields (averaged).
+	void
+		Cloud::voxelDownSample(float voxel_size)
+	{
+		auto corepoints = getVoxelDownSample(voxel_size);
+		double distance = (voxel_size / 2) * sqrt(3); //averaging radius relative to distance from centre to corner of cube
+
+		//Average the normals and scalar fields using the new cloud as core points.
+		if (this->hasNormals()) { this->averageNormalsSubset(distance, corepoints); }
+		if (this->hasScalarFields()) { this->averageAllScalarFieldsSubset(distance, corepoints); }
+
+		//set m_cloud to the corepoints and rebuild kdtrees
+		m_cloud = corepoints;
+		this->buildKdTrees();
+	}
+
+	//Returns a subsampled cloud, using a minimum distance. 
+	//I chose to interate through points in order (less fast, but it is deterministic). This method cannot be both be paralelized and deterministic. 
+	pcl::PointCloud<pcl::PointXYZ>::Ptr
+		Cloud::getDistanceDownSample(float distance)
+	{
+		GD_CORE_TRACE(":: Subsampling cloud by distance...\
+			\n--> Distance: {0}", distance);
+		auto start = GeoDetection::Time::getStart();
+
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_down(new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::PointIndices::Ptr inliers(new pcl::PointIndices());
+		inliers->indices.reserve(m_cloud->size()); //conservatively reserve space for entire cloud indices. 
+
+		std::vector<char> markers;
+		markers.resize(m_cloud->size(), -1); //set to -1 by default **remember bool(-1) --> True**
+
+		for (int64_t i = 0; i < m_cloud->size(); i++)
+		{
+			if (markers[i])
+			{
+				std::vector<int> IDRadiusSearch;
+				std::vector<float> DistanceRadiusSearch;
+
+				m_kdtreeFLANN->radiusSearch(m_cloud->points[i], distance, IDRadiusSearch, DistanceRadiusSearch);
+
+				if (IDRadiusSearch.size() > 1) {
+					for (std::vector<int>::iterator it = IDRadiusSearch.begin() + 1; it != IDRadiusSearch.end(); ++it) {
+						markers[*it] = false;
+					}
+				}
+
+				inliers->indices.push_back(i);
+			}
+		}
+
+		size_t size_original = m_cloud->size();
+		pcl::ExtractIndices<pcl::PointXYZ> extract;
+		extract.setInputCloud(m_cloud);
+		extract.setIndices(inliers);
+		extract.filter(*cloud_down);
+
+		GD_CORE_WARN("-->   Full cloud size: {0}\n --> Downsampled cloud size: {1}",
+			m_cloud->size(), cloud_down->size());
+
+		GD_CORE_WARN("--> Downsample time: {0} ms\n",
+			GeoDetection::Time::getDuration(start));
+
+		return cloud_down;
+
+	}
+
+	//Calls getDistanceDownSample but modifies members rather than returning a new point cloud.
+	//Modifies cloud, trees, normals (averaged), and scalarfields (averaged).
+	void
+		Cloud::distanceDownSample(float distance)
+	{
+		GD_CORE_TITLE("Subsampling GeoDetection Cloud");
+		auto corepoints = this->getDistanceDownSample(distance);
+
+		//Average the normals and scalar fields using the new cloud as core points.
+		if (this->hasNormals()) { this->averageNormalsSubset(distance, corepoints); }
+		if (this->hasScalarFields()) { this->averageAllScalarFieldsSubset(distance, corepoints); }
+
+		//set m_cloud to the corepoints and rebuild kdtrees
+		m_cloud = corepoints;
+		this->buildKdTrees();
+	}
+
+	//Removes NaN from point cloud 
+	//@TODO update other members (normals, scalarfields, trees) after cloud is filtered, to keep size the same across the board.
+	void
+		Cloud::removeNaN()
+	{
+		GD_CORE_TRACE(":: Removing NaN from Cloud.\n");
+
+		m_cloud->is_dense = false;
+		std::vector<int> indices;
+		pcl::removeNaNFromPointCloud(*m_cloud, *m_cloud, indices);
+		m_cloud->is_dense = true;
+	}
+
+/***********************************************************************************************************************************************//**
+*  Normal Estimation
+***************************************************************************************************************************************************/
+	pcl::PointCloud<pcl::Normal>::Ptr
 		Cloud::getNormalsRadiusSearch(float radius)
 	{
 		GD_CORE_ERROR("ERROR: This method will produce unreliable normals, if neighborhoods are far away from the origin.\
@@ -164,51 +262,51 @@ namespace GeoDetection
 		return normals;
 	}
 
-	 pcl::PointCloud<pcl::Normal>::Ptr
-		 Cloud::getNormalsRadiusSearchDemeaned(float radius)
-	 {
-		 GD_CORE_TRACE(":: Computing point cloud normals...\n:: Normal scale {0}", radius);
-		 GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
-			 omp_get_num_procs());
-		 auto start = GeoDetection::Time::getStart();
+	pcl::PointCloud<pcl::Normal>::Ptr
+		Cloud::getNormalsRadiusSearchDemeaned(float radius)
+	{
+		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Normal scale {0}", radius);
+		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
+			omp_get_num_procs());
+		auto start = GeoDetection::Time::getStart();
 
-		 pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
-		 normals->resize(m_cloud->size());
+		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+		normals->resize(m_cloud->size());
 
-		 // Iterate through each point and compute normals from demeaned neighborhoods.
+		// Iterate through each point and compute normals from demeaned neighborhoods.
 #pragma omp parallel for
-		 for (int i = 0; i < m_cloud->size(); i++)
-		 {
-			 computeDemeanedNormalRadiusSearch(*this, radius, i, normals->points[i], m_view);
-		 }
+		for (int i = 0; i < m_cloud->size(); i++)
+		{
+			computeDemeanedNormalRadiusSearch(*this, radius, i, normals->points[i], m_view);
+		}
 
-		 GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
-			 GeoDetection::Time::getDuration(start));
-		 return normals;
-	 }
+		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
+			GeoDetection::Time::getDuration(start));
+		return normals;
+	}
 
-	 pcl::PointCloud<pcl::Normal>::Ptr
-		 GeoDetection::Cloud::getNormalsRadiusSearchDemeanedOctree(float radius)
-	 {
-		 GD_CORE_TRACE(":: Computing point cloud normals with octree...\n:: Normal scale {0}", radius);
-		 GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
-			 omp_get_num_procs());
-		 auto start = GeoDetection::Time::getStart();
+	pcl::PointCloud<pcl::Normal>::Ptr
+		GeoDetection::Cloud::getNormalsRadiusSearchDemeanedOctree(float radius)
+	{
+		GD_CORE_TRACE(":: Computing point cloud normals with octree...\n:: Normal scale {0}", radius);
+		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
+			omp_get_num_procs());
+		auto start = GeoDetection::Time::getStart();
 
-		 pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
-		 normals->resize(m_cloud->size());
+		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+		normals->resize(m_cloud->size());
 
-		 // Iterate through each point and compute normals from demeaned neighborhoods.
+		// Iterate through each point and compute normals from demeaned neighborhoods.
 #pragma omp parallel for
-		 for (int i = 0; i < m_cloud->size(); i++)
-		 {
-			 computeDemeanedNormalRadiusSearchOctree(*this, radius, i, normals->points[i], m_view);
-		 }
+		for (int i = 0; i < m_cloud->size(); i++)
+		{
+			computeDemeanedNormalRadiusSearchOctree(*this, radius, i, normals->points[i], m_view);
+		}
 
-		 GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
-			 GeoDetection::Time::getDuration(start));
-		 return normals;
-	 }
+		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
+			GeoDetection::Time::getDuration(start));
+		return normals;
+	}
 
 	pcl::PointCloud<pcl::Normal>::Ptr
 		Cloud::getNormalsKSearch(int k)
@@ -261,120 +359,83 @@ namespace GeoDetection
 		return normals;
 	}
 
+/***********************************************************************************************************************************************//**
+*  Spatial averaging: Normals and Scalar Fields
+***************************************************************************************************************************************************/
+	//Computes an average subset of normals within specified radius. Uses OpenMP.
+	//Mostly used as helpers to reduce the size of normals when voxelDownSample(), or distanceDownSample() is called.
 	void
 		Cloud::averageNormalsSubset(float radius, pcl::PointCloud < pcl::PointXYZ>::Ptr corepoints)
 	{
 		m_normals = computeAverageNormals(*this, radius, corepoints);
 	}
 
+	//Computes a of normals within specified radius. Uses OpenMP.
+	//Mostly used for simplified feature calculations (i.e. spatial averaging a single-scale feature, rather than multiscale feature calculation)
 	void
 		Cloud::averageNormals(float radius)
 	{
 		auto corepoints = m_cloud;
 		m_normals = computeAverageNormals(*this, radius, corepoints);
 	}
-
-	pcl::PointCloud<pcl::PointXYZ>::Ptr
-		Cloud::getVoxelDownSample(float voxel_size)
-	{
-		GD_CORE_TRACE(":: Creating downsampled cloud with voxels...\
-			\n--> voxel filter size: {0}", voxel_size);
-		auto start = GeoDetection::Time::getStart();
-
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_down(new pcl::PointCloud<pcl::PointXYZ>);
-		pcl::VoxelGrid<pcl::PointXYZ> grid;
-		grid.setInputCloud(m_cloud);
-		grid.setLeafSize(voxel_size, voxel_size, voxel_size);
-		grid.filter(*cloud_down);
-
-		GD_CORE_WARN("-->   Full cloud size: {0}\n --> Downsampled cloud size: {1}",
-			m_cloud->size(), cloud_down->size());
-
-		GD_CORE_WARN("--> Downsample time: {0} ms\n",
-			GeoDetection::Time::getDuration(start));
-
-		return cloud_down;
-	}
-
+	
+	//Computes an average subset of a singular scalar field. Uses OpenMP.
+	//Mostly used as helpers to reduce the size of scalar fields when voxelDownSample(), or distanceDownSample() is called.
 	void 
-		Cloud::voxelDownSample(float voxel_size)
+		Cloud::averageScalarFieldSubset(float radius, int field_index, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints)
 	{
-		auto corepoints = getVoxelDownSample(voxel_size);
-		double distance = (voxel_size/2) * sqrt(3); //averaging radius relative to distance from centre to corner of cube
-
-		//Average the normals and scalar fields using the new cloud as core points.
-		if (this->hasNormals()) { this->averageNormalsSubset(distance, corepoints); }
-		if (this->hasScalarFields()) { this->averageAllScalarFieldsSubset(distance, corepoints); }
-
-		//set m_cloud to the corepoints and rebuild kdtrees
-		m_cloud = corepoints;
-		this->buildKdTrees();
-	}
-
-	pcl::PointCloud<pcl::PointXYZ>::Ptr
-		Cloud::getDistanceDownSample(float distance)
-	{
-		GD_CORE_TRACE(":: Subsampling cloud by distance...\
-			\n--> Distance: {0}", distance);
-		auto start = GeoDetection::Time::getStart();
-
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_down(new pcl::PointCloud<pcl::PointXYZ>);
-		pcl::PointIndices::Ptr inliers(new pcl::PointIndices());
-		inliers->indices.reserve(m_cloud->size()); //conservatively reserve space for entire cloud indices. 
-
-		std::vector<char> markers;
-		markers.resize(m_cloud->size(), -1); //set to -1 by default **remember bool(-1) --> True**
-
-		for (int64_t i = 0; i < m_cloud->size(); i++)
+		//Check for correct inputs
+		if (field_index > m_scalarfields.size() - 1 || field_index < 0)
 		{
-			if (markers[i])
-			{
-				std::vector<int> IDRadiusSearch;
-				std::vector<float> DistanceRadiusSearch;
-
-				m_kdtreeFLANN->radiusSearch(m_cloud->points[i], distance, IDRadiusSearch, DistanceRadiusSearch);
-
-				if (IDRadiusSearch.size() > 1) {
-					for (std::vector<int>::iterator it = IDRadiusSearch.begin() + 1; it != IDRadiusSearch.end(); ++it) {
-						markers[*it] = false;
-					}
-				}
-
-				inliers->indices.push_back(i);
-			}
+			GD_CORE_ERROR(":: Invalid scalar field index accessed."); return;
 		}
 
-		size_t size_original = m_cloud->size();
-		pcl::ExtractIndices<pcl::PointXYZ> extract;
-		extract.setInputCloud(m_cloud);
-		extract.setIndices(inliers);
-		extract.filter(*cloud_down);
+		GD_CORE_TRACE(":: Averaging scalar field index: {0} with name: {1}", field_index, m_scalarfields[field_index].name);
+		GeoDetection::ScalarField averaged_fields;
+		averaged_fields = computeAverageField(*this, m_scalarfields[field_index], radius, corepoints);
 
-		GD_CORE_WARN("-->   Full cloud size: {0}\n --> Downsampled cloud size: {1}",
-			m_cloud->size(), cloud_down->size());
-
-		GD_CORE_WARN("--> Downsample time: {0} ms\n",
-			GeoDetection::Time::getDuration(start));
-
-		return cloud_down;
-
+		m_scalarfields[field_index] = std::move(averaged_fields);
 	}
 
+	//Computes an average subset of a singular scalar field. Uses OpenMP.
 	void 
-		Cloud::distanceDownSample(float distance)
+		Cloud::averageScalarField(float radius, int field_index)
 	{
-		GD_CORE_TITLE("Subsampling GeoDetection Cloud");
-		auto corepoints = this->getDistanceDownSample(distance);
-
-		//Average the normals and scalar fields using the new cloud as core points.
-		if (this->hasNormals()) { this->averageNormalsSubset(distance, corepoints); }
-		if (this->hasScalarFields()) { this->averageAllScalarFieldsSubset(distance, corepoints); }
-
-		//set m_cloud to the corepoints and rebuild kdtrees
-		m_cloud = corepoints;
-		this->buildKdTrees();
+		this->averageScalarFieldSubset(radius, field_index, m_cloud);
 	}
 
+	//Computes an average subset of all scalar fields. Uses OpenMP.
+	//Mostly used as helpers to reduce the size of scalar fields when voxelDownSample(), or distanceDownSample() is called.
+	void 
+		Cloud::averageAllScalarFieldsSubset(float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints)
+	{
+		GD_CORE_TRACE(":: Averaging all scalar fields...");
+		for (int i = 0; i < m_scalarfields.size(); i++) { this->averageScalarFieldSubset(radius, i, corepoints); }
+		GD_CORE_TRACE(":: All fields averaged");
+	}
+
+	//Computes an average of all scalar fields. Uses OpenMP.
+	//Useful for simpified spatial averaging of multiple features. 
+	void 
+		Cloud::averageAllScalarFields(float radius)
+	{
+		this->averageAllScalarFieldsSubset(radius, m_cloud);
+	}
+
+/***********************************************************************************************************************************************//**
+*  Registration
+***************************************************************************************************************************************************/
+	//Updates m_transformation, with matrix multiplication of an input transformation matrix.
+	void
+		Cloud::updateTransformation(const Eigen::Matrix4f& transformation)
+	{
+		GD_CORE_TRACE(":: Updating transformation...");
+		Eigen::Matrix4d transformation_d = transformation.cast<double>(); //using doubles for more accurate arithmitic
+		m_transformation = transformation_d * m_transformation; //eigen matrix multiplication
+		m_transformation = transformation_d * m_transformation; //eigen matrix multiplication
+	}
+
+	//Transforms m_cloud and updates m_transformation
 	void
 		Cloud::applyTransformation(const Eigen::Matrix4f& transformation)
 	{
@@ -382,24 +443,13 @@ namespace GeoDetection
 		auto start = GeoDetection::Time::getStart();
 
 		pcl::transformPointCloud(*m_cloud, *m_cloud, transformation);
-
-		GD_CORE_TRACE(":: Updating transformation...");
-		Eigen::Matrix4d temp = transformation.cast<double>(); //using doubles for more accurate arithmitic
-		m_transformation = temp * m_transformation; //eigen matrix multiplication
+		this->updateTransformation(transformation);
 
 		GD_CORE_WARN("--> Transformation time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
 	}
 
-	void 
-		Cloud::updateTransformation(const Eigen::Matrix4f& transformation)
-	{
-		GD_CORE_TRACE(":: Updating transformation...");
-		Eigen::Matrix4d temp = transformation.cast<double>(); //using doubles for more accurate arithmitic
-		m_transformation = temp * m_transformation; //eigen matrix multiplication
-		m_transformation = temp * m_transformation; //eigen matrix multiplication
-	}
-
+	//Calculates Intrinsic Shape Signature keypoints (uses OpenMP).
 	pcl::PointCloud<pcl::PointXYZ>::Ptr
 		Cloud::getKeyPoints()
 	{
@@ -429,7 +479,9 @@ namespace GeoDetection
 		return keypoints;
 	}
 
-	//Enable AVX in Properties --> C/C++ --> Enable Enhanced Instruction Set --> /arch:AVX
+	//Compute fast point feature histograms. Uses OpenMP.
+	//Must enable AVX in Properties --> C/C++ --> Enable Enhanced Instruction Set --> /arch:AVX. 
+	//Otherwise you get heap corruption when it computes.
 	pcl::PointCloud<pcl::FPFHSignature33>::Ptr
 		Cloud::getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints)
 	{
@@ -454,17 +506,11 @@ namespace GeoDetection
 		return fpfh;
 	}
 
-	void
-		Cloud::removeNaN()
-	{
-		GD_CORE_TRACE(":: Removing NaN from Cloud.\n");
+/***********************************************************************************************************************************************//**
+*  ASCII Output
+***************************************************************************************************************************************************/
 
-		m_cloud->is_dense = false;
-		std::vector<int> indices;
-		pcl::removeNaNFromPointCloud(*m_cloud, *m_cloud, indices);
-		m_cloud->is_dense = true;
-	}
-
+	//Write the 4x4 transformation matrix into an ascii file.
 	void
 		Cloud::writeTransformation(std::string& fname)
 	{
@@ -476,6 +522,9 @@ namespace GeoDetection
 		ofs.close();
 	}
 
+	//Output the GeoDetection Cloud into an ASCII file.
+	//Option for whether to output normals and scalar fields.
+	//@TODO: add option for outputing specific scalar fields.
 	void Cloud::writeAsASCII(const std::string& filename_str, bool write_normals /* = true */, bool write_scalarfields /* = true */)
 	{
 		GD_TITLE("Exporting GeoDetection Cloud");
