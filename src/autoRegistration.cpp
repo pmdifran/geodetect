@@ -24,10 +24,10 @@ namespace GeoDetection
 		auto start = GeoDetection::Time::getStart();
 
 		if (!reference.hasCloud()) { GD_ERROR("Reference does not have a cloud"); }
-		if (!reference.hasNormals()) { reference.setNormalsRadiusSearch(radius); };
+		if (!reference.hasNormals()) { reference.updateNormalsRadiusSearch(radius); };
 
 		if (!source.hasCloud()) { GD_ERROR("Source does not have a cloud"); }
-		if (!source.hasNormals()) { source.setNormalsRadiusSearch(radius); }
+		if (!source.hasNormals()) { source.updateNormalsRadiusSearch(radius); }
 
 		//Compute ISS keypoints
 		pcl::PointCloud<pcl::PointXYZ>::Ptr ref_keypoints = reference.getKeyPoints();
@@ -94,12 +94,12 @@ namespace GeoDetection
 		auto start = GeoDetection::Time::getStart();
 
 		if (!reference.hasCloud()) { GD_ERROR("Reference does not have a cloud"); }
-		if (!reference.hasNormals()) { reference.setNormalsRadiusSearch(radius); };
+		if (!reference.hasNormals()) { reference.updateNormalsRadiusSearch(radius); };
 		if (!reference.hasKeypoints()) { reference.updateKeypoints(); }
 		if (!reference.hasFPFH()) { reference.updateFPFH(); }
 
 		if (!source.hasCloud()) { GD_ERROR("Source does not have a cloud"); }
-		if (!source.hasNormals()) { source.setNormalsRadiusSearch(radius); }
+		if (!source.hasNormals()) { source.updateNormalsRadiusSearch(radius); }
 
 		//Get pointers to reference global registration data
 		auto ref_keypoints = reference.keypoints();
@@ -166,11 +166,11 @@ namespace GeoDetection
 		auto start = GeoDetection::Time::getStart();
 
 		if (!reference.hasCloud()) { GD_ERROR("Reference does not have a cloud"); }
-		if (!reference.hasNormals()) { reference.setNormalsRadiusSearch(radius); };
+		if (!reference.hasNormals()) { reference.updateNormalsRadiusSearch(radius); };
 
 		if (!source.hasCloud()) { GD_ERROR("Source does not have a cloud"); }
 		if (!source.hasNormals()) {
-			source.setNormalsRadiusSearch(radius);
+			source.updateNormalsRadiusSearch(radius);
 		}
 
 		pcl::GeneralizedIterativeClosestPoint <pcl::PointXYZ, pcl::PointXYZ> gicp;
