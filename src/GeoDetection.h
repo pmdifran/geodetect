@@ -19,12 +19,13 @@
 #include <cmath>
 #include <chrono>
 
-// \brief Custom pointcloud object for geocomputation of LiDAR point clouds
+// \brief  Point Cloud containing tools for Tools for processing and extracting information from natural environments. 
+//  Built around PCL.
 namespace GeoDetection
 {
 	class Cloud
 	{
-		//Members
+	//Members
 	private:
 		std::string m_name;
 
@@ -48,7 +49,7 @@ namespace GeoDetection
 		double m_resolution = 0.0; //average resolution (i.e. point spacing) of the point cloud.
 		double m_scale = 0.0;
 
-		EIGEN_MAKE_ALIGNED_OPERATOR_NEW //So that dynamic allocation returns aligned pointer.
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 	//Constructors and assignments
 	public:
@@ -86,40 +87,51 @@ namespace GeoDetection
 
 		~Cloud() = default;
 
-		//Accessors
+	//Accessors
 	public:
 		inline std::string name() { return m_name; }
-		inline std::vector <ScalarField>* const scalarfields() { return &m_scalarfields; }
-		inline pcl::PointCloud<pcl::Normal>::Ptr const normals() const { return m_normals; }
+
+		//Point data
 		inline pcl::PointCloud<pcl::PointXYZ>::Ptr const cloud() const { return m_cloud; }
+		inline pcl::PointCloud<pcl::Normal>::Ptr const normals() const { return m_normals; }
+		inline std::vector <ScalarField>* const scalarfields() { return &m_scalarfields; }
+
+		//Search trees
 		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr const tree() const { return m_kdtree; }
 		inline pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr const flanntree() const { return m_kdtreeFLANN; }
 		inline const pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>& octree() const { return m_octree; }
 
+		//Cloud properties
 		inline Eigen::Matrix4d transformation() const { return m_transformation; }
-		inline double resolution() const { return m_resolution; }
 		inline std::array<float, 3> view() const { return m_view; }
 
-		//Setters and checks
+		inline double resolution() const { return m_resolution; }
+
+	//Setters
 	public:
-		//Sets the cloud to a new pcl::PointCloud, updates the KdTrees, and clears the normals. 
+		//Set scalar fields to another
 		inline void setScalarFields(std::vector<ScalarField> sf) { std::copy(sf.begin(), sf.end(), m_scalarfields.begin()); }
+
+		//Set cloud to another and rebuild KdTrees
 		inline void setCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) { m_cloud = std::move(cloud); buildKdTrees(); m_normals->clear(); }
+
+		//Set normals to another.
 		inline void setNormals(pcl::PointCloud<pcl::Normal>::Ptr& normals) { m_normals = std::move(normals); }
+
+		//Set viewpoint for normal orientation.
 		inline void setView(float x, float y, float z) { m_view[0] = x; m_view[1] = y; m_view[2] = z; }
+
 		void setScale(float scale) { m_scale = scale; }
-		
-		// Computes normals with radius search and sets the member m_normals.
-		void setNormalsRadiusSearch(float radius) { m_normals = this->getNormalsRadiusSearch(radius); }
 
-		// Computes normals with k nearest neighbor search and sets the member m_normals.
-		void setNormalsKSearch(int k) { m_normals = this->getNormalsKSearch(k); }
+	//Checks
+	public:
+		inline bool hasCloud() const { return m_cloud->size() > 0; }
+		inline bool hasNormals() const { return m_normals->size() > 0; }
+		inline bool hasScalarFields() const { return m_scalarfields.size() > 0; }
+		inline bool hasResolution() const { return m_resolution > 0; }
 
-		inline bool hasCloud() { return m_cloud->size() > 0; }
-		inline bool hasNormals() { return m_normals->size() > 0; }
-		inline bool hasScalarFields() { return m_scalarfields.size() > 0; }
-
-		//Methods
+	//METHODS
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	public:
 		/** \brief Method for adding another column of scalar fields
 		* \param[in] new_fields: float vector which should be the same length as # of points (this is checked for).
