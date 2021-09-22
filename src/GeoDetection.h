@@ -132,63 +132,9 @@ namespace GeoDetection
 
 	//METHODS
 	public:
-
-		/*
-		* Appends another column of ScalarFields to member.
-		*@param new_fields: ScalarField (needs to be the same length as m_cloud).
-		*/
-		inline void addScalarField(ScalarField&& new_fields)
-		{
-			if (new_fields.size() == m_cloud->size()) { m_scalarfields.push_back(std::move(new_fields)); }
-			else { GD_CORE_ERROR(":: Scalar field size must agree with the cloud size"); }
-		}
-
-		/**
-		* Removes column of scalar fields given an index.
-		* @param index: Index of scalar field to remove (removes the largest index by default).
-		*/
-		inline void deleteScalarField(int index)
-		{
-			if (index < 0 || m_scalarfields.size() == 0 || index > (m_scalarfields.size() - 1))
-			{
-				GD_CORE_ERROR(":: Attempting to access a scalar field index that does not exist");  
-				return;
-			}
-
-			m_scalarfields.erase(m_scalarfields.begin() + index);
-		}
-
-		inline void deleteFirstScalarField() { this->deleteScalarField(0); }
-		inline void deleteLastScalarField() { this->deleteScalarField(m_scalarfields.size() - 1); }
-
-		/**
-		* Averages specific subset scalar fields within a defined search radius. Reduces size of fields to the subset size.
-		* @param radius: Spatial averaging radius.
-		* @param corepoints: Subset corepoints at which to average scalar fields.
-		* @param field_index: i-th column of scalar fields.
-		*/
-		void averageScalarFieldSubset(float radius, int field_index, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);
-
-		/**
-		* Averages specific scalar fields within a defined search radius, at all points. m_scalar_fields.size() remains constant.
-		* @param radius: Spatial averaging radius.
-		* @param field_index: i-th column of scalar fields.
-		*/
-		void averageScalarField(float radius, int field_index);
-
-		/** 
-		* Averages specific subset all scalar field columns, within a defined search radius. Reduces size of fields to the subset size.
-		* @param radius: Spatial averaging radius.
-		* @param corepoints: Subset corepoints at which to average scalar fields.
-		*/
-		void averageAllScalarFieldsSubset(float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);
-
-		/**
-		* Averages all scalar fields within a defined search radius, at all points (m_cloud).
-		* @param radius: Spatial averaging radius.
-		*/
-		void averageAllScalarFields(float radius);
-
+/************************************************************************************************************************************************//**
+*  Search Tree Construction
+****************************************************************************************************************************************************/
 		/**
 		* Constructs K-dimensional search trees for the point cloud.
 		*/
@@ -199,6 +145,56 @@ namespace GeoDetection
 		*/
 		void buildOctree();
 
+/************************************************************************************************************************************************//**
+*  Resolution, Downsampling, and Filtering
+****************************************************************************************************************************************************/
+
+		/**
+		* Computes the local point cloud resolution (i.e. spacing), from a specified number of neighbors.
+		* Internal: updates member m_resolution (average cloud resolution).
+		* @param k: the number of neighbors to use for determining local resolution (default=2).
+		* @return Vector of local resolutions, consistent with point cloud indices.
+		*/
+		std::vector<float> getResolution(int num_neighbors = 2);
+
+		/**
+		* Generates a new, subsampled cloud, using a voxel filter that replaces voxel-level samples with their centroid.
+		* Therefore, the output points will NOT be true measurements. (This is useful for downsampling in autoregistration).
+		* The local cloud should be dense relative to the input voxel size.
+		* @param voxel_size: voxel size used to filter. The filtering
+		* \return Shared pointer to the subsampeld cloud.
+		*/
+		pcl::PointCloud<pcl::PointXYZ>::Ptr getVoxelDownSample(float voxel_size);
+
+		/**
+		* getVoxelDownsample, but directly modifies member m_cloud, resets KdTrees, and averages normals/scalar fields.
+		* Internal: modifies m_cloud, KdTrees, Normals, Scalar Fields
+		* @param distance: minimum distance between points
+		*/
+		void voxelDownSample(float voxel_size);
+
+		/**
+		* Generates a new, subsampled cloud, using a minimum distance (similar to CloudCompare).
+		* @param distance: minimum distance between points
+		* \return Shared pointer to the subsampled cloud.
+		*/
+		pcl::PointCloud<pcl::PointXYZ>::Ptr getDistanceDownSample(float distance);
+
+		/**
+		* getDistanceDownsample, but directly modifies member m_cloud, resets KdTrees, and averages normals/scalar fields.
+		* Internal: modifies m_cloud, KdTrees, Normals, Scalar Fields.
+		* @param distance: minimum distance between points
+		*/
+		void distanceDownSample(float distance);
+
+		/*
+		* Filters NaN values from the point cloud.
+		*/
+		void removeNaN();
+
+/***********************************************************************************************************************************************//**
+*  Normal Estimation
+***************************************************************************************************************************************************/
 		/**
 		* Compute normals with a radius search using octree. Uses OpenMP. Uses viewpoint <m_view> for orienting normals.
 		* **Should not be used when the point clouds are far from the origin.
@@ -210,7 +206,7 @@ namespace GeoDetection
 		/**
 		* Compute normals with a radius search using octree. Uses OpenMP. Uses viewpoint <m_view> for orienting normals.
 		* Neighborhoods are demeaned (i.e. moved to the origin) prior to covariance matrix and EVD calculations.
-		* Safe to use for point clouds that are far from the origin. 
+		* Safe to use for point clouds that are far from the origin.
 		* @param radius: Radius for spherical neighbour search used for principle component analysis.
 		* @return shared pointer to the computed normals.
 		*/
@@ -240,9 +236,9 @@ namespace GeoDetection
 		* calls getNormalsRadiusSearch and sets member normals to the result.
 		* @param radius: Radius for spherical neighbour search used for principle component analysis.
 		*/
-		inline void updateNormalsRadiusSearch(float radius) 
+		inline void updateNormalsRadiusSearch(float radius)
 		{
-			auto new_normals = this->getNormalsRadiusSearch(radius); 
+			auto new_normals = this->getNormalsRadiusSearch(radius);
 			this->setNormals(new_normals);
 		}
 
@@ -256,8 +252,42 @@ namespace GeoDetection
 			this->setNormals(new_normals);
 		}
 
+/***********************************************************************************************************************************************//**
+*  Scalar Fields
+***************************************************************************************************************************************************/
+		/*
+		* Appends another column of ScalarFields to member.
+		*@param new_fields: ScalarField (needs to be the same length as m_cloud).
+		*/
+		inline void addScalarField(ScalarField&& new_fields)
+		{
+			if (new_fields.size() == m_cloud->size()) { m_scalarfields.push_back(std::move(new_fields)); }
+			else { GD_CORE_ERROR(":: Scalar field size must agree with the cloud size"); }
+		}
+
 		/**
-		* Averages member normals (m_normals) within a defined search radius, at select subset of corepoints 
+		* Removes column of scalar fields given an index.
+		* @param index: Index of scalar field to remove (removes the largest index by default).
+		*/
+		inline void deleteScalarField(int index)
+		{
+			if (index < 0 || m_scalarfields.size() == 0 || index > (m_scalarfields.size() - 1))
+			{
+				GD_CORE_ERROR(":: Attempting to access a scalar field index that does not exist");  
+				return;
+			}
+
+			m_scalarfields.erase(m_scalarfields.begin() + index);
+		}
+
+		inline void deleteFirstScalarField() { this->deleteScalarField(0); }
+		inline void deleteLastScalarField() { this->deleteScalarField(m_scalarfields.size() - 1); }
+
+/***********************************************************************************************************************************************//**
+*  Spatial averaging: Normals and Scalar Fields
+***************************************************************************************************************************************************/
+		/**
+		* Averages member normals (m_normals) within a defined search radius, at select subset of corepoints
 		* @pararm radius: Spatial averaging radius.
 		* @param corepoints: Subset corepoints at which to average scalar fields.
 		*/
@@ -270,42 +300,48 @@ namespace GeoDetection
 		void averageNormals(float radius);
 
 		/**
-		* Computes the local point cloud resolution (i.e. spacing), from a specified number of neighbors.
-		* Internal: updates member m_resolution (average cloud resolution).
-		* @param k: the number of neighbors to use for determining local resolution (default=2).
-		* @return Vector of local resolutions, consistent with point cloud indices.
+		* Averages specific subset scalar fields within a defined search radius. Reduces size of fields to the subset size.
+		* @param radius: Spatial averaging radius.
+		* @param corepoints: Subset corepoints at which to average scalar fields.
+		* @param field_index: i-th column of scalar fields.
 		*/
-		std::vector<float> getResolution(int num_neighbors = 2);
+		void averageScalarFieldSubset(float radius, int field_index, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);
 
 		/**
-		* Generates a new, subsampled cloud, using a voxel filter that replaces voxel-level samples with their centroid.
-		* Therefore, the output points will NOT be true measurements. (This is useful for downsampling in autoregistration).
-		* The local cloud should be dense relative to the input voxel size.
-		* @param voxel_size: voxel size used to filter. The filtering 
-		* \return Shared pointer to the subsampeld cloud.
+		* Averages specific scalar fields within a defined search radius, at all points. m_scalar_fields.size() remains constant.
+		* @param radius: Spatial averaging radius.
+		* @param field_index: i-th column of scalar fields.
 		*/
-		pcl::PointCloud<pcl::PointXYZ>::Ptr getVoxelDownSample(float voxel_size);
+		void averageScalarField(float radius, int field_index);
+
+		/** 
+		* Averages specific subset all scalar field columns, within a defined search radius. Reduces size of fields to the subset size.
+		* @param radius: Spatial averaging radius.
+		* @param corepoints: Subset corepoints at which to average scalar fields.
+		*/
+		void averageAllScalarFieldsSubset(float radius, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints);
 
 		/**
-		* getVoxelDownsample, but directly modifies member m_cloud, resets KdTrees, and averages normals/scalar fields.
-		* Internal: modifies m_cloud, KdTrees, Normals, Scalar Fields
-		* @param distance: minimum distance between points
+		* Averages all scalar fields within a defined search radius, at all points (m_cloud).
+		* @param radius: Spatial averaging radius.
 		*/
-		void voxelDownSample(float voxel_size);
+		void averageAllScalarFields(float radius);
+
+/***********************************************************************************************************************************************//**
+*  Registration
+***************************************************************************************************************************************************/
+		/**
+		* Transforms the GeoDetection::Cloud and updates <m_transformation> matrix.
+		* @param transformation: Eigen affine transformation matrix.
+		*/
+		void applyTransformation(const Eigen::Matrix4f& transformation);
 
 		/**
-		* Generates a new, subsampled cloud, using a minimum distance (similar to CloudCompare).
-		* @param distance: minimum distance between points
-		* \return Shared pointer to the subsampled cloud.
+		* Updates the GeoDetection::Cloud <m_transformation> matrix, without translating the cloud.
+		* Should be called if a function has transformed the cloud without updating the matrix (i.e. pcl::GeneralizedIterativeClosestPoint)
+		* @param transformation: Eigen affine transformation matrix.
 		*/
-		pcl::PointCloud<pcl::PointXYZ>::Ptr getDistanceDownSample(float distance);
-
-		/**
-		* getDistanceDownsample, but directly modifies member m_cloud, resets KdTrees, and averages normals/scalar fields.
-		* Internal: modifies m_cloud, KdTrees, Normals, Scalar Fields.
-		* @param distance: minimum distance between points
-		*/
-		void distanceDownSample(float distance);
+		void updateTransformation(const Eigen::Matrix4f& transformation);
 
 		/**
 		* Computes intrinsic shape signature keypoints.
@@ -320,24 +356,9 @@ namespace GeoDetection
 		*/
 		pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints);
 
-		/**
-		* Transforms the GeoDetection::Cloud and updates <m_transformation> matrix.
-		* @param transformation: Eigen affine transformation matrix.
-		*/
-		void applyTransformation(const Eigen::Matrix4f& transformation);
-
-		/**
-		* Updates the GeoDetection::Cloud <m_transformation> matrix, without translating the cloud.
-		* Should be called if a function has transformed the cloud without updating the matrix (i.e. pcl::GeneralizedIterativeClosestPoint)
-		* @param transformation: Eigen affine transformation matrix.
-		*/
-		void updateTransformation(const Eigen::Matrix4f& transformation);
-
-		/*
-		* Filters NaN values from the point cloud.
-		*/
-		void removeNaN();
-
+/***********************************************************************************************************************************************//**
+*  ASCII Output
+***************************************************************************************************************************************************/
 		/**
 		* Writes the final transformation matrix to an ascii file. (Precision = 16)
 		* @param filename: Output file path/name.

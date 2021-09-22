@@ -30,6 +30,35 @@
 
 namespace GeoDetection
 {
+	void
+		Cloud::buildKdTrees()
+	{
+		GD_CORE_TRACE(":: Constructing K-dimensional Search Trees");
+		auto start = GeoDetection::Time::getStart();
+
+		m_kdtreeFLANN->setInputCloud(m_cloud);
+		m_kdtreeFLANN->setSortedResults(true); //explicit --> should be true by default construction
+
+		m_kdtree->setInputCloud(m_cloud);
+		m_kdtree->setSortedResults(true);
+
+		GD_CORE_WARN("--> KdTree construction time: {0} ms\n",
+			GeoDetection::Time::getDuration(start));
+	}
+
+	void
+		Cloud::buildOctree()
+	{
+		GD_CORE_TRACE(":: Constructing octrees");
+		auto start = GeoDetection::Time::getStart();
+		m_octree.setResolution(0.1f);
+		m_octree.enableDynamicDepth(10);
+		m_octree.setInputCloud(m_cloud);
+		m_octree.addPointsFromInputCloud();
+		GD_CORE_WARN("--> Octree construction time: {0} ms\n",
+			GeoDetection::Time::getDuration(start));
+	}
+
 	void 
 		Cloud::averageScalarFieldSubset(float radius, int field_index, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints)
 	{
@@ -66,35 +95,6 @@ namespace GeoDetection
 	{
 		auto corepoints = m_cloud;
 		this->averageAllScalarFieldsSubset(radius, corepoints);
-	}
-
-	void 
-		Cloud::buildKdTrees()
-	{
-		GD_CORE_TRACE(":: Constructing K-dimensional Search Trees");
-		auto start = GeoDetection::Time::getStart();
-
-		m_kdtreeFLANN->setInputCloud(m_cloud);
-		m_kdtreeFLANN->setSortedResults(true); //explicit --> should be true by default construction
-
-		m_kdtree->setInputCloud(m_cloud);
-		m_kdtree->setSortedResults(true);
-
-		GD_CORE_WARN("--> KdTree construction time: {0} ms\n",
-			GeoDetection::Time::getDuration(start));
-	}
-
-	void
-		Cloud::buildOctree()
-	{
-		GD_CORE_TRACE(":: Constructing octrees");
-		auto start = GeoDetection::Time::getStart();
-		m_octree.setResolution(0.1f);
-		m_octree.enableDynamicDepth(10);
-		m_octree.setInputCloud(m_cloud);
-		m_octree.addPointsFromInputCloud();
-		GD_CORE_WARN("--> Octree construction time: {0} ms\n",
-			GeoDetection::Time::getDuration(start));
 	}
 
 	std::vector<float> 
