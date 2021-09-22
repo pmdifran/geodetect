@@ -24,6 +24,9 @@ namespace GeoDetection
 		inline void setFilename(const char* fname) { m_filename = std::string(fname); }
 		inline void setFilename(const std::string fname) { m_filename = fname; }
 
+		/**
+		* Import ASCII data at m_filename, using c-style file reading.
+		*/
 		GeoDetection::Cloud import();
 	};
 

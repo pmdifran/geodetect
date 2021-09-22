@@ -1,6 +1,6 @@
 #include "readascii_core.h"
 
-//HELPER FUNCTIONS
+//Gets number of columns in an ASCII file. 
 size_t
 getNumColumns(const std::string& fname)
 {
@@ -29,6 +29,7 @@ getNumColumns(const std::string& fname)
 	return num_columns;
 }
 
+//Checks if there is only XYZ data.
 void
 checkIfXYZ(const std::string& fname)
 {
@@ -41,6 +42,10 @@ checkIfXYZ(const std::string& fname)
 	}
 }
 
+//Gets number of lines in the txt file.
+//Does this by counting the number of newlines '\n' in the file.
+//** Checks for the case, if the file is not ended with a newline '\n'.
+//** hasHeader, and this are needed, to determine number of points in a file. 
 uintmax_t
 getLineCount(const std::string& fname)
 {
@@ -88,6 +93,8 @@ getLineCount(const std::string& fname)
 	return num_lines;
 }
 
+//Check whether the file has a header at the top of the file, describing the fields.
+//Returns true if a header is present. 
 bool
 hasHeader(const std::string& fname)
 {
@@ -120,6 +127,7 @@ hasHeader(const std::string& fname)
 	}
 }
 
+//Returns the delimiter that separates the ASCII fields. 
 char
 getDelimeter(const std::string& fname)
 {
@@ -160,6 +168,3 @@ getDelimeter(const std::string& fname)
 	in.close();
 	return delimeters[i];
 }
-
-
-
