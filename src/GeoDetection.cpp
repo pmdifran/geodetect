@@ -71,7 +71,7 @@ namespace GeoDetection
 	void 
 		Cloud::buildKdTrees()
 	{
-		GD_CORE_TRACE(":: Constructing Search Trees");
+		GD_CORE_TRACE(":: Constructing K-dimensional Search Trees");
 		auto start = GeoDetection::Time::getStart();
 
 		m_kdtreeFLANN->setInputCloud(m_cloud);
@@ -81,6 +81,19 @@ namespace GeoDetection
 		m_kdtree->setSortedResults(true);
 
 		GD_CORE_WARN("--> KdTree construction time: {0} ms\n",
+			GeoDetection::Time::getDuration(start));
+	}
+
+	void
+		Cloud::buildOctree()
+	{
+		GD_CORE_TRACE(":: Constructing octrees");
+		auto start = GeoDetection::Time::getStart();
+		m_octree.setResolution(0.1f);
+		m_octree.enableDynamicDepth(10);
+		m_octree.setInputCloud(m_cloud);
+		m_octree.addPointsFromInputCloud();
+		GD_CORE_WARN("--> Octree construction time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
 	}
 
@@ -167,6 +180,29 @@ namespace GeoDetection
 		 for (int i = 0; i < m_cloud->size(); i++)
 		 {
 			 computeDemeanedNormalRadiusSearch(*this, radius, i, normals->points[i], m_view);
+		 }
+
+		 GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
+			 GeoDetection::Time::getDuration(start));
+		 return normals;
+	 }
+
+	 pcl::PointCloud<pcl::Normal>::Ptr
+		 GeoDetection::Cloud::getNormalsRadiusSearchDemeanedOctree(float radius)
+	 {
+		 GD_CORE_TRACE(":: Computing point cloud normals with octree...\n:: Normal scale {0}", radius);
+		 GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
+			 omp_get_num_procs());
+		 auto start = GeoDetection::Time::getStart();
+
+		 pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+		 normals->resize(m_cloud->size());
+
+		 // Iterate through each point and compute normals from demeaned neighborhoods.
+#pragma omp parallel for
+		 for (int i = 0; i < m_cloud->size(); i++)
+		 {
+			 computeDemeanedNormalRadiusSearchOctree(*this, radius, i, normals->points[i], m_view);
 		 }
 
 		 GD_CORE_WARN("--> Normal calculation time: {0} ms\n",

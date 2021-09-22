@@ -127,6 +127,7 @@ namespace GeoDetection
 			GD_WARN("--> Data import time: {0} ms", GeoDetection::Time::getDuration(start));
 
 			geodetect.buildKdTrees();
+			geodetect.buildOctree();
 			return geodetect;
 	}
 

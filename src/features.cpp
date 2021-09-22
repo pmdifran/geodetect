@@ -41,7 +41,8 @@ namespace GeoDetection
 	}
 
 
-	void computeNormalDemeaned(const Cloud& geodetect, pcl::Normal& normal, const std::vector<int>& indices, const std::array<float, 3>& view)
+	void 
+		computeNormalDemeaned(const Cloud& geodetect, pcl::Normal& normal, const std::vector<int>& indices, const std::array<float, 3>& view)
 	{
 		//get subcloud with indices[0] being moved at the origin
 		auto cloud = geodetect.cloud();
@@ -65,7 +66,8 @@ namespace GeoDetection
 	}
 
 
-	void computeDemeanedNormalRadiusSearch(const Cloud& geodetect, float radius, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
+	void 
+		computeDemeanedNormalRadiusSearch(const Cloud& geodetect, float radius, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
 	{
 		auto cloud = geodetect.cloud();
 		pcl::PointXYZ& point = cloud->points[point_index];
@@ -79,7 +81,28 @@ namespace GeoDetection
 		computeNormalDemeaned(geodetect, normal, indices, view);
 	}
 
-	void computeDemeanedNormalKSearch(const Cloud& geodetect, int k, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
+	void 
+		computeDemeanedNormalRadiusSearchOctree(const Cloud& geodetect, float radius, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
+	{
+		auto cloud = geodetect.cloud();
+		pcl::PointXYZ& point = cloud->points[point_index];
+
+		std::vector<int> indices;
+		std::vector<float> sqdistances;
+
+		//Get neighborhood and copy it into the new temp cloud (0th index corresponds to i)
+		if (geodetect.octree().radiusSearch(point, radius, indices, sqdistances) < 3)
+		{
+			std::fill_n(normal.data_n, 3, std::numeric_limits<float>::quiet_NaN());
+			normal.curvature = std::numeric_limits<float>::quiet_NaN();
+			return;
+		}
+		
+		computeNormalDemeaned(geodetect, normal, indices, view);
+	}
+
+	void 
+		computeDemeanedNormalKSearch(const Cloud& geodetect, int k, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
 	{
 		auto cloud = geodetect.cloud();
 		pcl::PointXYZ& point = cloud->points[point_index];
