@@ -4,7 +4,8 @@
 
 namespace GeoDetection
 {
-	//Main functions
+	//Segments vegetation using weighted differences of multiscale volumetric densities and curvatures.
+	//Largest scale queries are reused to reduce the search times. 
 	void 
 		segmentVegetation(GeoDetection::Cloud& geodetect)
 	{
@@ -41,6 +42,8 @@ namespace GeoDetection
 		geodetect.addScalarField(std::move(vegetation_scores));
 	}
 
+	//Segments vegetation using weighted differences of volumetric densities and curvatures, averaged at multiple scales.
+	//Largest scale queries are reused to reduce the search times. 
 	void segmentVegetationSimplified(GeoDetection::Cloud& geodetect)
 	{
 		GD_TITLE("Vegetation Segmentation - simplified");
