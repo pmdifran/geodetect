@@ -3,6 +3,7 @@
 
 namespace GeoDetection
 {
+	//Modify scalar field data with min-max normalization
 	void
 		ScalarField::normalizeMinMax()
 	{
@@ -18,6 +19,7 @@ namespace GeoDetection
 		}
 	}
 
+	//Make all NaN data equal to the max
 	void 
 		ScalarField::NaNtoMax()
 	{
@@ -30,6 +32,7 @@ namespace GeoDetection
 		}
 	}
 
+	//Make all NaN data equal to the min
 	void
 		ScalarField::NaNtoMin()
 	{
@@ -42,6 +45,7 @@ namespace GeoDetection
 		}
 	}
 
+	//Make all NaN data equal to zero
 	void
 		ScalarField::NaNtoZero()
 	{

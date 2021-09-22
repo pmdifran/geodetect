@@ -96,7 +96,7 @@ namespace GeoDetection
 	//Import ASCII data at m_filename, using c - style file reading.
 	//Mainly uses the parse data function above, and some read ascii core functions for getting line count, number of columns etc. 
 	Cloud 
-		AsciiReader::import()
+		AsciiReader::import() const
 	{
 			GD_TITLE("Ascii Data Import");
 			GD_TRACE(":: File: {}", m_filename);
