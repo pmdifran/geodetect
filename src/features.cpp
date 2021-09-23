@@ -71,38 +71,27 @@ namespace GeoDetection
 	}
 
 	//Computes the normal vector for a neighborhood of points, by transforming the neighborhood to the origin prior to demeaning.
+	//Uses Octree for radius search.
+	//Uses OpenMP.
 	void
 		computeDemeanedNormalRadiusSearch(const Cloud& geodetect, float radius, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
 	{
 		auto cloud = geodetect.cloud();
 		pcl::PointXYZ& point = cloud->points[point_index];
+		auto octree = geodetect.octree();
 
 		std::vector<int> indices;
 		std::vector<float> sqdistances;
 
-		//Get neighborhood and copy it into the new temp cloud (0th index corresponds to i)
-		geodetect.flanntree()->radiusSearch(point, radius, indices, sqdistances);
-
-		computeNormalDemeaned(geodetect, normal, indices, view);
-	}
-
-	void
-		computeDemeanedNormalRadiusSearchOctree(const Cloud& geodetect, float radius, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
-	{
-		auto cloud = geodetect.cloud();
-		pcl::PointXYZ& point = cloud->points[point_index];
-
-		std::vector<int> indices;
-		std::vector<float> sqdistances;
-
-		//Get neighborhood and copy it into the new temp cloud (0th index corresponds to i)
-		if (geodetect.octree().radiusSearch(point, radius, indices, sqdistances) < 3)
+		//If not enough points found, set fields to NaN
+		if (octree.radiusSearch(point, radius, indices, sqdistances) < 3)
 		{
 			std::fill_n(normal.data_n, 3, std::numeric_limits<float>::quiet_NaN());
 			normal.curvature = std::numeric_limits<float>::quiet_NaN();
 			return;
 		}
 
+		//Otherwise compute normal, first moving neighborhood to origin.
 		computeNormalDemeaned(geodetect, normal, indices, view);
 	}
 
@@ -112,13 +101,20 @@ namespace GeoDetection
 	{
 		auto cloud = geodetect.cloud();
 		pcl::PointXYZ& point = cloud->points[point_index];
+		auto octree = geodetect.octree();
 
 		std::vector<int> indices(k);
 		std::vector<float> sqdistances(k);
 
-		//Get neighborhood and copy it into the new temp cloud (0th index corresponds to i)
-		geodetect.flanntree()->nearestKSearch(point, k, indices, sqdistances);
+		//If not enough points found, set fields to NaN
+		if (octree.nearestKSearch(point, k, indices, sqdistances) < 3)
+		{
+			std::fill_n(normal.data_n, 3, std::numeric_limits<float>::quiet_NaN());
+			normal.curvature = std::numeric_limits<float>::quiet_NaN();
+			return;
+		}
 
+		//Otherwise compute normal, first moving neighborhood to origin.
 		computeNormalDemeaned(geodetect, normal, indices, view);
 	}
 
@@ -134,12 +130,12 @@ namespace GeoDetection
 		GD_CORE_TRACE(":: Computing average normals with radius: {0} ...", scale);
 
 		auto cloud = geodetect.cloud();
-		auto tree = geodetect.flanntree();
+		auto octree = geodetect.octree();
 		auto normals = geodetect.normals();
 
 		//Check for correct inputs
 		if (scale <= 0) { GD_CORE_ERROR(":: Invalid normal averaging radius inputted"); return nullptr; }
-		if (tree->getInputCloud()->size() != cloud->size()) { GD_CORE_ERROR(":: KdTree pointer disagrees with the input cloud."); return nullptr; }
+		if (octree.getInputCloud()->size() != cloud->size()) { GD_CORE_ERROR(":: KdTree pointer disagrees with the input cloud."); return nullptr; }
 		if (corepoints != nullptr && corepoints->size() == 0) { GD_CORE_WARN(":: Input core points are empty."); return nullptr; }
 
 		if (cloud->size() != normals->size())
@@ -161,7 +157,7 @@ namespace GeoDetection
 			pcl::PointXYZ p(corepoints->points[i]);
 			std::vector<int> ids;
 			std::vector<float> sqdistances;
-			tree->radiusSearch(p, scale, ids, sqdistances);
+			octree.radiusSearch(p, scale, ids, sqdistances);
 
 			int num_ids = ids.size();
 
@@ -192,10 +188,10 @@ namespace GeoDetection
 		GD_CORE_TRACE(":: Computing average field with scale: {0}", scale);
 
 		auto cloud = geodetect.cloud();
-		auto tree = geodetect.flanntree();
+		auto octree = geodetect.octree();
 
 		if (scale <= 0) { GD_CORE_ERROR(":: Invalid scalar field averaging scale inputted"); }
-		if (tree->getInputCloud()->size() != cloud->size()) { GD_CORE_ERROR(":: KdTree pointer disagrees with the input cloud."); }
+		if (octree.getInputCloud()->size() != cloud->size()) { GD_CORE_ERROR(":: KdTree pointer disagrees with the input cloud."); }
 		if (corepoints != nullptr && corepoints->size() == 0) { GD_CORE_WARN(":: Input core points are empty."); }
 		if (cloud->size() != field.size()) { GD_CORE_ERROR(":: Cannot average out scalars. Input size does not agree with the cloud."); }
 
@@ -211,7 +207,7 @@ namespace GeoDetection
 			pcl::PointXYZ p(corepoints->points[i]);
 			std::vector<int> ids;
 			std::vector<float> sqdistances;
-			tree->radiusSearch(p, scale, ids, sqdistances);
+			octree.radiusSearch(p, scale, ids, sqdistances);
 
 			int num_ids = ids.size();
 
@@ -250,7 +246,7 @@ namespace GeoDetection
 	{
 		GD_CORE_TRACE(":: Getting volumetric densities at scale: {0} ...\n", scale);
 		auto cloud = geodetect.cloud();
-		auto flanntree = geodetect.flanntree();
+		auto octree = geodetect.octree();
 		auto normals = geodetect.normals();
 
 		double sphere_vol = (4.0f / 3.0f) * M_PI * pow(scale, 3);
@@ -263,7 +259,7 @@ namespace GeoDetection
 			std::vector<float> distances;
 			std::vector<int> indices;
 
-			int num_points = flanntree->radiusSearch(cloud->points[i], scale, indices, distances);
+			int num_points = octree.radiusSearch(cloud->points[i], scale, indices, distances);
 			densities[i] = num_points / sphere_vol;
 		}
 
@@ -302,7 +298,7 @@ namespace GeoDetection
 		auto start = Time::getStart();
 
 		auto cloud = geodetect.cloud();
-		auto flanntree = geodetect.flanntree();
+		auto octree = geodetect.octree();
 		auto normals = geodetect.normals();
 		auto view = geodetect.view();
 		std::vector<size_t> sort_map = sortIndicesDescending(scales); //Get index mapping to sorted version of radii
@@ -311,7 +307,7 @@ namespace GeoDetection
 		std::vector<ScalarField> all_curvatures(scales.size(), std::vector<float>(cloud->size()));
 		int id_max = sort_map[0]; //mapping to the maximum search
 
-#pragma omp parallel for
+//#pragma omp parallel for
 		for (int64_t i = 0; i < cloud->size(); i++)
 		{
 			pcl::Normal c_normal; //normal used to store multiscale calculations
@@ -321,7 +317,7 @@ namespace GeoDetection
 			std::vector<int> indices;
 
 			//compute search for max scale
-			int num_points = flanntree->radiusSearch(cloud->points[i], scales[id_max], indices, sqdistances);
+			int num_points = octree.radiusSearch(cloud->points[i], scales[id_max], indices, sqdistances);
 			computeNormalDemeaned(geodetect, c_normal, indices, view);
 			all_curvatures[id_max][i] = c_normal.curvature;
 
@@ -353,7 +349,7 @@ namespace GeoDetection
 		auto start = Time::getStart();
 
 		auto cloud = geodetect.cloud();
-		auto flanntree = geodetect.flanntree();
+		auto octree = geodetect.octree();
 		auto normals = geodetect.normals();
 		std::vector<size_t> sort_map = sortIndicesDescending(scales); //Get index mapping to sorted version of radii
 
@@ -375,7 +371,7 @@ namespace GeoDetection
 			std::vector<int> indices;
 
 			//compute search for max scale
-			int num_points = flanntree->radiusSearch(cloud->points[i], scales[id_max], indices, sqdistances);
+			int num_points = octree.radiusSearch(cloud->points[i], scales[id_max], indices, sqdistances);
 			all_densities[id_max][i] = num_points / volumes[id_max];
 
 			//Iterate through smaller neighborhoods and compute density as a subset of sqdistances
@@ -407,7 +403,7 @@ namespace GeoDetection
 		GD_CORE_TRACE(":: Computing locally averaged fields from list of {0} scales...\n", scales.size());
 
 		auto cloud = geodetect.cloud();
-		auto flanntree = geodetect.flanntree();
+		auto octree = geodetect.octree();
 		std::vector<size_t> sort_map = sortIndicesDescending(scales); //Get index mapping to sorted version of radii
 
 		//initialize 2d vector (scale, pointID)
@@ -419,7 +415,7 @@ namespace GeoDetection
 			//Compute spatial KdTree search at the largest scale
 			std::vector<float> sqdistances;
 			std::vector<int> indices;
-			flanntree->radiusSearch(cloud->points[i], scales[sort_map[0]], indices, sqdistances);
+			octree.radiusSearch(cloud->points[i], scales[sort_map[0]], indices, sqdistances);
 
 			//compute average field at max scale (i.e. sort_map[0])
 			field_multiscale_averaged[sort_map[0]][i] = fieldSubsetAverage(field, indices.begin(), indices.end());

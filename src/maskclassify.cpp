@@ -18,7 +18,7 @@ namespace GeoDetection
 
 		//Get pointers to mask members
 		auto mask_cloud = mask.cloud();
-		auto mask_tree = mask.tree();
+		auto mask_tree = mask.kdtree();
 		auto mask_scalarfields = mask.scalarfields();
 
 		//mask must have scalar fields. Assumed classes are the last scalar field.

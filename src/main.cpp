@@ -99,11 +99,11 @@ int main(int argc, char* argv[])
 		GeoDetection::Cloud source = reader.import();
 
 		//Segment Vegetation
-		auto normals = source.getNormalsRadiusSearchDemeanedOctree(1.0);
-		source.setNormals(normals);
+		source.distanceDownSample(0.25);
+		GeoDetection::segmentVegetation(source);
 
 		//Output file
-		std::string out_filename = file_name_string + "_normals_radiusSearchDemeaned" + ext_string;
+		std::string out_filename = file_name_string + "_vegetation_segmented" + ext_string;
 		source.writeAsASCII(out_filename);
 	}
 

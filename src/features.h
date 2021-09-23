@@ -25,9 +25,6 @@ namespace GeoDetection
 	*/
 	void computeDemeanedNormalRadiusSearch(const Cloud& geodetect, float radius, int point_index, pcl::Normal& normal, const std::array<float, 3>& view);
 
-	//This will replace the above method.
-	void computeDemeanedNormalRadiusSearchOctree(const Cloud& geodetect, float radius, int point_index, pcl::Normal& normal, const std::array<float, 3>& view);
-
 	/**
 	* Computes the normal vector for a point using a radius search, with transformation of the neighborhood to the origin prior to demeaning.
 	* @param[in] geodetect: GeoDetection::Cloud object.

@@ -68,7 +68,7 @@ namespace GeoDetection
 		std::vector<GeoDetection::ScalarField> densities_multiscale = getVolumetricDensitiesMultiscale(geodetect, density_scales);
 
 		//Determine curvature at a small enough scale 
-		pcl::PointCloud<pcl::Normal>::Ptr normals = geodetect.getNormalsKSearchDemeaned(12);
+		pcl::PointCloud<pcl::Normal>::Ptr normals = geodetect.getNormalsKSearch(12);
 		GeoDetection::ScalarField curvatures = NormalsToCurvature(normals);
 		normals = nullptr;
 

@@ -5,12 +5,12 @@
 //PCL core
 #include <pcl/point_types.h>
 
-//KdTree
-#include <pcl/kdtree/kdtree_flann.h>
+//KdTree (FLANN)
 #include <pcl/search/kdtree.h>
 
 //Octree
 #include <pcl/octree/octree_search.h>
+#include <pcl/search/octree.h>
 
 //Filters
 #include <pcl/filters/extract_indices.h>
@@ -37,7 +37,6 @@ namespace GeoDetection
 		std::vector<ScalarField> m_scalarfields;
 
 		//PCL Search Trees
-		pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr m_kdtreeFLANN;
 		pcl::search::KdTree<pcl::PointXYZ>::Ptr m_kdtree;
 		pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> m_octree;
 
@@ -57,7 +56,6 @@ namespace GeoDetection
 			: m_name("Cloud Default"),
 			m_cloud(new pcl::PointCloud<pcl::PointXYZ>),
 			m_normals(new pcl::PointCloud<pcl::Normal>),
-			m_kdtreeFLANN(new pcl::KdTreeFLANN<pcl::PointXYZ>),
 			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
 			m_octree(0.1f)
 		{
@@ -68,13 +66,12 @@ namespace GeoDetection
 			: m_name(name),
 			m_cloud(cloud),
 			m_normals(new pcl::PointCloud<pcl::Normal>),
-			m_kdtreeFLANN(new pcl::KdTreeFLANN<pcl::PointXYZ>),
 			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
 			m_octree(0.1f)
 		{
 			GD_CORE_TITLE("GeoDetection Cloud Construction");
 			GD_CORE_TRACE("Creating GeoDetection Cloud Object: '{0}' with {1} points", m_name, m_cloud->size());
-			buildKdTrees();
+			buildKdTree();
 			buildOctree();
 			GD_CORE_INFO("--> GeoDetection Cloud Created\n");
 		}
@@ -97,8 +94,7 @@ namespace GeoDetection
 		inline std::vector <ScalarField>* const scalarfields() { return &m_scalarfields; }
 
 		//Search trees
-		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr const tree() const { return m_kdtree; }
-		inline pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr const flanntree() const { return m_kdtreeFLANN; }
+		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr const kdtree() const { return m_kdtree; }
 		inline const pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>& octree() const { return m_octree; }
 
 		//Cloud properties
@@ -113,7 +109,7 @@ namespace GeoDetection
 		inline void setScalarFields(std::vector<ScalarField> sf) { std::copy(sf.begin(), sf.end(), m_scalarfields.begin()); }
 
 		//Set cloud to another and rebuild KdTrees
-		inline void setCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) { m_cloud = std::move(cloud); buildKdTrees(); m_normals->clear(); }
+		inline void setCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) { m_cloud = std::move(cloud); buildKdTree(); m_normals->clear(); }
 
 		//Set normals to another.
 		inline void setNormals(pcl::PointCloud<pcl::Normal>::Ptr& normals) { m_normals = std::move(normals); }
@@ -137,8 +133,9 @@ namespace GeoDetection
 ****************************************************************************************************************************************************/
 		/**
 		* Constructs K-dimensional search trees for the point cloud.
+		* @TODO: Testing ongoing. This method may soon be removed.
 		*/
-		void buildKdTrees();
+		void buildKdTree();
 
 		/**
 		* Constructs octree search trees for the point cloud.
@@ -197,22 +194,12 @@ namespace GeoDetection
 ***************************************************************************************************************************************************/
 		/**
 		* Compute normals with a radius search using octree. Uses OpenMP. Uses viewpoint <m_view> for orienting normals.
-		* **Should not be used when the point clouds are far from the origin.
-		* @param radius: Radius for spherical neighbour search used for principle component analysis.
-		* @return shared pointer to the computed normals.
-		*/
-		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearch(float radius);
-
-		/**
-		* Compute normals with a radius search using octree. Uses OpenMP. Uses viewpoint <m_view> for orienting normals.
 		* Neighborhoods are demeaned (i.e. moved to the origin) prior to covariance matrix and EVD calculations.
 		* Safe to use for point clouds that are far from the origin.
 		* @param radius: Radius for spherical neighbour search used for principle component analysis.
 		* @return shared pointer to the computed normals.
 		*/
-		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearchDemeaned(float radius);
-
-		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearchDemeanedOctree(float radius); //not this commit- but this function is going to replace the one above.
+		pcl::PointCloud<pcl::Normal>::Ptr getNormalsRadiusSearch(float radius);
 
 		/**
 		* Compute normals from k-nearest neighbors, search using octree. Uses OpenMP. Uses viewpoint <m_view> for orienting normals.
@@ -222,15 +209,6 @@ namespace GeoDetection
 		* @return shared pointer to the computed normals.
 		*/
 		pcl::PointCloud<pcl::Normal>::Ptr getNormalsKSearch(int k);
-
-		/**
-		* Compute normals from k-nearest neighbors, search using octree. Uses OpenMP. Uses viewpoint <m_view> for orienting normals.
-		* Neighborhoods are demeaned (i.e. moved to the origin) prior to covariance matrix and EVD calculations.
-		* Safe to use for point clouds that are far from the origin.
-		* @param radius: Radius for spherical neighbour search used for principle component analysis.
-		* @return shared pointer to the computed normals.
-		*/
-		pcl::PointCloud<pcl::Normal>::Ptr getNormalsKSearchDemeaned(int k);
 
 		/**
 		* calls getNormalsRadiusSearch and sets member normals to the result.
@@ -246,7 +224,7 @@ namespace GeoDetection
 		* calls getNormalsKSearch and sets member normals to the result.
 		* @param radius: Radius for spherical neighbour search used for principle component analysis.
 		*/
-		inline void updateNormalsRadiusSearch(int k)
+		inline void updateNormalsKSearch(int k)
 		{
 			auto new_normals = this->getNormalsKSearch(k);
 			this->setNormals(new_normals);

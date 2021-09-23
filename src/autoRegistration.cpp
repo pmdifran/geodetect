@@ -191,8 +191,8 @@ namespace GeoDetection
 
 		gicp.setCorrespondenceRandomness(10);
 		gicp.setMaximumIterations(100);
-		gicp.setSearchMethodSource(source.tree());
-		gicp.setSearchMethodTarget(reference.tree());
+		gicp.setSearchMethodSource(source.kdtree());
+		gicp.setSearchMethodTarget(reference.kdtree());
 
 		gicp.align(*source.cloud()); //**The transformation is applied to the cloud here!
 

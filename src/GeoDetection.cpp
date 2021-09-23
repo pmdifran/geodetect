@@ -35,13 +35,10 @@ namespace GeoDetection
 ****************************************************************************************************************************************************/
 	// Constructs K-dimensional search trees for the point cloud.
 	void
-		Cloud::buildKdTrees()
+		Cloud::buildKdTree()
 	{
 		GD_CORE_TRACE(":: Constructing K-dimensional Search Trees");
 		auto start = GeoDetection::Time::getStart();
-
-		m_kdtreeFLANN->setInputCloud(m_cloud);
-		m_kdtreeFLANN->setSortedResults(true); //explicit --> should be true by default construction
 
 		m_kdtree->setInputCloud(m_cloud);
 		m_kdtree->setSortedResults(true);
@@ -57,6 +54,7 @@ namespace GeoDetection
 	{
 		GD_CORE_TRACE(":: Constructing octrees");
 		auto start = GeoDetection::Time::getStart();
+		m_octree.deleteTree();
 		m_octree.setResolution(0.1f);
 		m_octree.enableDynamicDepth(10);
 		m_octree.setInputCloud(m_cloud);
@@ -89,7 +87,7 @@ namespace GeoDetection
 			std::vector<int> indices(k);
 			std::vector<float> sq_distances(k);
 
-			m_kdtreeFLANN->nearestKSearch(i, k, indices, sq_distances);
+			m_octree.nearestKSearch(i, k, indices, sq_distances);
 			for (int j = 1; j < k; j++)
 			{
 				local_resolution += sq_distances[j];
@@ -146,9 +144,10 @@ namespace GeoDetection
 		if (this->hasNormals()) { this->averageNormalsSubset(distance, corepoints); }
 		if (this->hasScalarFields()) { this->averageAllScalarFieldsSubset(distance, corepoints); }
 
-		//set m_cloud to the corepoints and rebuild kdtrees
+		//set m_cloud to the corepoints and rebuild octree
 		m_cloud = corepoints;
-		this->buildKdTrees();
+		this->buildKdTree();
+		this->buildOctree();
 	}
 
 	//Returns a subsampled cloud, using a minimum distance. 
@@ -174,7 +173,7 @@ namespace GeoDetection
 				std::vector<int> IDRadiusSearch;
 				std::vector<float> DistanceRadiusSearch;
 
-				m_kdtreeFLANN->radiusSearch(m_cloud->points[i], distance, IDRadiusSearch, DistanceRadiusSearch);
+				m_octree.radiusSearch(m_cloud->points[i], distance, IDRadiusSearch, DistanceRadiusSearch);
 
 				if (IDRadiusSearch.size() > 1) {
 					for (std::vector<int>::iterator it = IDRadiusSearch.begin() + 1; it != IDRadiusSearch.end(); ++it) {
@@ -214,9 +213,10 @@ namespace GeoDetection
 		if (this->hasNormals()) { this->averageNormalsSubset(distance, corepoints); }
 		if (this->hasScalarFields()) { this->averageAllScalarFieldsSubset(distance, corepoints); }
 
-		//set m_cloud to the corepoints and rebuild kdtrees
+		//set m_cloud to the corepoints and rebuild octree
 		m_cloud = corepoints;
-		this->buildKdTrees();
+		this->buildKdTree();
+		this->buildOctree();
 	}
 
 	//Removes NaN from point cloud 
@@ -235,35 +235,10 @@ namespace GeoDetection
 /***********************************************************************************************************************************************//**
 *  Normal Estimation
 ***************************************************************************************************************************************************/
+	//Computes normals with a radius search. 
+	//Neighborhoods are transformed to the origin prior to demeaning during the covariance calculations, to prevent catostrophic cancellation
 	pcl::PointCloud<pcl::Normal>::Ptr
 		Cloud::getNormalsRadiusSearch(float radius)
-	{
-		GD_CORE_ERROR("ERROR: This method will produce unreliable normals, if neighborhoods are far away from the origin.\
-					Ongoing fix... Use getNormalsRadiusSearchDemeaned instead for now...");
-		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Normal scale {0}", radius);
-		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
-			omp_get_num_procs());
-		auto start = GeoDetection::Time::getStart();
-
-		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
-		normals->reserve(m_cloud->size());
-
-		pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> calcnormals;
-		calcnormals.setInputCloud(m_cloud);
-		calcnormals.setSearchMethod(m_kdtree);
-		calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
-		calcnormals.setRadiusSearch(radius);
-		calcnormals.setNumberOfThreads(omp_get_num_procs());
-		calcnormals.compute(*normals);
-
-		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
-			GeoDetection::Time::getDuration(start));
-
-		return normals;
-	}
-
-	pcl::PointCloud<pcl::Normal>::Ptr
-		Cloud::getNormalsRadiusSearchDemeaned(float radius)
 	{
 		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Normal scale {0}", radius);
 		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
@@ -285,59 +260,10 @@ namespace GeoDetection
 		return normals;
 	}
 
-	pcl::PointCloud<pcl::Normal>::Ptr
-		GeoDetection::Cloud::getNormalsRadiusSearchDemeanedOctree(float radius)
-	{
-		GD_CORE_TRACE(":: Computing point cloud normals with octree...\n:: Normal scale {0}", radius);
-		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
-			omp_get_num_procs());
-		auto start = GeoDetection::Time::getStart();
-
-		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
-		normals->resize(m_cloud->size());
-
-		// Iterate through each point and compute normals from demeaned neighborhoods.
-#pragma omp parallel for
-		for (int i = 0; i < m_cloud->size(); i++)
-		{
-			computeDemeanedNormalRadiusSearchOctree(*this, radius, i, normals->points[i], m_view);
-		}
-
-		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
-			GeoDetection::Time::getDuration(start));
-		return normals;
-	}
-
+	//Computes normals with a k-nearest neighbor search. 
+	//Neighborhoods are transformed to the origin prior to demeaning during the covariance calculations, to prevent catostrophic cancellation
 	pcl::PointCloud<pcl::Normal>::Ptr
 		Cloud::getNormalsKSearch(int k)
-	{
-		GD_CORE_ERROR("ERROR: This method will produce unreliable normals, if neighborhoods are far away from the origin.\
-					Ongoing fix... Use getNormalsKSearchDemeaned instead for now...");
-		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Number of neighbors: {0}", k);
-		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
-			omp_get_num_procs());
-		auto start = GeoDetection::Time::getStart();
-
-		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
-		normals->reserve(m_cloud->size());
-
-		pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> calcnormals;
-
-		calcnormals.setInputCloud(m_cloud);
-		calcnormals.setSearchMethod(m_kdtree);
-		calcnormals.setViewPoint(m_view[0], m_view[1], m_view[2]); //0,0,0 as default
-		calcnormals.setKSearch(k);
-		calcnormals.setNumberOfThreads(omp_get_num_procs());
-		calcnormals.compute(*normals);
-
-		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
-			GeoDetection::Time::getDuration(start));
-
-		return normals;
-	}
-
-	pcl::PointCloud<pcl::Normal>::Ptr
-		Cloud::getNormalsKSearchDemeaned(int k)
 	{
 		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Number of neighbors: {0}", k);
 		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
@@ -351,7 +277,7 @@ namespace GeoDetection
 #pragma omp parallel for
 		for (int i = 0; i < m_cloud->points.size(); i++)
 		{
-			computeDemeanedNormalRadiusSearch(*this, k, i, normals->points[i], m_view);
+			computeDemeanedNormalKSearch(*this, k, i, normals->points[i], m_view);
 		}
 
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
