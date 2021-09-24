@@ -340,19 +340,22 @@ namespace GeoDetection
 			computeNormalDemeaned(geodetect, c_normal, indices, view);
 			all_curvatures[id_max][i] = c_normal.curvature;
 
-			//Iterate through smaller neighborhoods and compute density as a subset of sqdistances
+			//Iterate through smaller neighborhoods (descending) and compute density as a subset of sqdistances
 			for (int j = 1; j < scales.size(); j++)
 			{
 				int id = sort_map[j]; //ID for the 2D vector (i.e. the current scale).
 				float sq_scale = pow(scales[id], 2);
-				auto iter_end = std::find_if(sqdistances.begin(), sqdistances.end(), [&sq_scale](float x)
-					{return x > sq_scale; });
 
-				size_t sub_size = iter_end - sqdistances.begin();
-				std::vector<int>::iterator id_iter_end = indices.begin() + sub_size;
-				std::vector<int> subindices(indices.begin(), id_iter_end);
+				//use reverse iterators because we're descending. Find first element that is less than the scale
+				auto riter_start = std::find_if(sqdistances.rbegin(), sqdistances.rend(), [&sq_scale](float x)
+					{return !(x > sq_scale); });
 
-				computeNormalDemeaned(geodetect, c_normal, subindices, view);
+				//scale in the next loop is smaller. Therefore, reduce the size of our search containers
+				size_t erase_num = riter_start - sqdistances.rbegin(); //need to use forward iterators for erase.
+				sqdistances.erase((sqdistances.end() - erase_num), sqdistances.end());
+				indices.erase((indices.end() - erase_num), indices.end());
+
+				computeNormalDemeaned(geodetect, c_normal, indices, view);
 				all_curvatures[id][i] = c_normal.curvature;
 			}
 		}
@@ -409,11 +412,17 @@ namespace GeoDetection
 			{
 				int id = sort_map[j];
 				float sq_scale = pow(scales[id], 2);
-				auto iter_end = std::find_if(sqdistances.begin(), sqdistances.end(), [&sq_scale](float x)
-					{return x > sq_scale; });
 
-				num_points = iter_end - sqdistances.begin();
-				all_densities[id][i] = num_points / volumes[id];
+				//use reverse iterators because we're descending. Find first element that is less than the scale
+				auto riter_start = std::find_if(sqdistances.rbegin(), sqdistances.rend(), [&sq_scale](float x)
+					{return !(x > sq_scale); });
+
+				//scale in the next loop is smaller. Therefore, reduce the size of our search containers
+				size_t erase_num = riter_start - sqdistances.rbegin(); //need to use forward iterators for erase.
+				sqdistances.erase((sqdistances.end() - erase_num), sqdistances.end());
+				indices.erase((indices.end() - erase_num), indices.end());
+
+				all_densities[id][i] = indices.size() / volumes[id];
 			}
 		}
 
