@@ -201,7 +201,7 @@ namespace GeoDetection
 		* @param k: the number of neighbors to use for determining local resolution (default=2).
 		* @return Vector of local resolutions, consistent with point cloud indices.
 		*/
-		std::vector<float> getResolution(int num_neighbors = 2);
+		std::vector<float> getResolution(int num_neighbors = 1);
 
 		/**
 		* Generates a new, subsampled cloud, using a voxel filter that replaces voxel-level samples with their centroid.
