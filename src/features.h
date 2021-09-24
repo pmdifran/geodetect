@@ -9,7 +9,6 @@ namespace GeoDetection
 	/**
 	* Computes the normal vector for a neighborhood of points, by transforming the neighborhood to the origin prior to demeaning.
 	* @param[in] geodetect: GeoDetection::Cloud object.
-	* @param[out] normal: Normal that is filled by the calculation.
 	* @param[in] indices: Neighborhood indices, corresponding to geodetect.cloud().
 	* @param[in] view: viewpoint used to orient the resulting normal.
 	*/
@@ -45,7 +44,7 @@ namespace GeoDetection
 	* @param corepoints: Subcloud used for computing the average normals. (Full resolution is used by default).
 	* @return Shared pointer to averaged normals.
 	*/
-	pcl::PointCloud<pcl::Normal>::Ptr computeAverageNormals(const Cloud& geodetect,
+	pcl::PointCloud<pcl::Normal>::Ptr computeAverageNormals(Cloud& geodetect,
 		float scale, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints = nullptr);
 
 	/**
@@ -55,7 +54,7 @@ namespace GeoDetection
 	* @param corepoints: Subcloud used for computing the average scalar fields. (Full resolution is used by default).
 	* @return Shared pointer to averaged normals.
 	*/
-	ScalarField computeAverageField(const Cloud& geodetect, const ScalarField& field, float scale,
+	ScalarField computeAverageField(Cloud& geodetect, const ScalarField& field, float scale,
 		pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints = nullptr);
 
 /***********************************************************************************************************************************************//**
@@ -74,7 +73,7 @@ namespace GeoDetection
 	* @param scale: nearest neighbor radius.
 	* @return ScalarField of volumetric densities.
 	*/
-	ScalarField getVolumetricDensities(const Cloud& geodetect, float scale);
+	ScalarField getVolumetricDensities(Cloud& geodetect, float scale);
 
 	/**
 	* Computes the vegetation index from the weight, curvatures, and volumetric densities. The vegetation indices are summed.
@@ -95,7 +94,7 @@ namespace GeoDetection
 	* @param scales: Vector of scales (radii).
 	* @return Vector of ScalarFields (i.e. curvatures).
 	*/
-	std::vector<ScalarField> getCurvaturesMultiscale(const Cloud& geodetect, const std::vector<float>& scales);
+	std::vector<ScalarField> getCurvaturesMultiscale(Cloud& geodetect, const std::vector<float>& scales);
 
 	/**
 	* Get multiscale volumetric densities given input of scales.
@@ -103,7 +102,7 @@ namespace GeoDetection
 	* @param scales: Vector of scales (radii).
 	* @return Vector of ScalarFields (i.e. volumetric densities).
 	*/
-	std::vector<ScalarField> getVolumetricDensitiesMultiscale(const Cloud& geodetect, const std::vector<float>& scales);
+	std::vector<ScalarField> getVolumetricDensitiesMultiscale(Cloud& geodetect, const std::vector<float>& scales);
 
 /***********************************************************************************************************************************************//**
 *  Feature Averaging - Multiscale
@@ -120,7 +119,7 @@ namespace GeoDetection
 //
 	//For entire cloud: set corepoints equal to cloud.
 	std::vector<ScalarField>
-		computeAverageFieldMultiscale(const Cloud& geodetect, const ScalarField& field,
+		computeAverageFieldMultiscale(Cloud& geodetect, const ScalarField& field,
 			const std::vector<float> scales, pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints = nullptr);
 
 }

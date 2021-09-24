@@ -128,8 +128,12 @@ namespace GeoDetection
 			fclose(file);
 			GD_WARN("--> Data import time: {0} ms", GeoDetection::Time::getDuration(start));
 
+			//Build the KdTree. GeoDetection Clouds use both KdTrees and Octrees. 
 			geodetect.buildKdTree();
-			geodetect.buildOctree();
+
+			//Use KdTree to estimate the mean resolution of the cloud
+			geodetect.getResolution();
+			geodetect.buildOctree(geodetect.getOptimalOctreeResolution());
 			return geodetect;
 	}
 

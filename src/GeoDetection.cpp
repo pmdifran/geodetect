@@ -48,15 +48,29 @@ namespace GeoDetection
 	}
 
 	//Constructs octree search trees for the point cloud.
-	//Uses dynamic depth, for maximum number of points in a leaf (dynamic depth), as well as a specified lead resolution.
 	void
-		Cloud::buildOctree()
+		Cloud::buildOctree(float resolution)
 	{
 		GD_CORE_TRACE(":: Constructing octrees");
 		auto start = GeoDetection::Time::getStart();
-		m_octree.deleteTree();
-		m_octree.setResolution(0.1f);
-		m_octree.enableDynamicDepth(10);
+		m_octree.deleteTree(); //delete previous tree (Cloud only stores one octree at a time)
+		m_octree.setResolution(resolution);
+		m_octree.setInputCloud(m_cloud);
+		m_octree.addPointsFromInputCloud();
+		GD_CORE_WARN("--> Octree construction time: {0} ms\n",
+			GeoDetection::Time::getDuration(start));
+	}
+
+	//Constructs octree search trees for the point cloud.
+	//Uses dynamic depth, for maximum number of points in a leaf (dynamic depth), as well as a specified lead resolution.
+	void
+		Cloud::buildOctreeDynamic(float resolution, int max_leaf_population)
+	{
+		GD_CORE_TRACE(":: Constructing octrees");
+		auto start = GeoDetection::Time::getStart();
+		m_octree.deleteTree(); //delete previous tree (Cloud only stores one octree at a time)
+		m_octree.setResolution(resolution);
+		m_octree.enableDynamicDepth(max_leaf_population); //setting dynamic property of the octree. 
 		m_octree.setInputCloud(m_cloud);
 		m_octree.addPointsFromInputCloud();
 		GD_CORE_WARN("--> Octree construction time: {0} ms\n",
@@ -67,7 +81,7 @@ namespace GeoDetection
 *  Resolution, Downsampling, and Filtering
 ****************************************************************************************************************************************************/
 	//Computes the local point cloud resolution(i.e.spacing), from a specified number of neighbors, with OpenMP.
-	//Returns a vector of the point resolutions (can be added to ScalarFields), and updates m_resolution with the average.
+	//Returns a vector of the point resolutions (can be added to ScalarFields), and updates m_resolution_avg with the average.
 	std::vector<float>
 		Cloud::getResolution(const int num_neighbors)
 	{
@@ -80,6 +94,7 @@ namespace GeoDetection
 
 		double avg_resolution = 0; //cloud-wide average resolution
 
+		//Calculate resolution for each point, and determine average resolution
 #pragma omp parallel for reduction(+: avg_resolution)
 		for (int64_t i = 0; i < m_cloud->size(); i++)
 		{
@@ -87,7 +102,7 @@ namespace GeoDetection
 			std::vector<int> indices(k);
 			std::vector<float> sq_distances(k);
 
-			m_octree.nearestKSearch(i, k, indices, sq_distances);
+			m_kdtree->nearestKSearch(i, k, indices, sq_distances);
 			for (int j = 1; j < k; j++)
 			{
 				local_resolution += sq_distances[j];
@@ -99,12 +114,21 @@ namespace GeoDetection
 		}
 
 		avg_resolution = sqrt(avg_resolution / (double)m_cloud->size());
-		m_resolution = avg_resolution;
+		m_resolution_avg = avg_resolution;
 
-		GD_INFO("--> Point cloud resolution: {0} meters", m_resolution);
+		GD_INFO("--> Point cloud resolution: {0} meters", m_resolution_avg);
 		GD_CORE_WARN("--> Resolution estimation time: {0} ms\n",
 			GeoDetection::Time::getDuration(start));
 
+		//Calculate standard deviation of resolution.
+		double deviation;
+#pragma omp parallel for reduction(+: deviation)
+		for (int64_t i = 0; i < m_cloud->size(); i++)
+		{
+			deviation += pow(resolution[i] - avg_resolution, 2);
+		}
+		
+		m_resolution_stdev = sqrt(deviation / m_cloud->size());
 		return resolution;
 	}
 
@@ -147,7 +171,8 @@ namespace GeoDetection
 		//set m_cloud to the corepoints and rebuild octree
 		m_cloud = corepoints;
 		this->buildKdTree();
-		this->buildOctree();
+		this->getResolution();
+		this->buildOctreeOptimalParams();
 	}
 
 	//Returns a subsampled cloud, using a minimum distance. 
@@ -216,7 +241,8 @@ namespace GeoDetection
 		//set m_cloud to the corepoints and rebuild octree
 		m_cloud = corepoints;
 		this->buildKdTree();
-		this->buildOctree();
+		this->getResolution();
+		this->buildOctree(this->getOptimalOctreeResolution());
 	}
 
 	//Removes NaN from point cloud 
@@ -248,6 +274,9 @@ namespace GeoDetection
 		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
 		normals->resize(m_cloud->size());
 
+		//Create optimal octree for search:
+		this->buildOctreeDynamicOptimalParams(radius);
+
 		// Iterate through each point and compute normals from demeaned neighborhoods.
 #pragma omp parallel for
 		for (int i = 0; i < m_cloud->size(); i++)
@@ -272,6 +301,9 @@ namespace GeoDetection
 
 		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
 		normals->resize(m_cloud->size());
+
+		//Create optimal octree for search:
+		this->buildOctreeDynamicOptimalParams(k);
 
 		// Iterate through each point and compute normals from demeaned neighborhoods.
 #pragma omp parallel for

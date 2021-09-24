@@ -45,7 +45,8 @@ namespace GeoDetection
 		std::array<float, 3> m_view = { 0, 0, 0 }; //view for normal orientation
 
 		//Scale and resoluton
-		double m_resolution = 0.0; //average resolution (i.e. point spacing) of the point cloud.
+		double m_resolution_avg = 0.0; //average resolution (i.e. point spacing) of the point cloud.
+		double m_resolution_stdev = 0.0; //standard deviation of resolution (i.e. point spacing) of the cloud.
 		double m_scale = 0.0;
 
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -57,7 +58,7 @@ namespace GeoDetection
 			m_cloud(new pcl::PointCloud<pcl::PointXYZ>),
 			m_normals(new pcl::PointCloud<pcl::Normal>),
 			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
-			m_octree(0.1f)
+			m_octree(1.0f) //resolution here doesn't matter. Import methods will call build anyways. 
 		{
 			GD_CORE_TRACE(":: Constructing empty GeoDetection Cloud...");
 		}
@@ -67,12 +68,18 @@ namespace GeoDetection
 			m_cloud(cloud),
 			m_normals(new pcl::PointCloud<pcl::Normal>),
 			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
-			m_octree(0.1f)
+			m_octree(0.1f) ////resolution here doesn't matter. Constructor will alter it anyways.
 		{
 			GD_CORE_TITLE("GeoDetection Cloud Construction");
 			GD_CORE_TRACE("Creating GeoDetection Cloud Object: '{0}' with {1} points", m_name, m_cloud->size());
+			
+			//Build the KdTree. GeoDetection Clouds use both KdTrees and Octrees. 
 			buildKdTree();
-			buildOctree();
+
+			//Use KdTree to estimate the mean resolution of the cloud
+			this->getResolution();
+			buildOctree(this->getOptimalOctreeResolution());
+			
 			GD_CORE_INFO("--> GeoDetection Cloud Created\n");
 		}
 
@@ -101,7 +108,7 @@ namespace GeoDetection
 		inline Eigen::Matrix4d transformation() const { return m_transformation; }
 		inline std::array<float, 3> view() const { return m_view; }
 
-		inline double resolution() const { return m_resolution; }
+		inline double resolution() const { return m_resolution_avg; }
 
 	//Setters
 	public:
@@ -124,7 +131,7 @@ namespace GeoDetection
 		inline bool hasCloud() const { return m_cloud->size() > 0; }
 		inline bool hasNormals() const { return m_normals->size() > 0; }
 		inline bool hasScalarFields() const { return m_scalarfields.size() > 0; }
-		inline bool hasResolution() const { return m_resolution > 0; }
+		inline bool hasResolution() const { return m_resolution_avg > 0; }
 
 	//METHODS
 	public:
@@ -137,10 +144,52 @@ namespace GeoDetection
 		*/
 		void buildKdTree();
 
+		inline float getOptimalOctreeResolution() const { return (sqrt(2.0) * m_resolution_avg) + m_resolution_stdev; }
+		inline int getOptimalOctreeLeafPopulation(float radius) const 
+		{
+			return (M_PI * pow(m_resolution_avg, 2) * (radius, 2));
+		}
+
 		/**
-		* Constructs octree search trees for the point cloud.
+		* Constructs octree search tree for the point cloud.
+		* @param resolution: voxel size at greatest depth (i.e. smallest scale).
 		*/
-		void buildOctree();
+		void buildOctree(float resolution);
+
+		/**
+		* Constructs octree search tree for the point cloud.
+		* @param resolution: voxel size at greatest depth (i.e. smallest scale).
+		* @param max_leaf_population: maximum population of a voxel at the greatest depth. Used for dynamic octree structure. 
+		*/
+		void buildOctreeDynamic(float resolution, int max_leaf_population);
+
+		/**
+		* Constructs octree search tree for the point cloud. Uses resolution to determine appropriate leaf sizes \
+		* (i.e. cubic voxel dimensions)
+		*/
+		inline void buildOctreeOptimalParams() { this->buildOctree(this->getOptimalOctreeResolution()); }
+
+		/**
+		* Constructs octree search tree for the point cloud. Uses resolution to determine appropriate leaf sizes \
+		* (i.e. cubic voxel dimensions). Takes input of search radius size to determine maximum population of leaves for \
+		* the dynamic structure.
+		* @param radius: Search radius being used for the particular search application.
+		*/
+		inline void buildOctreeDynamicOptimalParams(float radius) 
+		{ 
+			this->buildOctreeDynamic(this->getOptimalOctreeResolution(), this->getOptimalOctreeLeafPopulation(radius));
+		}
+
+		/**
+		* Constructs octree search tree for the point cloud. Uses resolution to determine appropriate leaf sizes \
+		* (i.e. cubic voxel dimensions). Takes input k-nearest neighbors to determine maximum population of leaves for \
+		* the dynamic octree structure.
+		* @param k: number of nearest-neighbors for the search application.
+		*/
+		inline void buildOctreeDynamicOptimalParams(int k)
+		{
+			this->buildOctreeDynamic(this->getOptimalOctreeResolution(), k * sqrt(2.0f));
+		}
 
 /************************************************************************************************************************************************//**
 *  Resolution, Downsampling, and Filtering
@@ -148,7 +197,7 @@ namespace GeoDetection
 
 		/**
 		* Computes the local point cloud resolution (i.e. spacing), from a specified number of neighbors.
-		* Internal: updates member m_resolution (average cloud resolution).
+		* Internal: updates member m_resolution_avg (average cloud resolution).
 		* @param k: the number of neighbors to use for determining local resolution (default=2).
 		* @return Vector of local resolutions, consistent with point cloud indices.
 		*/
