@@ -108,12 +108,12 @@ namespace GeoDetection
 				local_resolution += sq_distances[j];
 			}
 
-			local_resolution = sqrt(local_resolution / (double)num_neighbors);
+			local_resolution = sqrt(local_resolution) / (double)num_neighbors;
 			resolution[i] = local_resolution;
 			avg_resolution += local_resolution; //thread-safe with omp reduction
 		}
 
-		avg_resolution = sqrt(avg_resolution / (double)m_cloud->size());
+		avg_resolution = avg_resolution / (double)m_cloud->size();
 		m_resolution_avg = avg_resolution;
 
 		GD_INFO("--> Point cloud resolution: {0} meters", m_resolution_avg);
