@@ -121,7 +121,7 @@ namespace GeoDetection
 			GeoDetection::Time::getDuration(start));
 
 		//Calculate standard deviation of resolution.
-		double deviation;
+		double deviation = 0.0;
 #pragma omp parallel for reduction(+: deviation)
 		for (int64_t i = 0; i < m_cloud->size(); i++)
 		{
@@ -281,7 +281,7 @@ namespace GeoDetection
 #pragma omp parallel for
 		for (int i = 0; i < m_cloud->size(); i++)
 		{
-			computeDemeanedNormalRadiusSearch(*this, radius, i, normals->points[i], m_view);
+			computeNormalAtOriginRadiusSearch(*this, radius, i, normals->points[i], m_view);
 		}
 
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
@@ -309,7 +309,7 @@ namespace GeoDetection
 #pragma omp parallel for
 		for (int i = 0; i < m_cloud->points.size(); i++)
 		{
-			computeDemeanedNormalKSearch(*this, k, i, normals->points[i], m_view);
+			computeNormalAtOriginKSearch(*this, k, i, normals->points[i], m_view);
 		}
 
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
