@@ -20,6 +20,21 @@ namespace GeoDetection
 	std::vector<size_t> sortIndicesAscending(const std::vector<T>& vec);
 
 	/**
+	* Reorders a vector in place, given a mapping to the indices.
+	* @param[out] vec: Vector of arbitrary template type T. This vector is sorted in place.
+	* @param[out] sort_map: index vector of sorting indices. **This vector is also sorted in place.
+	*/
+	template <typename T>
+	void reorderVector(std::vector<T>& vec, std::vector<size_t>& sort_map);
+
+	/**
+	* Inplace, reorders the sqdistances and indices resulting from an octree query, so that are acending in proximity of points.
+	* @param[out] sqdistances: Vector of arbitrary template type T. This vector is sorted in place.
+	* @param[out] indices: index vector of sorting indices. This vector is also sorted in place.
+	*/
+	void sortOctreeQuery(std::vector<int>& indices, std::vector<float>& sqdistances);
+
+	/**
 	* Assembles a contiguous array (i.e. vector) from vector subset indices.
 	* @param indices: Subset indices of std::vector<T_field>
 	* @param field: Vector of the (superset) data, of type T_field.

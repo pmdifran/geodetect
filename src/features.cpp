@@ -291,6 +291,7 @@ namespace GeoDetection
 ***************************************************************************************************************************************************/
 	//Gets normals at numerous scales, using the largest scale query for the other scales.
 	//Reuses the largest search neighborhood to reduce the search times. 
+	//@TODO: Use a reverse iterator, and delete the larger search scale from the lamdba search.
 	std::vector<ScalarField>
 		getCurvaturesMultiscale(const Cloud& geodetect, const std::vector<float>& scales)
 	{
@@ -318,19 +319,25 @@ namespace GeoDetection
 
 			//compute search for max scale
 			int num_points = octree.radiusSearch(cloud->points[i], scales[id_max], indices, sqdistances);
+
+			//Octree does not return sorted queries. We need them sorted (ascending).
+			sortOctreeQuery(indices, sqdistances);
+
 			computeNormalDemeaned(geodetect, c_normal, indices, view);
 			all_curvatures[id_max][i] = c_normal.curvature;
 
 			//Iterate through smaller neighborhoods and compute density as a subset of sqdistances
 			for (int j = 1; j < scales.size(); j++)
 			{
-				int id = sort_map[j];
+				int id = sort_map[j]; //ID for the 2D vector (i.e. the current scale).
 				float sq_scale = pow(scales[id], 2);
 				auto iter_end = std::find_if(sqdistances.begin(), sqdistances.end(), [&sq_scale](float x)
 					{return x > sq_scale; });
 
-				std::vector<int>::iterator id_iter_end = indices.begin() + (iter_end - sqdistances.begin());
+				size_t sub_size = iter_end - sqdistances.begin();
+				std::vector<int>::iterator id_iter_end = indices.begin() + sub_size;
 				std::vector<int> subindices(indices.begin(), id_iter_end);
+
 				computeNormalDemeaned(geodetect, c_normal, subindices, view);
 				all_curvatures[id][i] = c_normal.curvature;
 			}
@@ -360,7 +367,7 @@ namespace GeoDetection
 			volumes[i] = (4.0f / 3.0f) * M_PI * pow(scales[i], 3);
 		}
 
-		//initialize 2d vector (scale, pointID)
+		//Initialize 2d vector (scale, pointID)
 		std::vector<ScalarField> all_densities(scales.size(), std::vector<float>(cloud->size()));
 		int id_max = sort_map[0]; //mapping to the maximum search
 
@@ -370,9 +377,12 @@ namespace GeoDetection
 			std::vector<float> sqdistances;
 			std::vector<int> indices;
 
-			//compute search for max scale
+			//Compute search for max scale
 			int num_points = octree.radiusSearch(cloud->points[i], scales[id_max], indices, sqdistances);
 			all_densities[id_max][i] = num_points / volumes[id_max];
+
+			//Octree does not return sorted queries. We need them sorted (ascending).
+			sortOctreeQuery(indices, sqdistances);
 
 			//Iterate through smaller neighborhoods and compute density as a subset of sqdistances
 			for (int j = 1; j < scales.size(); j++)

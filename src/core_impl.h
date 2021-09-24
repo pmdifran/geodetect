@@ -2,6 +2,7 @@
 #include "core.h"
 #include <algorithm>
 #include <numeric>
+#include <cassert>
 
 namespace GeoDetection
 {
@@ -25,6 +26,28 @@ namespace GeoDetection
 		std::iota(idx.begin(), idx.end(), 0);
 		std::stable_sort(idx.begin(), idx.end(), [&vec](size_t i1, size_t i2) {return vec[i1] < vec[i2]; });
 		return idx;
+	}
+
+	//Returns a reordered vector, given a mapping to the indices.
+	//Specifically useful to reorder sqdistances and indices following an octree neighborhood query, since they are not ordered.
+	//--> Must input std::vector<size_t> from sortIndicesDescending or sortIndicesAscending
+	template <typename T>
+	void reorderVector(std::vector<T>& vec, std::vector<size_t>& order)
+	{
+		assert(vec.size() == order.size());
+
+		// for all elements to put in place (last element falls into place)
+		for (size_t i = 0; i < vec.size() - 1; ++i)
+		{
+			// while the element i is not yet in place 
+			while (i != order[i])
+			{
+				// swap it with the element at its final place
+				size_t alt = order[i];
+				std::swap(vec[i], vec[alt]);
+				std::swap(order[i], order[alt]);
+			}
+		}
 	}
 
 	//Assemble contiguous array of fields from indices

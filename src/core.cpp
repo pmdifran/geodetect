@@ -11,5 +11,18 @@ namespace GeoDetection
 
 	template int computeModeFromIndices<int, int>(std::vector<int>&, std::vector<int>&);
 	template float computeModeFromIndices<int, float>(std::vector<int>&, std::vector<float>&);
+
+	//Inplace, reorders the sqdistances and indices resulting from an octree query, so that are acending in proximity of points.
+	void sortOctreeQuery(std::vector<int>& indices, std::vector<float>& sqdistances)
+	{
+		// get sort map for most proximal neighbors. 
+		std::vector<size_t> sort_map = sortIndicesAscending(sqdistances);
+
+		// sort sqdistances in place
+		std::sort(sqdistances.begin(), sqdistances.end());
+
+		// reorder indices in place based on sort map
+		reorderVector(indices, sort_map);
+	}
 }
 
