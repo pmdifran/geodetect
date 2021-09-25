@@ -69,7 +69,7 @@ namespace GeoDetection
 		computeNormal(const pcl::PointCloud<pcl::PointXYZ>& neighborhood, std::vector<int>& subindices,
 			pcl::PointXYZ& point, pcl::Normal& normal, const std::array<float, 3>& view)
 	{
-		assert(!(neighborhood->size() < subindices.size())); //make sure subindices are lesser or equal to size.
+		assert(!(neighborhood.size() < subindices.size())); //make sure subindices are lesser or equal to size.
 		// Compute the point normal
 		float curvature;
 		Eigen::Vector4f n;
@@ -362,7 +362,10 @@ namespace GeoDetection
 		std::vector<ScalarField> all_curvatures(scales.size(), std::vector<float>(cloud->size()));
 
 		GD_CORE_TRACE(":: Computing...");
-#pragma omp parallel for collapse(2)
+
+		//Resolution likely varies accross the cloud. 
+		//We're using guided scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
+#pragma omp parallel for schedule(guided)
 		for (int64_t i = 0; i < cloud->size(); i++)
 		{
 			pcl::Normal c_normal; //normal used to store multiscale calculations
@@ -373,7 +376,7 @@ namespace GeoDetection
 			std::vector<int> indices;
 
 			//compute search for max scale
-			int num_points = octree.radiusSearch(cloud->points[i], scales[id_max], indices, sqdistances);
+			octree.radiusSearch(cloud->points[i], scales[id_max], indices, sqdistances);
 
 			//Octree does not return sorted queries. We need them sorted (ascending).
 			sortOctreeQuery(indices, sqdistances);
@@ -442,7 +445,9 @@ namespace GeoDetection
 		std::vector<ScalarField> all_densities(scales.size(), std::vector<float>(cloud->size()));
 
 		GD_CORE_TRACE(":: Computing...");
-#pragma omp parallel for collapse(2)
+		//Resolution likely varies accross the cloud. 
+		//We're using guided scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
+#pragma omp parallel for schedule(guided)
 		for (int64_t i = 0; i < cloud->size(); i++)
 		{
 			std::vector<float> sqdistances;
@@ -499,7 +504,9 @@ namespace GeoDetection
 		//Initialize 2d vector (scale, pointID)
 		std::vector<ScalarField> field_multiscale_averaged(scales.size(), std::vector<float>(cloud->size()));
 
-#pragma omp parallel for
+		//Resolution likely varies accross the cloud. 
+		//We're using guided scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
+#pragma omp parallel for schedule(guided)
 		for (int64_t i = 0; i < cloud->size(); i++)
 		{
 			//Compute spatial KdTree search at the largest scale
