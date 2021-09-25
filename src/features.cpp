@@ -364,8 +364,8 @@ namespace GeoDetection
 		GD_CORE_TRACE(":: Computing...");
 
 		//Resolution likely varies accross the cloud. 
-		//We're using guided scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
-#pragma omp parallel for schedule(guided)
+		//We're using dynamic scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
+#pragma omp parallel for schedule(dynamic,1)
 		for (int64_t i = 0; i < cloud->size(); i++)
 		{
 			pcl::Normal c_normal; //normal used to store multiscale calculations
@@ -446,8 +446,8 @@ namespace GeoDetection
 
 		GD_CORE_TRACE(":: Computing...");
 		//Resolution likely varies accross the cloud. 
-		//We're using guided scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
-#pragma omp parallel for schedule(guided)
+		//We're using dynamic scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
+#pragma omp parallel for schedule(dynamic,1)
 		for (int64_t i = 0; i < cloud->size(); i++)
 		{
 			std::vector<float> sqdistances;
@@ -505,8 +505,8 @@ namespace GeoDetection
 		std::vector<ScalarField> field_multiscale_averaged(scales.size(), std::vector<float>(cloud->size()));
 
 		//Resolution likely varies accross the cloud. 
-		//We're using guided scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
-#pragma omp parallel for schedule(guided)
+		//We're using dynamic scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
+#pragma omp parallel for schedule(dynamic,1)
 		for (int64_t i = 0; i < cloud->size(); i++)
 		{
 			//Compute spatial KdTree search at the largest scale
