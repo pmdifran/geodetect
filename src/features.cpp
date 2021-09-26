@@ -1,7 +1,7 @@
 #include "features.h"
 #include "core.h"
 
-#include <span>
+#include "progressbar.h"
 
 #include <pcl/features/normal_3d.h>
 #include <pcl/common/impl/transforms.hpp> //for transformation
@@ -357,16 +357,18 @@ namespace GeoDetection
 		auto octree = geodetect.octree();
 		auto normals = geodetect.normals();
 		auto view = geodetect.view();
+		int64_t size = cloud->size();
 
 		//initialize 2d vector (scale, pointID)
-		std::vector<ScalarField> all_curvatures(scales.size(), std::vector<float>(cloud->size()));
+		std::vector<ScalarField> all_curvatures(scales.size(), std::vector<float>(size));
 
 		GD_CORE_TRACE(":: Computing...");
 
 		//Resolution likely varies accross the cloud. 
 		//We're using dynamic scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
+		GD_PROGRESS(bar, size);
 #pragma omp parallel for schedule(dynamic,1)
-		for (int64_t i = 0; i < cloud->size(); i++)
+		for (int64_t i = 0; i < size; i++)
 		{
 			pcl::Normal c_normal; //normal used to store multiscale calculations
 			pcl::PointXYZ& c_point = cloud->points[i];
@@ -408,6 +410,7 @@ namespace GeoDetection
 				computeNormal(neighborhood, c_point, cc_normal, view);
 				all_curvatures[id][i] = c_normal.curvature;
 			}
+			GD_PROGRESS_INCREMENT(bar);
 		}
 
 		GD_CORE_WARN("--> Multiscale normale-rate-of-change curvature calculation time: {0} ms\n", GeoDetection::Time::getDuration(start));
@@ -433,6 +436,7 @@ namespace GeoDetection
 		auto cloud = geodetect.cloud();
 		auto octree = geodetect.octree();
 		auto normals = geodetect.normals();
+		int64_t size = cloud->size();
 
 		//Get sphere volumes for each scale
 		std::vector<float> volumes(scales.size());
@@ -442,13 +446,14 @@ namespace GeoDetection
 		}
 
 		//Initialize 2d vector (scale, pointID)
-		std::vector<ScalarField> all_densities(scales.size(), std::vector<float>(cloud->size()));
+		std::vector<ScalarField> all_densities(scales.size(), std::vector<float>(size));
 
 		GD_CORE_TRACE(":: Computing...");
 		//Resolution likely varies accross the cloud. 
 		//We're using dynamic scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
+		GD_PROGRESS(bar, size);
 #pragma omp parallel for schedule(dynamic,1)
-		for (int64_t i = 0; i < cloud->size(); i++)
+		for (int64_t i = 0; i < size; i++)
 		{
 			std::vector<float> sqdistances;
 			std::vector<int> indices;
@@ -473,6 +478,7 @@ namespace GeoDetection
 				//get density from number of points in the new scale neighborhood
 				all_densities[id][i] = (iter_end - sqdistances.begin()) / volumes[id];
 			}
+			GD_PROGRESS_INCREMENT(bar);
 		}
 
 		GD_CORE_WARN("--> Multiscale volumetric density calculation time: {0} ms\n", GeoDetection::Time::getDuration(start));
