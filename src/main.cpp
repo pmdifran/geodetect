@@ -1,10 +1,16 @@
-
 //#define LOG_ALL_OFF
-//GeoDetection includes
+//#define PROGRESS_OFF
+
+
+//Console functionality 
+#include "log.h"
+#include "progressbar.h"
+
+
 #include "readascii.h"
 #include "GeoDetection.h"
 #include "segmentVegetation.h"
-#include "log.h"
+
 
 //stdlib includes
 #include <iomanip> //for set_precision.
@@ -14,6 +20,9 @@
 #include "CLI/Formatter.hpp"
 #include "CLI/Config.hpp"
 
+//Allow unicode strings
+#include <Windows.h>
+
 //File handling 
 #include <filesystem>
 
@@ -22,10 +31,11 @@
 #include <pcl/octree/octree_search.h>
 
 int main(int argc, char* argv[])
-{
+{					
 	//Initialize logger and start timer.
 	GeoDetection::Log::Init();
 	auto start = GeoDetection::Time::getStart();
+	SetConsoleOutputCP(CP_UTF8); //so we can print unicode (needed for progress bars)	
 
 	// COMMAND LINE INTERFACING.....................................................................................
 	if (argc == 1) { GD_ERROR("No arguments passed. Use argument -h or --help for instructions."); return 0; }
