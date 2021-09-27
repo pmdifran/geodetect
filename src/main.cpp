@@ -31,10 +31,11 @@
 #include <pcl/octree/octree_search.h>
 
 int main(int argc, char* argv[])
-{					
+{				
+	geodetection::Timer timer;
+
 	//Initialize logger and start timer.
 	geodetection::Log::Init();
-	auto start = geodetection::Time::getStart();
 	SetConsoleOutputCP(CP_UTF8); //so we can print unicode (needed for progress bars)	
 
 	// COMMAND LINE INTERFACING.....................................................................................
@@ -118,5 +119,5 @@ int main(int argc, char* argv[])
 		source.writeAsASCII(out_filename);
 	}
 
-	GD_WARN("Total time: {0} s \n", (geodetection::Time::getDuration(start) / 1000));
+	GD_WARN("Total time: {0} s \n",  timer.getDuration() / 1000);
 }

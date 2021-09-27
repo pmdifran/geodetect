@@ -39,13 +39,12 @@ namespace geodetection
 		Cloud::buildKdTree()
 	{
 		GD_CORE_TRACE(":: Constructing K-dimensional Search Trees");
-		auto start = geodetection::Time::getStart();
+		Timer timer;
 
 		m_kdtree->setInputCloud(m_cloud);
 		m_kdtree->setSortedResults(true);
 
-		GD_CORE_WARN("--> KdTree construction time: {0} ms\n",
-			geodetection::Time::getDuration(start));
+		GD_CORE_WARN("--> KdTree construction time: {0} ms\n", timer.getDuration());
 	}
 
 	//Constructs octree search trees for the point cloud.
@@ -53,13 +52,14 @@ namespace geodetection
 		Cloud::buildOctree(float resolution)
 	{
 		GD_CORE_TRACE(":: Constructing octrees");
-		auto start = geodetection::Time::getStart();
+		Timer timer;
+
 		m_octree.deleteTree(); //delete previous tree (Cloud only stores one octree at a time)
 		m_octree.setResolution(resolution);
 		m_octree.setInputCloud(m_cloud);
 		m_octree.addPointsFromInputCloud();
-		GD_CORE_WARN("--> Octree construction time: {0} ms\n",
-			geodetection::Time::getDuration(start));
+
+		GD_CORE_WARN("--> Octree construction time: {0} ms\n", timer.getDuration());
 	}
 
 	//Constructs octree search trees for the point cloud.
@@ -68,14 +68,15 @@ namespace geodetection
 		Cloud::buildOctreeDynamic(float resolution, int max_leaf_population)
 	{
 		GD_CORE_TRACE(":: Constructing octrees");
-		auto start = geodetection::Time::getStart();
+		Timer timer;
+
 		m_octree.deleteTree(); //delete previous tree (Cloud only stores one octree at a time)
 		m_octree.setResolution(resolution);
 		m_octree.enableDynamicDepth(max_leaf_population); //setting dynamic property of the octree. 
 		m_octree.setInputCloud(m_cloud);
 		m_octree.addPointsFromInputCloud();
-		GD_CORE_WARN("--> Octree construction time: {0} ms\n",
-			geodetection::Time::getDuration(start));
+
+		GD_CORE_WARN("--> Octree construction time: {0} ms\n", timer.getDuration());
 	}
 
 /************************************************************************************************************************************************//**
@@ -88,7 +89,7 @@ namespace geodetection
 	{
 		GD_CORE_TRACE(":: Computing cloud resolution...");
 		GD_CORE_TRACE("--> k-nearest neighbors used for distances: {0}", num_neighbors);
-		auto start = geodetection::Time::getStart();
+		Timer timer;
 
 		std::vector<float> resolution(m_cloud->size());
 		unsigned int k = num_neighbors + 1; //The first nearest neighbor is the query point itself --> use for searches.
@@ -121,8 +122,7 @@ namespace geodetection
 		m_resolution_avg = avg_resolution;
 
 		GD_INFO("--> Point cloud resolution: {0} meters", m_resolution_avg);
-		GD_CORE_WARN("--> Resolution estimation time: {0} ms\n",
-			geodetection::Time::getDuration(start));
+		GD_CORE_WARN("--> Resolution estimation time: {0} ms\n", timer.getDuration());
 
 		//Calculate standard deviation of resolution.
 		double deviation = 0.0;
@@ -141,9 +141,8 @@ namespace geodetection
 	pcl::PointCloud<pcl::PointXYZ>::Ptr
 		Cloud::getVoxelDownSample(float voxel_size)
 	{
-		GD_CORE_TRACE(":: Creating downsampled cloud with voxels...\
-			\n--> voxel filter size: {0}", voxel_size);
-		auto start = geodetection::Time::getStart();
+		GD_CORE_TRACE(":: Creating downsampled cloud with voxels...\n--> voxel filter size: {0}", voxel_size);
+		Timer timer;
 
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_down(new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::VoxelGrid<pcl::PointXYZ> grid;
@@ -154,8 +153,7 @@ namespace geodetection
 		GD_CORE_WARN("-->   Full cloud size: {0}\n --> Downsampled cloud size: {1}",
 			m_cloud->size(), cloud_down->size());
 
-		GD_CORE_WARN("--> Downsample time: {0} ms\n",
-			geodetection::Time::getDuration(start));
+		GD_CORE_WARN("--> Downsample time: {0} ms\n", timer.getDuration());
 
 		return cloud_down;
 	}
@@ -184,9 +182,8 @@ namespace geodetection
 	pcl::PointCloud<pcl::PointXYZ>::Ptr
 		Cloud::getDistanceDownSample(float distance)
 	{
-		GD_CORE_TRACE(":: Subsampling cloud by distance...\
-			\n--> Distance: {0}", distance);
-		auto start = geodetection::Time::getStart();
+		GD_CORE_TRACE(":: Subsampling cloud by distance... \n--> Distance: {0}", distance);
+		Timer timer;
 
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_down(new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::PointIndices::Ptr inliers(new pcl::PointIndices());
@@ -220,14 +217,10 @@ namespace geodetection
 		extract.setIndices(inliers);
 		extract.filter(*cloud_down);
 
-		GD_CORE_WARN("-->   Full cloud size: {0}\n --> Downsampled cloud size: {1}",
-			m_cloud->size(), cloud_down->size());
-
-		GD_CORE_WARN("--> Downsample time: {0} ms\n",
-			geodetection::Time::getDuration(start));
+		GD_CORE_WARN("-->   Full cloud size: {0}\n --> Downsampled cloud size: {1}", m_cloud->size(), cloud_down->size());
+		GD_CORE_WARN("--> Downsample time: {0} ms\n", timer.getDuration());
 
 		return cloud_down;
-
 	}
 
 	//Calls getDistanceDownSample but modifies members rather than returning a new point cloud.
@@ -271,9 +264,8 @@ namespace geodetection
 		Cloud::getNormalsRadiusSearch(float radius)
 	{
 		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Normal scale {0}", radius);
-		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
-			omp_get_num_procs());
-		auto start = geodetection::Time::getStart();
+		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}", omp_get_num_procs());
+		Timer timer;
 
 		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
 		normals->resize(m_cloud->size());
@@ -283,15 +275,15 @@ namespace geodetection
 
 		// Iterate through each point and compute normals from demeaned neighborhoods.
 		GD_PROGRESS(progress_bar, m_cloud->size());
-//#pragma omp parallel for
+#pragma omp parallel for
 		for (int i = 0; i < m_cloud->size(); i++)
 		{
 			computeNormalAtOriginRadiusSearch(*this, normals->points[i], radius, i,  m_view);
 			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
-		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
-			geodetection::Time::getDuration(start));
+		GD_CORE_WARN("--> Normal calculation time: {0} ms\n", timer.getDuration());
+
 		return normals;
 	}
 
@@ -301,9 +293,8 @@ namespace geodetection
 		Cloud::getNormalsKSearch(int k)
 	{
 		GD_CORE_TRACE(":: Computing point cloud normals...\n:: Number of neighbors: {0}", k);
-		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}",
-			omp_get_num_procs());
-		auto start = geodetection::Time::getStart();
+		GD_CORE_WARN(":: # Threads automatically set to the number of cores: {0}", omp_get_num_procs());
+		Timer timer;
 
 		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
 		normals->resize(m_cloud->size());
@@ -320,8 +311,8 @@ namespace geodetection
 			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
-		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
-			geodetection::Time::getDuration(start));
+		GD_CORE_WARN("--> Normal calculation time: {0} ms\n", timer.getDuration());
+
 		return normals;
 	}
 
@@ -406,13 +397,12 @@ namespace geodetection
 		Cloud::applyTransformation(const Eigen::Matrix4f& transformation)
 	{
 		GD_CORE_TRACE(":: Applying transformation...");
-		auto start = geodetection::Time::getStart();
+		Timer timer;
 
 		pcl::transformPointCloud(*m_cloud, *m_cloud, transformation);
 		this->updateTransformation(transformation);
 
-		GD_CORE_WARN("--> Transformation time: {0} ms\n",
-			geodetection::Time::getDuration(start));
+		GD_CORE_WARN("--> Transformation time: {0} ms\n", timer.getDuration());
 	}
 
 	//Calculates Intrinsic Shape Signature keypoints (uses OpenMP).
@@ -420,7 +410,7 @@ namespace geodetection
 		Cloud::getKeyPoints()
 	{
 		GD_CORE_TRACE(":: Computing intrinsic shape signature keypoints...");
-		auto start = geodetection::Time::getStart();
+		Timer timer;
 
 		pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints(new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::ISSKeypoint3D<pcl::PointXYZ, pcl::PointXYZ> iss_detector;
@@ -439,8 +429,7 @@ namespace geodetection
 		iss_detector.setNumberOfThreads(omp_get_num_procs());
 		iss_detector.compute(*keypoints);
 
-		GD_CORE_WARN("--> Keypoint calculation time: {0} ms\n",
-			geodetection::Time::getDuration(start));
+		GD_CORE_WARN("--> Keypoint calculation time: {0} ms\n", timer.getDuration());
 
 		return keypoints;
 	}
@@ -452,7 +441,7 @@ namespace geodetection
 		Cloud::getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints)
 	{
 		GD_CORE_TRACE("Computing fast point feature histograms...");
-		auto start = geodetection::Time::getStart();
+		Timer timer;
 
 		pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh(new pcl::PointCloud<pcl::FPFHSignature33>);
 		pcl::FPFHEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> computefpfh;
@@ -466,8 +455,7 @@ namespace geodetection
 
 		computefpfh.compute(*fpfh);
 
-		GD_CORE_WARN("--> FPFH calculation time: {0} ms\n",
-			geodetection::Time::getDuration(start));
+		GD_CORE_WARN("--> FPFH calculation time: {0} ms\n", timer.getDuration());
 
 		return fpfh;
 	}
@@ -495,7 +483,7 @@ namespace geodetection
 	{
 		GD_TITLE("Exporting GeoDetection Cloud");
 		GD_TRACE(":: File: {}", filename_str);
-		auto start = geodetection::Time::getStart();
+		Timer timer;
 
 		//Using c-string for c-style IO
 		const char* filename = filename_str.c_str();
@@ -582,6 +570,6 @@ namespace geodetection
 		}
 		fstream.close();
 
-		GD_WARN("--> Data export time: {0} ms", geodetection::Time::getDuration(start));
+		GD_WARN("--> Data export time: {0} ms", timer.getDuration());
 	}
 }
