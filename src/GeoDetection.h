@@ -21,7 +21,7 @@
 
 // \brief  Point Cloud containing tools for Tools for processing and extracting information from natural environments. 
 //  Built around PCL.
-namespace GeoDetection
+namespace geodetection
 {
 	class Cloud
 	{
@@ -359,14 +359,14 @@ namespace GeoDetection
 *  Registration
 ***************************************************************************************************************************************************/
 		/**
-		* Updates the GeoDetection::Cloud <m_transformation> matrix, without translating the cloud.
+		* Updates the geodetection::Cloud <m_transformation> matrix, without translating the cloud.
 		* Should be called if a function has transformed the cloud without updating the matrix (i.e. pcl::GeneralizedIterativeClosestPoint)
 		* @param transformation: Eigen affine transformation matrix.
 		*/
 		void updateTransformation(const Eigen::Matrix4f& transformation);
 
 		/**
-		* Transforms the GeoDetection::Cloud and updates <m_transformation> matrix.
+		* Transforms the geodetection::Cloud and updates <m_transformation> matrix.
 		* @param transformation: Eigen affine transformation matrix.
 		*/
 		void applyTransformation(const Eigen::Matrix4f& transformation);
@@ -394,7 +394,7 @@ namespace GeoDetection
 		void writeTransformation(std::string& filename);
 
 		/**
-		* Writes the GeoDetection::Cloud to an ASCII file (c-style)
+		* Writes the geodetection::Cloud to an ASCII file (c-style)
 		* @param filename: Output file path/name.
 		* @param write_normals: Whether to write normals Nx, Ny, Nz (default=true)
 		* @param write_scalarfields: Whether to write scalar fields (default=true)

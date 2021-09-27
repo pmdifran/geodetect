@@ -2,7 +2,7 @@
 #include "features.h" 
 #include "core.h"
 
-namespace GeoDetection
+namespace geodetection
 {
 	//Classifies points with respect to a mask.
 	//Classifies based on the mode of a local neighborhood (odd #) of nearest neighbors.

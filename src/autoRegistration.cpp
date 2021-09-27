@@ -15,15 +15,15 @@
 #include <pcl/registration/gicp.h>
 #include <pcl/features/from_meshes.h>
 
-namespace GeoDetection
+namespace geodetection
 {
 	//Transforms source cloud using a global registration determined with keypoint fast point feature histogram correspondences.
 	//Default norml radius = 1.0. Not used if the cloud already has normals.
-	Eigen::Matrix4f getGlobalRegistration(GeoDetection::Cloud& reference,
-		GeoDetection::Cloud& source, float radius /* = 1.0 */)
+	Eigen::Matrix4f getGlobalRegistration(geodetection::Cloud& reference,
+		geodetection::Cloud& source, float radius /* = 1.0 */)
 	{
 		GD_TITLE("Auto Registration --Global");
-		auto start = GeoDetection::Time::getStart();
+		auto start = geodetection::Time::getStart();
 
 		if (!reference.hasCloud()) { GD_ERROR("Reference does not have a cloud"); }
 		if (!reference.hasNormals()) { reference.updateNormalsRadiusSearch(radius); };
@@ -63,7 +63,7 @@ namespace GeoDetection
 		Eigen::Matrix4f transformation = ransac_rejector.getBestTransformation();
 
 		GD_TRACE(":: Number of inlier fpfh correpondences: {0}\n", correspondences->size());
-		GD_WARN("--> Transformation computed in: {0} ms: \n", GeoDetection::Time::getDuration(start));
+		GD_WARN("--> Transformation computed in: {0} ms: \n", geodetection::Time::getDuration(start));
 		std::cout << std::setprecision(16) << std::fixed <<
 			"Transformation: \n" << transformation << '\n' << std::endl;
 
@@ -87,7 +87,7 @@ namespace GeoDetection
 		GD_WARN("--> Mean square error: {0}", mse);
 		GD_TRACE("NOTE: MSE may be higher due to a subsampled input\n");
 
-		//Apply the transformation to the source GeoDetection object.
+		//Apply the transformation to the source geodetection object.
 		source.applyTransformation(transformation);
 		return transformation;
 	}
@@ -96,11 +96,11 @@ namespace GeoDetection
 	//Default norml radius = 1.0. Not used if the cloud already has normals.
 	//This overload uses RegistrationCloud: which preserves the keypoints and fast point feature histograms,
 	//--> so that they are not recalculated in a batched registration pipeline. 
-	Eigen::Matrix4f getGlobalRegistration(GeoDetection::RegistrationCloud& reference,
-		GeoDetection::Cloud& source, float radius /* = 1.0 */)
+	Eigen::Matrix4f getGlobalRegistration(geodetection::RegistrationCloud& reference,
+		geodetection::Cloud& source, float radius /* = 1.0 */)
 	{
 		GD_TITLE("Auto Registration --Global");
-		auto start = GeoDetection::Time::getStart();
+		auto start = geodetection::Time::getStart();
 
 		if (!reference.hasCloud()) { GD_ERROR("Reference does not have a cloud"); }
 		if (!reference.hasNormals()) { reference.updateNormalsRadiusSearch(radius); };
@@ -142,7 +142,7 @@ namespace GeoDetection
 		Eigen::Matrix4f transformation = ransac_rejector.getBestTransformation();
 
 		GD_TRACE(":: Number of inlier fpfh correpondences: {0}\n", correspondences->size());
-		GD_WARN("--> Transformation computed in: {0} ms: \n", GeoDetection::Time::getDuration(start));
+		GD_WARN("--> Transformation computed in: {0} ms: \n", geodetection::Time::getDuration(start));
 		std::cout << std::setprecision(16) << std::fixed <<
 			"Transformation: \n" << transformation << '\n' << std::endl;
 
@@ -163,17 +163,17 @@ namespace GeoDetection
 		GD_WARN("--> Mean square error: {0}", mse);
 		GD_TRACE("NOTE: MSE may be higher due to a subsample input\n");
 
-		//Apply the transformation to the source GeoDetection object.
+		//Apply the transformation to the source geodetection object.
 		source.applyTransformation(transformation);
 		return transformation;
 	}
 
 	//Transforms source cloud using a fine generalized ICP registration (i.e. plane-to-plane).
-	Eigen::Matrix4f getICPRegistration(GeoDetection::Cloud& reference,
-		GeoDetection::Cloud& source, float radius /* = 1.0 */)
+	Eigen::Matrix4f getICPRegistration(geodetection::Cloud& reference,
+		geodetection::Cloud& source, float radius /* = 1.0 */)
 	{
 		GD_TITLE("Auto Registration --ICP");
-		auto start = GeoDetection::Time::getStart();
+		auto start = geodetection::Time::getStart();
 
 		if (!reference.hasCloud()) { GD_ERROR("Reference does not have a cloud"); }
 		if (!reference.hasNormals()) { reference.updateNormalsRadiusSearch(radius); };
@@ -201,7 +201,7 @@ namespace GeoDetection
 		// update the matrix without transforming the data again.
 		source.updateTransformation(transformation);
 		
-		GD_WARN("ICP computed in: {0} ms\n", GeoDetection::Time::getDuration(start));
+		GD_WARN("ICP computed in: {0} ms\n", geodetection::Time::getDuration(start));
 		std::cout << std::setprecision(16) << std::fixed <<
 			"Transformation: \n" << transformation << '\n' << std::endl;
 

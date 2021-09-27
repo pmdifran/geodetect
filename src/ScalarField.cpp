@@ -1,7 +1,7 @@
 #include "ScalarField.h"
 #include <algorithm>
 
-namespace GeoDetection
+namespace geodetection
 {
 	//Modify scalar field data with min-max normalization
 	void

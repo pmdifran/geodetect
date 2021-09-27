@@ -7,7 +7,7 @@
 #include <chrono>
 
 
-namespace GeoDetection
+namespace geodetection
 {
 	class Log
 	{
@@ -41,11 +41,11 @@ namespace GeoDetection
 
 //Preprocessors to include or ignore log functions.
 #if !defined LOG_CLIENT_OFF ||  !defined LOG_ALL_OFF
-#define GD_TRACE(...)          ::GeoDetection::Log::getClientLogger()->trace(__VA_ARGS__)
-#define GD_INFO(...)           ::GeoDetection::Log::getClientLogger()->info(__VA_ARGS__)
-#define GD_WARN(...)           ::GeoDetection::Log::getClientLogger()->warn(__VA_ARGS__)
-#define GD_ERROR(...)          ::GeoDetection::Log::getClientLogger()->error(__VA_ARGS__)
-#define GD_FATAL(...)          ::GeoDetection::Log::getClientLogger()->critical(__VA_ARGS__)
+#define GD_TRACE(...)          ::geodetection::Log::getClientLogger()->trace(__VA_ARGS__)
+#define GD_INFO(...)           ::geodetection::Log::getClientLogger()->info(__VA_ARGS__)
+#define GD_WARN(...)           ::geodetection::Log::getClientLogger()->warn(__VA_ARGS__)
+#define GD_ERROR(...)          ::geodetection::Log::getClientLogger()->error(__VA_ARGS__)
+#define GD_FATAL(...)          ::geodetection::Log::getClientLogger()->critical(__VA_ARGS__)
 
 #define GD_TITLE(...)	{																	\
 							int num_dashes = 75;											\
@@ -68,11 +68,11 @@ namespace GeoDetection
 #endif
 
 #if !defined LOG_CORE_OFF || !defined LOG_ALL_OFF 
-#define GD_CORE_TRACE(...)     ::GeoDetection::Log::getCoreLogger()->trace(__VA_ARGS__)
-#define GD_CORE_INFO(...)      ::GeoDetection::Log::getCoreLogger()->info(__VA_ARGS__)
-#define GD_CORE_WARN(...)      ::GeoDetection::Log::getCoreLogger()->warn(__VA_ARGS__)
-#define GD_CORE_ERROR(...)     ::GeoDetection::Log::getCoreLogger()->error(__VA_ARGS__)
-#define GD_CORE_FATAL(...)     ::GeoDetection::Log::getCoreLogger()->critical(__VA_ARGS__)
+#define GD_CORE_TRACE(...)     ::geodetection::Log::getCoreLogger()->trace(__VA_ARGS__)
+#define GD_CORE_INFO(...)      ::geodetection::Log::getCoreLogger()->info(__VA_ARGS__)
+#define GD_CORE_WARN(...)      ::geodetection::Log::getCoreLogger()->warn(__VA_ARGS__)
+#define GD_CORE_ERROR(...)     ::geodetection::Log::getCoreLogger()->error(__VA_ARGS__)
+#define GD_CORE_FATAL(...)     ::geodetection::Log::getCoreLogger()->critical(__VA_ARGS__)
 
 #define GD_CORE_TITLE(...)	{																\
 							int num_dashes = 75;											\

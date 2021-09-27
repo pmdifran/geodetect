@@ -2,9 +2,9 @@
 #include "readascii.h"
 #include <fast_float/fast_float.h> // for fast parsing (similar to atof).
 
-namespace GeoDetection
+namespace geodetection
 {
-	//Helper to parse the file and return a GeoDetection Cloud. Currently only imports scalar fields and XYZ coordinates.
+	//Helper to parse the file and return a geodetection Cloud. Currently only imports scalar fields and XYZ coordinates.
 	//@TODO: Add option for inputing normals, and specifying their location.
 	Cloud 
 		parseData(FILE* file, size_t num_points, size_t num_columns, bool header_present)
@@ -100,7 +100,7 @@ namespace GeoDetection
 	{
 			GD_TITLE("Ascii Data Import");
 			GD_TRACE(":: File: {}", m_filename);
-			auto start = GeoDetection::Time::getStart();
+			auto start = geodetection::Time::getStart();
 
 			//Get number of points in the file, and reduce by one if header is present.
 			bool header_present = hasHeader(m_filename);
@@ -126,9 +126,9 @@ namespace GeoDetection
 			Cloud geodetect = parseData(file, num_points, num_columns, header_present);
 
 			fclose(file);
-			GD_WARN("--> Data import time: {0} ms", GeoDetection::Time::getDuration(start));
+			GD_WARN("--> Data import time: {0} ms", geodetection::Time::getDuration(start));
 
-			//Build the KdTree. GeoDetection Clouds use both KdTrees and Octrees. 
+			//Build the KdTree. geodetection Clouds use both KdTrees and Octrees. 
 			geodetect.buildKdTree();
 
 			//Use KdTree to estimate the mean resolution of the cloud

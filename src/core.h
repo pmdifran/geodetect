@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 
-namespace GeoDetection
+namespace geodetection
 {
 	/**
 	* Determines an index mapping to the input vector if it was sorted by descending values.
