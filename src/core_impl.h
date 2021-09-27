@@ -7,7 +7,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-namespace GeoDetection
+namespace geodetection
 {
 	//Gets index mapping to the input vector if it was sorted by descending values
 	template <typename T>

@@ -1,7 +1,7 @@
 #pragma once
 #include "GeoDetection.h"
 
-namespace GeoDetection
+namespace geodetection
 {
 	//Registration cloud for storing the features computed in auto registration \
 	Typically a reference cloud which is used numerous times for registration in a batch processing

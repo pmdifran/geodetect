@@ -10,7 +10,7 @@
 #include <pcl\point_types.h>
 #include <pcl\point_cloud.h>
 
-namespace GeoDetection
+namespace geodetection
 {
 	class AsciiReader
 	{
@@ -27,7 +27,7 @@ namespace GeoDetection
 		/**
 		* Import ASCII data at m_filename, using c-style file reading.
 		*/
-		GeoDetection::Cloud import() const;
+		geodetection::Cloud import() const;
 	};
 
 }

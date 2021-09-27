@@ -1,6 +1,6 @@
 #include "log.h"
 
-namespace GeoDetection
+namespace geodetection
 {
 	std::shared_ptr<spdlog::logger> Log::s_core_logger;
 	std::shared_ptr<spdlog::logger> Log::s_client_logger;

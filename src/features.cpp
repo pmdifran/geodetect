@@ -6,7 +6,7 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/common/impl/transforms.hpp> //for transformation
 
-namespace GeoDetection
+namespace geodetection
 {
 /***********************************************************************************************************************************************//**
 *  Helpers
@@ -349,7 +349,7 @@ namespace GeoDetection
 		//Build optimal Octree for the maximum scale
 		geodetect.buildOctreeDynamicOptimalParams(scales[id_max]);
 
-		//Get GeoDetection::Cloud data members
+		//Get geodetection::Cloud data members
 		auto cloud = geodetect.cloud();
 		auto& octree = geodetect.octree();
 		auto normals = geodetect.normals();
@@ -397,7 +397,7 @@ namespace GeoDetection
 			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
-		GD_CORE_WARN("--> Multiscale normale-rate-of-change curvature calculation time: {0} ms\n", GeoDetection::Time::getDuration(start));
+		GD_CORE_WARN("--> Multiscale normale-rate-of-change curvature calculation time: {0} ms\n", geodetection::Time::getDuration(start));
 		return all_curvatures;
 	}
 
@@ -416,7 +416,7 @@ namespace GeoDetection
 		//Build optimal Octree for the maximum scale
 		geodetect.buildOctreeDynamicOptimalParams(scales[id_max]);
 
-		//Get GeoDetection::Cloud data members
+		//Get geodetection::Cloud data members
 		auto cloud = geodetect.cloud();
 		auto& octree = geodetect.octree();
 		auto normals = geodetect.normals();
@@ -459,7 +459,7 @@ namespace GeoDetection
 			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
-		GD_CORE_WARN("--> Multiscale volumetric density calculation time: {0} ms\n", GeoDetection::Time::getDuration(start));
+		GD_CORE_WARN("--> Multiscale volumetric density calculation time: {0} ms\n", geodetection::Time::getDuration(start));
 		return all_densities;
 	}
 
@@ -481,7 +481,7 @@ namespace GeoDetection
 		//Build optimal Octree for the maximum scale
 		geodetect.buildOctreeDynamicOptimalParams(scales[id_max]);
 
-		//Get GeoDetection::Cloud data members
+		//Get geodetection::Cloud data members
 		auto cloud = geodetect.cloud();
 		auto& octree = geodetect.octree();
 		int64_t size = cloud->size();
