@@ -108,6 +108,8 @@ int main(int argc, char* argv[])
 		reader.setFilename(source_filename);
 		GeoDetection::Cloud source = reader.import();
 
+		//source.distanceDownSample(0.25);
+
 		//Segment Vegetation
 		GeoDetection::segmentVegetation(source);
 

@@ -283,7 +283,7 @@ namespace GeoDetection
 
 		// Iterate through each point and compute normals from demeaned neighborhoods.
 		GD_PROGRESS(bar, m_cloud->size());
-#pragma omp parallel for
+//#pragma omp parallel for
 		for (int i = 0; i < m_cloud->size(); i++)
 		{
 			computeNormalAtOriginRadiusSearch(*this, radius, i, normals->points[i], m_view);

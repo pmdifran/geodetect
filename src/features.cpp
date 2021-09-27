@@ -109,7 +109,7 @@ namespace GeoDetection
 	{
 		auto cloud = geodetect.cloud();
 		pcl::PointXYZ& point = cloud->points[point_index];
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 
 		std::vector<int> indices;
 		std::vector<float> sqdistances;
@@ -132,7 +132,7 @@ namespace GeoDetection
 	{
 		auto cloud = geodetect.cloud();
 		pcl::PointXYZ& point = cloud->points[point_index];
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 
 		std::vector<int> indices(k);
 		std::vector<float> sqdistances(k);
@@ -164,7 +164,7 @@ namespace GeoDetection
 		geodetect.buildOctreeDynamicOptimalParams(scale);
 
 		auto cloud = geodetect.cloud();
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 		auto normals = geodetect.normals();
 
 		//Check for correct inputs
@@ -224,7 +224,7 @@ namespace GeoDetection
 		geodetect.buildOctreeDynamicOptimalParams(scale);
 
 		auto cloud = geodetect.cloud();
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 
 		if (scale <= 0) { GD_CORE_ERROR(":: Invalid scalar field averaging scale inputted"); }
 		if (corepoints != nullptr && corepoints->size() == 0) { GD_CORE_WARN(":: Input core points are empty."); }
@@ -285,7 +285,7 @@ namespace GeoDetection
 		geodetect.buildOctreeDynamicOptimalParams(scale);
 
 		auto cloud = geodetect.cloud();
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 		auto normals = geodetect.normals();
 
 		double sphere_vol = (4.0f / 3.0f) * M_PI * pow(scale, 3);
@@ -354,7 +354,7 @@ namespace GeoDetection
 
 		//Get GeoDetection::Cloud data members
 		auto cloud = geodetect.cloud();
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 		auto normals = geodetect.normals();
 		auto view = geodetect.view();
 		int64_t size = cloud->size();
@@ -400,7 +400,7 @@ namespace GeoDetection
 
 				//use reverse iterators because we're descending. Find first element that is less than the scale.
 				auto iter_end = std::find_if(sqdistances.begin(), sqdistances.end(), [&sq_scale](float x)
-					{return x < sq_scale; });
+					{return x > sq_scale; });
 
 				//pcl doesn't currently support passing iterators through to pcl::computePointNormal... so we have to pass a subset of indices
 				size_t subcloud_end = iter_end - sqdistances.begin();
@@ -434,7 +434,7 @@ namespace GeoDetection
 
 		//Get GeoDetection::Cloud data members
 		auto cloud = geodetect.cloud();
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 		auto normals = geodetect.normals();
 		int64_t size = cloud->size();
 
@@ -443,6 +443,13 @@ namespace GeoDetection
 		for (size_t i = 0; i < scales.size(); i++)
 		{
 			volumes[i] = (4.0f / 3.0f) * M_PI * pow(scales[i], 3);
+		}
+
+		//Get sqscales
+		std::vector<float> sqscales(scales.size());
+		for (size_t i = 0; i < scales.size(); i++)
+		{
+			sqscales[i] = scales[i]*scales[i];
 		}
 
 		//Initialize 2d vector (scale, pointID)
@@ -469,12 +476,13 @@ namespace GeoDetection
 			for (int j = 1; j < scales.size(); j++)
 			{
 				int id = sort_map[j];
-				float sq_scale = pow(scales[id], 2);
+				float sq_scale = sqscales[id];
 
-				//Find first element that is less than the scale.
+				//Find cutoff point (first element that is greater than the scale)
 				auto iter_end = std::find_if(sqdistances.begin(), sqdistances.end(), [&sq_scale](float x)
-					{return x < sq_scale; });
+					{return x > sq_scale; });
 
+				int test = iter_end - sqdistances.begin();
 				//get density from number of points in the new scale neighborhood
 				all_densities[id][i] = (iter_end - sqdistances.begin()) / volumes[id];
 			}
@@ -505,7 +513,7 @@ namespace GeoDetection
 
 		//Get GeoDetection::Cloud data members
 		auto cloud = geodetect.cloud();
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 
 		//Initialize 2d vector (scale, pointID)
 		std::vector<ScalarField> field_multiscale_averaged(scales.size(), std::vector<float>(cloud->size()));
