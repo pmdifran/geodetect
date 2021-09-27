@@ -4,6 +4,9 @@
 #include <numeric>
 #include <cassert>
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 namespace GeoDetection
 {
 	//Gets index mapping to the input vector if it was sorted by descending values
@@ -50,6 +53,21 @@ namespace GeoDetection
 		}
 	}
 
+	//Returns a subset of the indices, who correspond to max_distance < max_distance.
+	template <typename T_index, typename T_distance>
+	std::vector<T_index> getProximalIndices(const std::vector<T_index>& indices, const std::vector<T_distance>& distances, float max_distance)
+	{
+		//Find first element (iterator) that is less than the scale.
+		 auto iter_end = std::find_if(distances.begin(), distances.end(), [&max_distance](T_distance x)
+			{return x > max_distance; });
+
+		//Get subset of new indices.
+		size_t subcloud_end = iter_end - distances.begin();
+		std::vector<T_index> subindices(indices.begin(), indices.begin() + subcloud_end);
+
+		return subindices;
+	}
+
 	//Assemble contiguous array of fields from indices
 	template <typename T_index, typename T_field>
 	std::vector<T_field>
@@ -73,6 +91,35 @@ namespace GeoDetection
 		std::copy(begin_it, end_it, vec.begin());
 		std::sort(vec.begin(), vec.end());
 		return vec;
+	}
+
+	//Returns a squared copy of the vector.
+	template <typename T_in, typename T_out>
+	std::vector<T_out> vectorGetSquared(const std::vector<T_in>& vec)
+	{
+		std::vector<T_out> sqvec;
+		sqvec.reserve(vec.size());
+		
+		for (T_in x : vec) { sqvec.push_back(x * x); }
+		return sqvec;
+	}
+
+	//Returns Sphere volume, given a scale.
+	template <typename T>
+	T getSphereVolume(T scale)
+	{
+		return (T)((4.0f / 3.0f) * M_PI * pow(scale, 3));
+	}
+
+	//Returns vector of sphere volumes, given vector of scales.
+	template <typename T_in>
+	std::vector<double> vectorGetSphereVolumes(const std::vector<T_in>& scales)
+	{
+		std::vector<double> volumes;
+		volumes.reserve(scales.size());
+
+		for (T_in x : scales) { volumes.push_back(getSphereVolume<T_in>(x)); }
+		return volumes;
 	}
 
 	//Gets a unique list from a sorted vector.

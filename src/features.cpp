@@ -128,7 +128,7 @@ namespace GeoDetection
 
 	//Computes the normal vector for a point using a radius search, with transformation of the neighborhood to the origin prior to demeaning.
 	//Need to make pcl's octree::OctreePointCloudSearch::nearestKSearch method const.
-	void
+	void 
 		computeNormalAtOriginKSearch(Cloud& geodetect, pcl::Normal& normal, int k, int point_index, const std::array<float, 3>& view)
 	{
 		auto cloud = geodetect.cloud();
@@ -289,7 +289,7 @@ namespace GeoDetection
 		auto& octree = geodetect.octree();
 		auto normals = geodetect.normals();
 
-		double sphere_vol = (4.0f / 3.0f) * M_PI * pow(scale, 3);
+		double sphere_vol = getSphereVolume(scale);
 
 		ScalarField densities(cloud->size());
 
@@ -340,11 +340,7 @@ namespace GeoDetection
 		auto start = Time::getStart();
 
 		//Get sqdistances of scales
-		std::vector<double> sqscales(scales.size());
-		for (size_t i = 0; i < scales.size(); i++)
-		{
-			sqscales[i] = pow(scales[i], 2);
-		}
+		std::vector<double> sqscales = vectorGetSquared<float, double>(scales);
 
 		//Sort the scales descending, and store the sorted index mapping
 		std::vector<size_t> sort_map = sortIndicesDescending(scales); //Get index mapping to sorted version of radii
@@ -363,18 +359,14 @@ namespace GeoDetection
 		//initialize 2d vector (scale, pointID)
 		std::vector<ScalarField> all_curvatures(scales.size(), std::vector<float>(size));
 
-		GD_CORE_TRACE(":: Computing...");
-
-		//Resolution likely varies accross the cloud. 
-		//We're using dynamic scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
 		GD_PROGRESS(progress_bar, size);
-#pragma omp parallel for schedule(dynamic,1)
+#pragma omp parallel for schedule(dynamic,10)
 		for (int64_t i = 0; i < size; i++)
 		{
-			pcl::Normal c_normal; //normal used to store multiscale calculations
+			pcl::Normal c_normal; 
 			pcl::PointXYZ& c_point = cloud->points[i];
 
-			//containers for largest search
+			//containers for largestest scale search
 			std::vector<float> sqdistances;
 			std::vector<int> indices;
 
@@ -384,7 +376,7 @@ namespace GeoDetection
 			//Octree does not return sorted queries. We need them sorted (ascending).
 			sortOctreeQuery(indices, sqdistances);
 
-			//Get neighborhood that is moved to the origin for accurate normal estimation. (It is now ordered by proximity!)
+			//Get neighborhood that is moved to the origin for accurate normal estimation, sorted by proximity.
 			pcl::PointCloud<pcl::PointXYZ> neighborhood = getSubcloudAtOrigin(cloud, indices, c_point); //(indices are no longer needed)
 
 			//Compute normal for the largest neighborhood.
@@ -394,21 +386,12 @@ namespace GeoDetection
 			//Iterate through smaller neighborhoods (descending) and compute normals as a subset of neighborhood
 			for (int j = 1; j < scales.size(); j++)
 			{
-				pcl::Normal cc_normal; //deeper local object for storing normal in parallel loop.
-
 				int id = sort_map[j]; //ID for descending scale of the unsorted vector
-				float sq_scale = sqscales[id];
 
-				//use reverse iterators because we're descending. Find first element that is less than the scale.
-				auto iter_end = std::find_if(sqdistances.begin(), sqdistances.end(), [&sq_scale](float x)
-					{return x > sq_scale; });
+				std::vector<int> subindices = getProximalIndices(indices, sqdistances, sqscales[id]);
 
-				//pcl doesn't currently support passing iterators through to pcl::computePointNormal... so we have to pass a subset of indices
-				size_t subcloud_end = iter_end - sqdistances.begin();
-				std::vector<int> subindices(indices.begin(), indices.begin() + subcloud_end);
-
-				//compute normal for subset of neighborhood :)
-				computeNormal(neighborhood, c_point, cc_normal, view);
+				//compute normal for subset of neighborhood
+				computeNormal(neighborhood, subindices, c_point, c_normal, view);
 				all_curvatures[id][i] = c_normal.curvature;
 			}
 			GD_PROGRESS_INCREMENT(progress_bar);
@@ -439,28 +422,15 @@ namespace GeoDetection
 		auto normals = geodetect.normals();
 		int64_t size = cloud->size();
 
-		//Get sphere volumes for each scale
-		std::vector<float> volumes(scales.size());
-		for (size_t i = 0; i < scales.size(); i++)
-		{
-			volumes[i] = (4.0f / 3.0f) * M_PI * pow(scales[i], 3);
-		}
-
-		//Get sqscales
-		std::vector<float> sqscales(scales.size());
-		for (size_t i = 0; i < scales.size(); i++)
-		{
-			sqscales[i] = scales[i]*scales[i];
-		}
+		//Get sqdistances of scales and scale volumes
+		std::vector<double> sqscales = vectorGetSquared<float, double>(scales);
+		std::vector<double> volumes = vectorGetSphereVolumes<float>(scales);
 
 		//Initialize 2d vector (scale, pointID)
 		std::vector<ScalarField> all_densities(scales.size(), std::vector<float>(size));
 
-		GD_CORE_TRACE(":: Computing...");
-		//Resolution likely varies accross the cloud. 
-		//We're using dynamic scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
 		GD_PROGRESS(progress_bar, size);
-#pragma omp parallel for schedule(dynamic,1)
+#pragma omp parallel for schedule(dynamic,10)
 		for (int64_t i = 0; i < size; i++)
 		{
 			std::vector<float> sqdistances;
@@ -483,7 +453,6 @@ namespace GeoDetection
 				auto iter_end = std::find_if(sqdistances.begin(), sqdistances.end(), [&sq_scale](float x)
 					{return x > sq_scale; });
 
-				int test = iter_end - sqdistances.begin();
 				//get density from number of points in the new scale neighborhood
 				all_densities[id][i] = (iter_end - sqdistances.begin()) / volumes[id];
 			}
@@ -515,14 +484,14 @@ namespace GeoDetection
 		//Get GeoDetection::Cloud data members
 		auto cloud = geodetect.cloud();
 		auto& octree = geodetect.octree();
+		int64_t size = cloud->size();
 
 		//Initialize 2d vector (scale, pointID)
-		std::vector<ScalarField> field_multiscale_averaged(scales.size(), std::vector<float>(cloud->size()));
+		std::vector<ScalarField> field_multiscale_averaged(scales.size(), std::vector<float>(size));
 
-		//Resolution likely varies accross the cloud. 
-		//We're using dynamic scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
-#pragma omp parallel for schedule(dynamic,1)
-		for (int64_t i = 0; i < cloud->size(); i++)
+		GD_PROGRESS(progress_bar, size);
+#pragma omp parallel for schedule(dynamic,10)
+		for (int64_t i = 0; i < size; i++)
 		{
 			//Compute spatial KdTree search at the largest scale
 			std::vector<float> sqdistances;
@@ -543,6 +512,7 @@ namespace GeoDetection
 
 				field_multiscale_averaged[sort_map[j]][i] = fieldSubsetAverage(field, indices.begin(), id_iter_end);
 			}
+			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
 		return field_multiscale_averaged;

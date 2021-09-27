@@ -41,7 +41,7 @@ namespace GeoDetection
 	* @param[out] normal: Normal that is filled by the calculation.
 	* @param[in] view: viewpoint used to orient the resulting normal.
 	*/
-	void computeNormalAtOriginKSearch(const Cloud& geodetect, pcl::Normal& normal, int k, int point_index, const std::array<float, 3>& view);
+	void computeNormalAtOriginKSearch(Cloud& geodetect, pcl::Normal& normal, int k, int point_index, const std::array<float, 3>& view);
 
 /***********************************************************************************************************************************************//**
 *  Feature Averaging

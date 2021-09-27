@@ -6,6 +6,11 @@ namespace GeoDetection
 	template std::vector<size_t> sortIndicesDescending(const std::vector<int>& vec);
 	template std::vector<size_t> sortIndicesDescending(const std::vector<float>& vec);
 
+	template std::vector<double> vectorGetSquared<float, double>(const std::vector<float>& vec);
+	template std::vector<double> vectorGetSphereVolumes(const std::vector<float>& scales);
+
+	template std::vector<int> getProximalIndices(const std::vector<int>& indices, const std::vector<float>& distances, float max_distance);
+
 	template int computeMode(typename std::vector<int>::const_iterator, typename std::vector<int>::const_iterator);
 	template float computeMode(typename std::vector<float>::const_iterator, typename std::vector<float>::const_iterator);
 
