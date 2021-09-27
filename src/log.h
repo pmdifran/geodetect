@@ -23,19 +23,21 @@ namespace geodetection
 
 	};
 
-	class Time
+	class Timer
 	{	
 	public:
-		Time() {}
+		Timer() { setStartToNow(); }
 
-		inline static std::chrono::time_point<std::chrono::steady_clock> getStart() 
-		{ return std::chrono::steady_clock::now(); }
+		inline void setStartToNow() { m_start_time = std::chrono::steady_clock::now(); }
 
-		inline static double getDuration(std::chrono::time_point<std::chrono::steady_clock>& start_time)
+		inline double getDuration()
 		{
 			return std::chrono::duration<double, std::ratio<1, 1000>>
-				(std::chrono::steady_clock::now() - start_time).count();
+				(std::chrono::steady_clock::now() - m_start_time).count();
 		}
+	
+	private:
+		std::chrono::time_point<std::chrono::high_resolution_clock> m_start_time;
 	};
 }
 

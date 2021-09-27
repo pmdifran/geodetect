@@ -23,7 +23,7 @@ namespace geodetection
 		geodetection::Cloud& source, float radius /* = 1.0 */)
 	{
 		GD_TITLE("Auto Registration --Global");
-		auto start = geodetection::Time::getStart();
+		Timer timer;
 
 		if (!reference.hasCloud()) { GD_ERROR("Reference does not have a cloud"); }
 		if (!reference.hasNormals()) { reference.updateNormalsRadiusSearch(radius); };
@@ -63,7 +63,7 @@ namespace geodetection
 		Eigen::Matrix4f transformation = ransac_rejector.getBestTransformation();
 
 		GD_TRACE(":: Number of inlier fpfh correpondences: {0}\n", correspondences->size());
-		GD_WARN("--> Transformation computed in: {0} ms: \n", geodetection::Time::getDuration(start));
+		GD_WARN("--> Transformation computed in: {0} ms: \n", timer.getDuration());
 		std::cout << std::setprecision(16) << std::fixed <<
 			"Transformation: \n" << transformation << '\n' << std::endl;
 
@@ -100,7 +100,7 @@ namespace geodetection
 		geodetection::Cloud& source, float radius /* = 1.0 */)
 	{
 		GD_TITLE("Auto Registration --Global");
-		auto start = geodetection::Time::getStart();
+		Timer timer;
 
 		if (!reference.hasCloud()) { GD_ERROR("Reference does not have a cloud"); }
 		if (!reference.hasNormals()) { reference.updateNormalsRadiusSearch(radius); };
@@ -142,7 +142,7 @@ namespace geodetection
 		Eigen::Matrix4f transformation = ransac_rejector.getBestTransformation();
 
 		GD_TRACE(":: Number of inlier fpfh correpondences: {0}\n", correspondences->size());
-		GD_WARN("--> Transformation computed in: {0} ms: \n", geodetection::Time::getDuration(start));
+		GD_WARN("--> Transformation computed in: {0} ms: \n", timer.getDuration());
 		std::cout << std::setprecision(16) << std::fixed <<
 			"Transformation: \n" << transformation << '\n' << std::endl;
 
@@ -173,7 +173,7 @@ namespace geodetection
 		geodetection::Cloud& source, float radius /* = 1.0 */)
 	{
 		GD_TITLE("Auto Registration --ICP");
-		auto start = geodetection::Time::getStart();
+		Timer timer;
 
 		if (!reference.hasCloud()) { GD_ERROR("Reference does not have a cloud"); }
 		if (!reference.hasNormals()) { reference.updateNormalsRadiusSearch(radius); };
@@ -201,7 +201,7 @@ namespace geodetection
 		// update the matrix without transforming the data again.
 		source.updateTransformation(transformation);
 		
-		GD_WARN("ICP computed in: {0} ms\n", geodetection::Time::getDuration(start));
+		GD_WARN("ICP computed in: {0} ms\n", timer.getDuration());
 		std::cout << std::setprecision(16) << std::fixed <<
 			"Transformation: \n" << transformation << '\n' << std::endl;
 

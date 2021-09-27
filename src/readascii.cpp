@@ -100,7 +100,7 @@ namespace geodetection
 	{
 			GD_TITLE("Ascii Data Import");
 			GD_TRACE(":: File: {}", m_filename);
-			auto start = geodetection::Time::getStart();
+			Timer timer;
 
 			//Get number of points in the file, and reduce by one if header is present.
 			bool header_present = hasHeader(m_filename);
@@ -126,7 +126,7 @@ namespace geodetection
 			Cloud geodetect = parseData(file, num_points, num_columns, header_present);
 
 			fclose(file);
-			GD_WARN("--> Data import time: {0} ms", geodetection::Time::getDuration(start));
+			GD_WARN("--> Data import time: {0} ms", timer.getDuration());
 
 			//Build the KdTree. geodetection Clouds use both KdTrees and Octrees. 
 			geodetect.buildKdTree();

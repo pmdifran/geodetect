@@ -337,7 +337,7 @@ namespace geodetection
 		getCurvaturesMultiscale(Cloud& geodetect, const std::vector<float>& scales)
 	{
 		GD_CORE_TRACE(":: Computing curvatures from list of {0} scales...", scales.size());
-		auto start = Time::getStart();
+		Timer timer;
 
 		//Get sqdistances of scales
 		std::vector<double> sqscales = vectorGetSquared<float, double>(scales);
@@ -397,7 +397,7 @@ namespace geodetection
 			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
-		GD_CORE_WARN("--> Multiscale normale-rate-of-change curvature calculation time: {0} ms\n", geodetection::Time::getDuration(start));
+		GD_CORE_WARN("--> Multiscale normale-rate-of-change curvature calculation time: {0} ms\n", timer.getDuration());
 		return all_curvatures;
 	}
 
@@ -407,7 +407,7 @@ namespace geodetection
 		getVolumetricDensitiesMultiscale(Cloud & geodetect, const std::vector<float>&scales)
 	{
 		GD_CORE_TRACE(":: Computing volumetric densities from list of {0} scales...", scales.size());
-		auto start = Time::getStart();
+		Timer timer;
 
 		//Sort the scales descending, and store the sorted index mapping
 		std::vector<size_t> sort_map = sortIndicesDescending(scales); //Get index mapping to sorted version of radii
@@ -459,7 +459,7 @@ namespace geodetection
 			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
-		GD_CORE_WARN("--> Multiscale volumetric density calculation time: {0} ms\n", geodetection::Time::getDuration(start));
+		GD_CORE_WARN("--> Multiscale volumetric density calculation time: {0} ms\n", timer.getDuration());
 		return all_densities;
 	}
 
