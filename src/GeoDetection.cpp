@@ -96,7 +96,7 @@ namespace GeoDetection
 		double avg_resolution = 0; //cloud-wide average resolution
 
 		//Calculate resolution for each point, and determine average resolution
-		GD_PROGRESS(bar, m_cloud->size());
+		GD_PROGRESS(progress_bar, m_cloud->size());
 #pragma omp parallel for reduction(+: avg_resolution)
 		for (int64_t i = 0; i < m_cloud->size(); i++)
 		{
@@ -114,7 +114,7 @@ namespace GeoDetection
 			resolution[i] = local_resolution;
 			avg_resolution += local_resolution; //thread-safe with omp reduction
 
-			GD_PROGRESS_INCREMENT(bar);
+			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
 		avg_resolution = avg_resolution / (double)m_cloud->size();
@@ -282,12 +282,12 @@ namespace GeoDetection
 		this->buildOctreeDynamicOptimalParams(radius);
 
 		// Iterate through each point and compute normals from demeaned neighborhoods.
-		GD_PROGRESS(bar, m_cloud->size());
+		GD_PROGRESS(progress_bar, m_cloud->size());
 //#pragma omp parallel for
 		for (int i = 0; i < m_cloud->size(); i++)
 		{
-			computeNormalAtOriginRadiusSearch(*this, radius, i, normals->points[i], m_view);
-			GD_PROGRESS_INCREMENT(bar);
+			computeNormalAtOriginRadiusSearch(*this, normals->points[i], radius, i,  m_view);
+			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",
@@ -312,12 +312,12 @@ namespace GeoDetection
 		this->buildOctreeDynamicOptimalParams(k);
 
 		// Iterate through each point and compute normals from demeaned neighborhoods.
-		GD_PROGRESS(bar, m_cloud->size());
+		GD_PROGRESS(progress_bar, m_cloud->size());
 #pragma omp parallel for
 		for (int i = 0; i < m_cloud->points.size(); i++)
 		{
-			computeNormalAtOriginKSearch(*this, k, i, normals->points[i], m_view);
-			GD_PROGRESS_INCREMENT(bar);
+			computeNormalAtOriginKSearch(*this, normals->points[i], k, i, m_view);
+			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n",

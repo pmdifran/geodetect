@@ -105,7 +105,7 @@ namespace GeoDetection
 	//Uses Octree for radius search.
 	//Uses OpenMP.
 	void
-		computeNormalAtOriginRadiusSearch(const Cloud& geodetect, float radius, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
+		computeNormalAtOriginRadiusSearch(const Cloud& geodetect, pcl::Normal& normal, float radius, int point_index, const std::array<float, 3>& view)
 	{
 		auto cloud = geodetect.cloud();
 		pcl::PointXYZ& point = cloud->points[point_index];
@@ -129,7 +129,7 @@ namespace GeoDetection
 	//Computes the normal vector for a point using a radius search, with transformation of the neighborhood to the origin prior to demeaning.
 	//Need to make pcl's octree::OctreePointCloudSearch::nearestKSearch method const.
 	void
-		computeNormalAtOriginKSearch(Cloud& geodetect, int k, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
+		computeNormalAtOriginKSearch(Cloud& geodetect, pcl::Normal& normal, int k, int point_index, const std::array<float, 3>& view)
 	{
 		auto cloud = geodetect.cloud();
 		pcl::PointXYZ& point = cloud->points[point_index];

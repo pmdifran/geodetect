@@ -31,7 +31,7 @@ namespace GeoDetection
 	* @param[out] normal: Normal that is filled by the calculation.
 	* @param[in] view: viewpoint used to orient the resulting normal.
 	*/
-	void computeNormalAtOriginRadiusSearch(const Cloud& geodetect, float radius, int point_index, pcl::Normal& normal, const std::array<float, 3>& view);
+	void computeNormalAtOriginRadiusSearch(const Cloud& geodetect, pcl::Normal& normal, float radius, int point_index, const std::array<float, 3>& view);
 
 	/**
 	* Computes the normal vector for a point using a radius search, with transformation of the neighborhood to the origin prior to demeaning.
@@ -41,7 +41,7 @@ namespace GeoDetection
 	* @param[out] normal: Normal that is filled by the calculation.
 	* @param[in] view: viewpoint used to orient the resulting normal.
 	*/
-	void computeNormalAtOriginKSearch(const Cloud& geodetect, int k, int point_index, pcl::Normal& normal, const std::array<float, 3>& view);
+	void computeNormalAtOriginKSearch(const Cloud& geodetect, pcl::Normal& normal, int k, int point_index, const std::array<float, 3>& view);
 
 /***********************************************************************************************************************************************//**
 *  Feature Averaging
