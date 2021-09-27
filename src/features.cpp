@@ -127,8 +127,9 @@ namespace GeoDetection
 	}
 
 	//Computes the normal vector for a point using a radius search, with transformation of the neighborhood to the origin prior to demeaning.
+	//Need to make pcl's octree::OctreePointCloudSearch::nearestKSearch method const.
 	void
-		computeNormalAtOriginKSearch(const Cloud& geodetect, int k, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
+		computeNormalAtOriginKSearch(Cloud& geodetect, int k, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
 	{
 		auto cloud = geodetect.cloud();
 		pcl::PointXYZ& point = cloud->points[point_index];
@@ -366,7 +367,7 @@ namespace GeoDetection
 
 		//Resolution likely varies accross the cloud. 
 		//We're using dynamic scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
-		GD_PROGRESS(bar, size);
+		GD_PROGRESS(progress_bar, size);
 #pragma omp parallel for schedule(dynamic,1)
 		for (int64_t i = 0; i < size; i++)
 		{
@@ -410,7 +411,7 @@ namespace GeoDetection
 				computeNormal(neighborhood, c_point, cc_normal, view);
 				all_curvatures[id][i] = c_normal.curvature;
 			}
-			GD_PROGRESS_INCREMENT(bar);
+			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
 		GD_CORE_WARN("--> Multiscale normale-rate-of-change curvature calculation time: {0} ms\n", GeoDetection::Time::getDuration(start));
@@ -458,7 +459,7 @@ namespace GeoDetection
 		GD_CORE_TRACE(":: Computing...");
 		//Resolution likely varies accross the cloud. 
 		//We're using dynamic scheduling so that a high-density parition doesn't cause all the threads to sit in idle. 
-		GD_PROGRESS(bar, size);
+		GD_PROGRESS(progress_bar, size);
 #pragma omp parallel for schedule(dynamic,1)
 		for (int64_t i = 0; i < size; i++)
 		{
@@ -486,7 +487,7 @@ namespace GeoDetection
 				//get density from number of points in the new scale neighborhood
 				all_densities[id][i] = (iter_end - sqdistances.begin()) / volumes[id];
 			}
-			GD_PROGRESS_INCREMENT(bar);
+			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
 		GD_CORE_WARN("--> Multiscale volumetric density calculation time: {0} ms\n", GeoDetection::Time::getDuration(start));
