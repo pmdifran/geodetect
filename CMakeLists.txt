@@ -28,6 +28,7 @@ set(HEADERS
     ${GeoDetection_source}/autoRegistration.h
     ${GeoDetection_source}/GeoDetection.h
     ${GeoDetection_source}/log.h
+    ${GeoDetection_source}/progressbar.h
     ${GeoDetection_source}/segmentVegetation.h
     ${GeoDetection_source}/ScalarField.h
     ${GeoDetection_source}/features.h
@@ -108,6 +109,9 @@ include_directories(${GeoDetection_vendor}/fast_float/include)
 
 #CLI11
 include_directories(${GeoDetection_vendor}/CLI11/include)
+
+#indicators (for progress bar)
+include_directories(${GeoDetection_vendor}/indicators/include)
 
 #MSVS output directories
 #######################################################################################

@@ -1,6 +1,8 @@
 #include "features.h"
 #include "core.h"
 
+#include "progressbar.h"
+
 #include <pcl/features/normal_3d.h>
 #include <pcl/common/impl/transforms.hpp> //for transformation
 
@@ -9,8 +11,8 @@ namespace GeoDetection
 /***********************************************************************************************************************************************//**
 *  Helpers
 ***************************************************************************************************************************************************/
-	//Create centered subcloud, with input point becoming the new origin for neighborhood of indices.
-	pcl::PointCloud<pcl::PointXYZ> demeanSubcloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, const std::vector<int>& indices, const pcl::PointXYZ& point)
+	//Create centered neighborhood, with input point becoming the new origin for neighborhood of indices.
+	pcl::PointCloud<pcl::PointXYZ> getSubcloudAtOrigin(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, const std::vector<int>& indices, const pcl::PointXYZ& point)
 	{
 		pcl::PointCloud<pcl::PointXYZ> cloud_centered;
 		cloud_centered.reserve(indices.size());
@@ -43,22 +45,35 @@ namespace GeoDetection
 /***********************************************************************************************************************************************//**
 *  Normal calculation
 ***************************************************************************************************************************************************/
-	//Computes the normal vector for a neighborhood of points, by transforming the neighborhood to the origin prior to demeaning.
-	//Prevents catostrophic cancellation that can occur during demeaning, when computing covariance matrix.
-	//--> catostrophic cancellation can occur since eigen uses floats to compute the covariance matrix.
+	//Computes the normal vector for a neighborhood of points, given the input point, and view for orienting the normal vector.
 	void
-		computeNormalDemeaned(const Cloud& geodetect, pcl::Normal& normal, const std::vector<int>& indices, const std::array<float, 3>& view)
+		computeNormal(const pcl::PointCloud<pcl::PointXYZ>& neighborhood, pcl::PointXYZ& point, pcl::Normal& normal, const std::array<float, 3>& view)
 	{
-		//get subcloud with indices[0] being moved at the origin
-		auto cloud = geodetect.cloud();
-		pcl::PointXYZ& point = cloud->points[indices[0]];
-
-		pcl::PointCloud<pcl::PointXYZ> subcloud = demeanSubcloud(geodetect.cloud(), indices, point);
-
 		// Compute the point normal
 		float curvature;
 		Eigen::Vector4f n;
-		pcl::computePointNormal(subcloud, n, curvature);
+		pcl::computePointNormal(neighborhood, n, curvature);
+
+		// Flip normals so they consistently point in one direction
+		pcl::flipNormalTowardsViewpoint(point, view[0], view[1], view[2], n);
+
+		// Set the normal to the result
+		normal.normal_x = n[0];
+		normal.normal_y = n[1];
+		normal.normal_z = n[2];
+		normal.curvature = curvature;
+	}
+
+	//Computes the normal vector for a subset of a neighborhood of points, given the input point, and view for orienting the normal vector.
+	void
+		computeNormal(const pcl::PointCloud<pcl::PointXYZ>& neighborhood, std::vector<int>& subindices,
+			pcl::PointXYZ& point, pcl::Normal& normal, const std::array<float, 3>& view)
+	{
+		assert(!(neighborhood.size() < subindices.size())); //make sure subindices are lesser or equal to size.
+		// Compute the point normal
+		float curvature;
+		Eigen::Vector4f n;
+		pcl::computePointNormal(neighborhood, subindices, n, curvature);
 
 		// Flip normals so they consistently point in one direction
 		pcl::flipNormalTowardsViewpoint(point, view[0], view[1], view[2], n);
@@ -71,14 +86,30 @@ namespace GeoDetection
 	}
 
 	//Computes the normal vector for a neighborhood of points, by transforming the neighborhood to the origin prior to demeaning.
+	//Prevents catostrophic cancellation that can occur during demeaning, when computing covariance matrix.
+	//--> catostrophic cancellation can occur since eigen uses floats to compute the covariance matrix.
+	void
+		computeNormalAtOrigin(const Cloud& geodetect, pcl::Normal& normal, const std::vector<int>& indices, const std::array<float, 3>& view)
+	{
+		//get neighborhood with indices[0] being moved at the origin
+		auto cloud = geodetect.cloud();
+		pcl::PointXYZ& point = cloud->points[indices[0]];
+
+		pcl::PointCloud<pcl::PointXYZ> subcloud = getSubcloudAtOrigin(geodetect.cloud(), indices, point);
+
+		// Compute the point normal
+		computeNormal(subcloud, point, normal, view);
+	}
+
+	//Computes the normal vector for a neighborhood of points, by transforming the neighborhood to the origin prior to demeaning.
 	//Uses Octree for radius search.
 	//Uses OpenMP.
 	void
-		computeDemeanedNormalRadiusSearch(const Cloud& geodetect, float radius, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
+		computeNormalAtOriginRadiusSearch(const Cloud& geodetect, pcl::Normal& normal, float radius, int point_index, const std::array<float, 3>& view)
 	{
 		auto cloud = geodetect.cloud();
 		pcl::PointXYZ& point = cloud->points[point_index];
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 
 		std::vector<int> indices;
 		std::vector<float> sqdistances;
@@ -92,16 +123,17 @@ namespace GeoDetection
 		}
 
 		//Otherwise compute normal, first moving neighborhood to origin.
-		computeNormalDemeaned(geodetect, normal, indices, view);
+		computeNormalAtOrigin(geodetect, normal, indices, view);
 	}
 
 	//Computes the normal vector for a point using a radius search, with transformation of the neighborhood to the origin prior to demeaning.
-	void
-		computeDemeanedNormalKSearch(const Cloud& geodetect, int k, int point_index, pcl::Normal& normal, const std::array<float, 3>& view)
+	//Need to make pcl's octree::OctreePointCloudSearch::nearestKSearch method const.
+	void 
+		computeNormalAtOriginKSearch(Cloud& geodetect, pcl::Normal& normal, int k, int point_index, const std::array<float, 3>& view)
 	{
 		auto cloud = geodetect.cloud();
 		pcl::PointXYZ& point = cloud->points[point_index];
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 
 		std::vector<int> indices(k);
 		std::vector<float> sqdistances(k);
@@ -115,13 +147,13 @@ namespace GeoDetection
 		}
 
 		//Otherwise compute normal, first moving neighborhood to origin.
-		computeNormalDemeaned(geodetect, normal, indices, view);
+		computeNormalAtOrigin(geodetect, normal, indices, view);
 	}
 
 /***********************************************************************************************************************************************//**
 *  Feature Averaging
 ***************************************************************************************************************************************************/
-	//Average - out normals around a given scale of core points. Entire cloud used by default. 
+	//Average - out normals around a given scale of core points. Entire neighborhood used by default. 
 	//Uses OpenMP.
 	pcl::PointCloud<pcl::Normal>::Ptr
 		computeAverageNormals(Cloud& geodetect,
@@ -133,7 +165,7 @@ namespace GeoDetection
 		geodetect.buildOctreeDynamicOptimalParams(scale);
 
 		auto cloud = geodetect.cloud();
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 		auto normals = geodetect.normals();
 
 		//Check for correct inputs
@@ -145,7 +177,7 @@ namespace GeoDetection
 			GD_CORE_ERROR(":: Cannot average out normals. Input size does not agree with the cloud.");
 		}
 
-		//If no core points given, use full cloud
+		//If no core points given, use full neighborhood
 		if (corepoints == nullptr) { corepoints = cloud; }
 
 		//Average normals as new pointcloud
@@ -181,7 +213,7 @@ namespace GeoDetection
 		return averaged_normals;
 	}
 
-	//Average-out scalar field around a given scale of core points. Entire cloud used by default.
+	//Average-out scalar field around a given scale of core points. Entire neighborhood used by default.
 	//Uses OpenMP.
 	ScalarField
 		computeAverageField(Cloud& geodetect, const ScalarField& field, float scale,
@@ -193,13 +225,13 @@ namespace GeoDetection
 		geodetect.buildOctreeDynamicOptimalParams(scale);
 
 		auto cloud = geodetect.cloud();
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 
 		if (scale <= 0) { GD_CORE_ERROR(":: Invalid scalar field averaging scale inputted"); }
 		if (corepoints != nullptr && corepoints->size() == 0) { GD_CORE_WARN(":: Input core points are empty."); }
 		if (cloud->size() != field.size()) { GD_CORE_ERROR(":: Cannot average out scalars. Input size does not agree with the cloud."); }
 
-		//If no corepoints specified, assume to use the entire cloud.
+		//If no corepoints specified, assume to use the entire neighborhood.
 		if (corepoints == nullptr) { corepoints = cloud; }
 
 		ScalarField averaged_field(corepoints->size(), 0);
@@ -254,10 +286,10 @@ namespace GeoDetection
 		geodetect.buildOctreeDynamicOptimalParams(scale);
 
 		auto cloud = geodetect.cloud();
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 		auto normals = geodetect.normals();
 
-		double sphere_vol = (4.0f / 3.0f) * M_PI * pow(scale, 3);
+		double sphere_vol = getSphereVolume(scale);
 
 		ScalarField densities(cloud->size());
 
@@ -297,14 +329,18 @@ namespace GeoDetection
 /***********************************************************************************************************************************************//**
 *  Feature Calculaton - Multiscale
 ***************************************************************************************************************************************************/
-	//Gets normals at numerous scales, using the largest scale query for the other scales.
+	//Gets normals at numerous scales, reusing the largest scale query for computing the other scales.
 	//Reuses the largest search neighborhood to reduce the search times. 
-	//@TODO: Use a reverse iterator, and delete the larger search scale from the lamdba search.
+	//@TODO: Break some of the internals into helper functions to improve readability.
+	//@TODO: Try storing 
 	std::vector<ScalarField>
 		getCurvaturesMultiscale(Cloud& geodetect, const std::vector<float>& scales)
 	{
-		GD_CORE_TRACE(":: Computing curvatures from list of {0} scales...\n", scales.size());
+		GD_CORE_TRACE(":: Computing curvatures from list of {0} scales...", scales.size());
 		auto start = Time::getStart();
+
+		//Get sqdistances of scales
+		std::vector<double> sqscales = vectorGetSquared<float, double>(scales);
 
 		//Sort the scales descending, and store the sorted index mapping
 		std::vector<size_t> sort_map = sortIndicesDescending(scales); //Get index mapping to sorted version of radii
@@ -315,46 +351,50 @@ namespace GeoDetection
 
 		//Get GeoDetection::Cloud data members
 		auto cloud = geodetect.cloud();
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 		auto normals = geodetect.normals();
 		auto view = geodetect.view();
+		int64_t size = cloud->size();
 
 		//initialize 2d vector (scale, pointID)
-		std::vector<ScalarField> all_curvatures(scales.size(), std::vector<float>(cloud->size()));
+		std::vector<ScalarField> all_curvatures(scales.size(), std::vector<float>(size));
 
-#pragma omp parallel for
-		for (int64_t i = 0; i < cloud->size(); i++)
+		GD_PROGRESS(progress_bar, size);
+#pragma omp parallel for schedule(dynamic,10)
+		for (int64_t i = 0; i < size; i++)
 		{
-			pcl::Normal c_normal; //normal used to store multiscale calculations
+			pcl::Normal c_normal; 
+			pcl::PointXYZ& c_point = cloud->points[i];
 
-			//containers for largest search
+			//containers for largestest scale search
 			std::vector<float> sqdistances;
 			std::vector<int> indices;
 
 			//compute search for max scale
-			int num_points = octree.radiusSearch(cloud->points[i], scales[id_max], indices, sqdistances);
+			octree.radiusSearch(cloud->points[i], scales[id_max], indices, sqdistances);
 
 			//Octree does not return sorted queries. We need them sorted (ascending).
 			sortOctreeQuery(indices, sqdistances);
 
-			computeNormalDemeaned(geodetect, c_normal, indices, view);
+			//Get neighborhood that is moved to the origin for accurate normal estimation, sorted by proximity.
+			pcl::PointCloud<pcl::PointXYZ> neighborhood = getSubcloudAtOrigin(cloud, indices, c_point); //(indices are no longer needed)
+
+			//Compute normal for the largest neighborhood.
+			computeNormal(neighborhood, c_point, c_normal, view);
 			all_curvatures[id_max][i] = c_normal.curvature;
 
-			//Iterate through smaller neighborhoods and compute density as a subset of sqdistances
+			//Iterate through smaller neighborhoods (descending) and compute normals as a subset of neighborhood
 			for (int j = 1; j < scales.size(); j++)
 			{
-				int id = sort_map[j]; //ID for the 2D vector (i.e. the current scale).
-				float sq_scale = pow(scales[id], 2);
-				auto iter_end = std::find_if(sqdistances.begin(), sqdistances.end(), [&sq_scale](float x)
-					{return x > sq_scale; });
+				int id = sort_map[j]; //ID for descending scale of the unsorted vector
 
-				size_t sub_size = iter_end - sqdistances.begin();
-				std::vector<int>::iterator id_iter_end = indices.begin() + sub_size;
-				std::vector<int> subindices(indices.begin(), id_iter_end);
+				std::vector<int> subindices = getProximalIndices(indices, sqdistances, sqscales[id]);
 
-				computeNormalDemeaned(geodetect, c_normal, subindices, view);
+				//compute normal for subset of neighborhood
+				computeNormal(neighborhood, subindices, c_point, c_normal, view);
 				all_curvatures[id][i] = c_normal.curvature;
 			}
+			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
 		GD_CORE_WARN("--> Multiscale normale-rate-of-change curvature calculation time: {0} ms\n", GeoDetection::Time::getDuration(start));
@@ -366,7 +406,7 @@ namespace GeoDetection
 	std::vector<ScalarField>
 		getVolumetricDensitiesMultiscale(Cloud & geodetect, const std::vector<float>&scales)
 	{
-		GD_CORE_TRACE(":: Computing volumetric densities from list of {0} scales...\n", scales.size());
+		GD_CORE_TRACE(":: Computing volumetric densities from list of {0} scales...", scales.size());
 		auto start = Time::getStart();
 
 		//Sort the scales descending, and store the sorted index mapping
@@ -378,43 +418,45 @@ namespace GeoDetection
 
 		//Get GeoDetection::Cloud data members
 		auto cloud = geodetect.cloud();
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
 		auto normals = geodetect.normals();
+		int64_t size = cloud->size();
 
-		//Get sphere volumes for each scale
-		std::vector<float> volumes(scales.size());
-		for (size_t i = 0; i < scales.size(); i++)
-		{
-			volumes[i] = (4.0f / 3.0f) * M_PI * pow(scales[i], 3);
-		}
+		//Get sqdistances of scales and scale volumes
+		std::vector<double> sqscales = vectorGetSquared<float, double>(scales);
+		std::vector<double> volumes = vectorGetSphereVolumes<float>(scales);
 
 		//Initialize 2d vector (scale, pointID)
-		std::vector<ScalarField> all_densities(scales.size(), std::vector<float>(cloud->size()));
+		std::vector<ScalarField> all_densities(scales.size(), std::vector<float>(size));
 
-#pragma omp parallel for
-		for (int64_t i = 0; i < cloud->size(); i++)
+		GD_PROGRESS(progress_bar, size);
+#pragma omp parallel for schedule(dynamic,10)
+		for (int64_t i = 0; i < size; i++)
 		{
 			std::vector<float> sqdistances;
 			std::vector<int> indices;
 
 			//Compute search for max scale
-			int num_points = octree.radiusSearch(cloud->points[i], scales[id_max], indices, sqdistances);
-			all_densities[id_max][i] = num_points / volumes[id_max];
+			octree.radiusSearch(cloud->points[i], scales[id_max], indices, sqdistances);
+			all_densities[id_max][i] = sqdistances.size() / volumes[id_max];
 
-			//Octree does not return sorted queries. We need them sorted (ascending).
-			sortOctreeQuery(indices, sqdistances);
+			//Octree does not return sorted queries. We need sqdistances to be sorted.
+			std::sort(sqdistances.begin(), sqdistances.end());
 
 			//Iterate through smaller neighborhoods and compute density as a subset of sqdistances
 			for (int j = 1; j < scales.size(); j++)
 			{
 				int id = sort_map[j];
-				float sq_scale = pow(scales[id], 2);
+				float sq_scale = sqscales[id];
+
+				//Find cutoff point (first element that is greater than the scale)
 				auto iter_end = std::find_if(sqdistances.begin(), sqdistances.end(), [&sq_scale](float x)
 					{return x > sq_scale; });
 
-				num_points = iter_end - sqdistances.begin();
-				all_densities[id][i] = num_points / volumes[id];
+				//get density from number of points in the new scale neighborhood
+				all_densities[id][i] = (iter_end - sqdistances.begin()) / volumes[id];
 			}
+			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
 		GD_CORE_WARN("--> Multiscale volumetric density calculation time: {0} ms\n", GeoDetection::Time::getDuration(start));
@@ -441,13 +483,15 @@ namespace GeoDetection
 
 		//Get GeoDetection::Cloud data members
 		auto cloud = geodetect.cloud();
-		auto octree = geodetect.octree();
+		auto& octree = geodetect.octree();
+		int64_t size = cloud->size();
 
 		//Initialize 2d vector (scale, pointID)
-		std::vector<ScalarField> field_multiscale_averaged(scales.size(), std::vector<float>(cloud->size()));
+		std::vector<ScalarField> field_multiscale_averaged(scales.size(), std::vector<float>(size));
 
-#pragma omp parallel for
-		for (int64_t i = 0; i < cloud->size(); i++)
+		GD_PROGRESS(progress_bar, size);
+#pragma omp parallel for schedule(dynamic,10)
+		for (int64_t i = 0; i < size; i++)
 		{
 			//Compute spatial KdTree search at the largest scale
 			std::vector<float> sqdistances;
@@ -468,6 +512,7 @@ namespace GeoDetection
 
 				field_multiscale_averaged[sort_map[j]][i] = fieldSubsetAverage(field, indices.begin(), id_iter_end);
 			}
+			GD_PROGRESS_INCREMENT(progress_bar);
 		}
 
 		return field_multiscale_averaged;

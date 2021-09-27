@@ -103,6 +103,7 @@ namespace GeoDetection
 		//Search trees
 		inline pcl::search::KdTree<pcl::PointXYZ>::Ptr const kdtree() const { return m_kdtree; }
 		inline const pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>& octree() const { return m_octree; }
+		inline pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>& octree() { return m_octree; } //need to make pcl's nearestKSearch method const.
 
 		//Cloud properties
 		inline Eigen::Matrix4d transformation() const { return m_transformation; }

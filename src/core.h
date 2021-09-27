@@ -35,13 +35,22 @@ namespace GeoDetection
 	void sortOctreeQuery(std::vector<int>& indices, std::vector<float>& sqdistances);
 
 	/**
+	* Returns a subset of the indices, who correspond to max_distance < max_distance.
+	* if the distances are squared distance, then the input max_distance also needs to be squared.
+	* @param[in] max_distance: Maximum distance to which index is included.
+	* @return indices: Subset of the indices, who correspond to max_distance < max_distance.
+	*/
+	template <typename T_index, typename T_distance>
+	std::vector<T_index> getProximalIndices(const std::vector<T_index>& indices, const std::vector<T_distance>& distances, float max_distance);
+
+	/**
 	* Assembles a contiguous array (i.e. vector) from vector subset indices.
 	* @param indices: Subset indices of std::vector<T_field>
 	* @param field: Vector of the (superset) data, of type T_field.
 	* @return Subset of field vector, corresponding to indices, in the same order as they were provided.
 	*/
 	template <typename T_index, typename T_field>
-	std::vector<T_field> vectorFromIndices(std::vector<T_index>& indices, std::vector<T_field>& field);
+	std::vector<T_field> vectorFromIndices(const std::vector<T_index>& indices, const std::vector<T_field>& field);
 
 	/**
 	* Returns a sorted copy of the vector, given begin and end iterators.
@@ -51,6 +60,30 @@ namespace GeoDetection
 	*/
 	template <typename T>
 	std::vector<T> vectorSortedCopy(typename std::vector<T>::const_iterator begin_it, typename std::vector<T>::const_iterator end_it);
+
+	/**
+	* Returns a squared copy of the vector.
+	* @param vec: Vector to be squared.
+	* @return Squared copy of the vector.
+	*/
+	template <typename T_in, typename T_out>
+	std::vector<T_out> vectorGetSquared(const std::vector<T_in>& vec);
+
+	/**
+	* Returns Sphere volume, given a scale.
+	* @param scales: Scales at which to calculate sphere volumes.
+	* @return Returns vector of sphere volumes.
+	*/
+	template <typename T>
+	T getSphereVolume(T scale);
+
+	/**
+	* Returns vector of sphere volumes, given vector of scales.
+	* @param scales: Scales at which to calculate sphere volumes.
+	* @return Returns vector of sphere volumes.
+	*/
+	template <typename T_in>
+	std::vector<double> vectorGetSphereVolumes(const std::vector<T_in>& scales);
 
 	/**
 	* Gets a unique list from a sorted vector.
