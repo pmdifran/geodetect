@@ -53,7 +53,7 @@ namespace geodetection
 		}
 	}
 
-	//Returns a subset of the indices, who correspond to max_distance < max_distance.
+	//Returns a subset of the indices, who correspond to distance < max_distance.
 	template <typename T_index, typename T_distance>
 	std::vector<T_index> getProximalIndices(const std::vector<T_index>& indices, const std::vector<T_distance>& distances, float max_distance)
 	{
