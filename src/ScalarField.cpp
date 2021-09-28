@@ -7,10 +7,11 @@ namespace geodetection
 	void
 		ScalarField::normalizeMinMax()
 	{
-		const auto min = std::min_element(data.begin(), data.end()); //returns iterator
-		const auto max = std::max_element(data.begin(), data.end());
+		auto min = std::min_element(data.begin(), data.end()); //returns iterator
+		auto max = std::max_element(data.begin(), data.end());
 
-		const float range = *max - *min;
+		float range = *max - *min;
+		if (range == 0) { return;  } //if all scalarfields are 0, leave them.
 
 #pragma omp parallel for
 		for (int64_t i = 0; i < (int64_t)data.size(); i++)
@@ -19,41 +20,15 @@ namespace geodetection
 		}
 	}
 
-	//Make all NaN data equal to the max
-	void 
-		ScalarField::NaNtoMax()
-	{
-		const auto max = *(std::max_element(data.begin(), data.end()));
-#pragma omp parallel for
-		for (int64_t i = 0; i < (int64_t)data.size(); i++)
-		{
-			if (data[i] == data[i]) { continue; } //false if is NaN
-			data[i] = max;
-		}
-	}
-
-	//Make all NaN data equal to the min
-	void
-		ScalarField::NaNtoMin()
-	{
-		const auto min = *(std::min_element(data.begin(), data.end()));
-#pragma omp parallel for
-		for (int64_t i = 0; i < (int64_t)data.size(); i++)
-		{
-			if (data[i] == data[i]) { continue; } //false if is NaN
-			data[i] = min;
-		}
-	}
-
 	//Make all NaN data equal to zero
 	void
-		ScalarField::NaNtoZero()
+		ScalarField::NaNtoValue(float value)
 	{
 #pragma omp parallel for
 		for (int64_t i = 0; i < (int64_t)data.size(); i++)
 		{
 			if (data[i] == data[i]) { continue; } //false if is NaN
-			data[i] = 0;
+			data[i] = value;
 		}
 	}
 }

@@ -314,6 +314,7 @@ namespace geodetection
 			ScalarField& curvatures, ScalarField& densities)
 
 	{
+		curvatures.NaNtoValue(0.0);
 		curvatures.normalizeMinMax();
 		densities.normalizeMinMax();
 
@@ -377,10 +378,13 @@ namespace geodetection
 			sortOctreeQuery(indices, sqdistances);
 
 			//Get neighborhood that is moved to the origin for accurate normal estimation, sorted by proximity.
-			pcl::PointCloud<pcl::PointXYZ> neighborhood = getSubcloudAtOrigin(cloud, indices, c_point); //(indices are no longer needed)
+			pcl::PointCloud<pcl::PointXYZ> neighborhood = getSubcloudAtOrigin(cloud, indices, c_point);
+			
+			//Transfer indices for new neighboorhood subcloud. 
+			std::iota(indices.begin(), indices.end(), 0);
 
 			//Compute normal for the largest neighborhood.
-			computeNormal(neighborhood, c_point, c_normal, view);
+			computeNormal(neighborhood, indices, c_point, c_normal, view);
 			all_curvatures[id_max][i] = c_normal.curvature;
 
 			//Iterate through smaller neighborhoods (descending) and compute normals as a subset of neighborhood
@@ -391,7 +395,7 @@ namespace geodetection
 				std::vector<int> subindices = getProximalIndices(indices, sqdistances, sqscales[id]);
 
 				//compute normal for subset of neighborhood
-				computeNormal(neighborhood, subindices, c_point, c_normal, view);
+				computeNormal(*cloud, subindices, c_point, c_normal, view);
 				all_curvatures[id][i] = c_normal.curvature;
 			}
 			GD_PROGRESS_INCREMENT(progress_bar);

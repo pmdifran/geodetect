@@ -32,8 +32,6 @@ namespace geodetection
 
 		for (int i = 0; i < weights.size(); i++)
 		{
-			curvatures_multiscale[i].NaNtoMax(); //set NaN curvatures to max value.
-
 			//Calculate TREEZ index
 			getVegetationScore(vegetation_scores, weights[i], curvatures_multiscale[i], densities_multiscale[i]);
 		}
