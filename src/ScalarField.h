@@ -71,13 +71,7 @@ namespace geodetection
 		//Modify scalar field data with min-max normalization
 		void normalizeMinMax();
 
-		//Make all NaN data equal to the max
-		void NaNtoMax();
-
-		//Make all NaN data equal to the min
-		void NaNtoMin();
-
-		//Make all NaN data equal to zero
-		void NaNtoZero();
+		//Make all NaN data equal to a value
+		void NaNtoValue(float value);
 	};
 }
