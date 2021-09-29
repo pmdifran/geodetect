@@ -1,6 +1,7 @@
 //#define LOG_ALL_OFF
 //#define PROGRESS_OFF
 
+
 //Console functionality 
 #include "log.h"
 #include "progressbar.h"

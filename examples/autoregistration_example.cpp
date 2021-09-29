@@ -17,14 +17,15 @@
 //File handling 
 #include <filesystem>
 
-int main(int argc, char* argv[])
-{
 #define SUBSAMPLE_DISTANCE 0.1f
 #define NORMAL_RADIUS 1.0f
 
+int main(int argc, char* argv[])
+{
 	//Initialize logger and start timer.
-	GeoDetection::Log::Init();
-	auto start = GeoDetection::Time::getStart();
+	geodetection::Log::Init();
+	SetConsoleOutputCP(CP_UTF8); //so we can print unicode (needed for progress bars)	
+	geodetection::Timer timer;
 
 	// COMMAND LINE INTERFACING.....................................................................................
 	if (argc == 1) { GD_ERROR("No arguments passed. Use argument -h or --help for instructions."); return 0; }
@@ -127,5 +128,5 @@ int main(int argc, char* argv[])
 		source.writeAsASCII(out_filename);
 	}
 
-	GD_WARN("Total time: {0} s \n", (GeoDetection::Time::getDuration(start) / 1000));
+	GD_WARN("Total time: {0} s \n", timer.getDuration());
 }
