@@ -398,7 +398,7 @@ namespace geodetection
 				computeNormal(*cloud, subindices, c_point, c_normal, view);
 				all_curvatures[id][i] = c_normal.curvature;
 			}
-			GD_PROGRESS_INCREMENT(progress_bar);
+			GD_PROGRESS_INCREMENT(progress_bar, cloud->size());
 		}
 
 		GD_CORE_WARN("--> Multiscale normale-rate-of-change curvature calculation time: {0} ms\n", timer.getDuration());
@@ -460,7 +460,7 @@ namespace geodetection
 				//get density from number of points in the new scale neighborhood
 				all_densities[id][i] = (iter_end - sqdistances.begin()) / volumes[id];
 			}
-			GD_PROGRESS_INCREMENT(progress_bar);
+			GD_PROGRESS_INCREMENT(progress_bar, cloud->size());
 		}
 
 		GD_CORE_WARN("--> Multiscale volumetric density calculation time: {0} ms\n", timer.getDuration());
@@ -516,7 +516,7 @@ namespace geodetection
 
 				field_multiscale_averaged[sort_map[j]][i] = fieldSubsetAverage(field, indices.begin(), id_iter_end);
 			}
-			GD_PROGRESS_INCREMENT(progress_bar);
+			GD_PROGRESS_INCREMENT(progress_bar, cloud->size());
 		}
 
 		return field_multiscale_averaged;
