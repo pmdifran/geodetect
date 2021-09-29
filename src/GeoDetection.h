@@ -107,6 +107,7 @@ namespace geodetection
 
 		//Cloud properties
 		inline Eigen::Matrix4d transformation() const { return m_transformation; }
+		inline void printTransformation() const { std::cout << std::setprecision(16) << std::fixed << m_transformation << '\n' << std::endl; }
 		inline std::array<float, 3> view() const { return m_view; }
 
 		inline double resolution() const { return m_resolution_avg; }
@@ -382,7 +383,7 @@ namespace geodetection
 		* @param keypoints: shared pointer to a pcl point cloud containing keypoints, at which fpf histograms are calculated for.
 		* @return shared pointer to point cloud with fast point feature histograms.
 		*/
-		pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints);
+		pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints, float radius);
 
 /***********************************************************************************************************************************************//**
 *  ASCII Output
