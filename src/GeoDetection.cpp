@@ -51,7 +51,7 @@ namespace geodetection
 	void
 		Cloud::buildOctree(float resolution)
 	{
-		GD_CORE_TRACE(":: Constructing octrees");
+		GD_CORE_TRACE(":: Constructing Octree with resolution: {0}", resolution);
 		Timer timer;
 
 		m_octree.deleteTree(); //delete previous tree (Cloud only stores one octree at a time)
@@ -67,7 +67,8 @@ namespace geodetection
 	void
 		Cloud::buildOctreeDynamic(float resolution, int max_leaf_population)
 	{
-		GD_CORE_TRACE(":: Constructing octrees");
+		GD_CORE_TRACE(":: Constructing Octree with:    resolution: {0}  |  max leaf population: {1} ", 
+			resolution, max_leaf_population );
 		Timer timer;
 
 		m_octree.deleteTree(); //delete previous tree (Cloud only stores one octree at a time)
@@ -115,7 +116,7 @@ namespace geodetection
 			resolution[i] = local_resolution;
 			avg_resolution += local_resolution; //thread-safe with omp reduction
 
-			GD_PROGRESS_INCREMENT(progress_bar);
+			GD_PROGRESS_INCREMENT(progress_bar, m_cloud->size());
 		}
 
 		avg_resolution = avg_resolution / (double)m_cloud->size();
@@ -279,7 +280,7 @@ namespace geodetection
 		for (int i = 0; i < m_cloud->size(); i++)
 		{
 			computeNormalAtOriginRadiusSearch(*this, normals->points[i], radius, i,  m_view);
-			GD_PROGRESS_INCREMENT(progress_bar);
+			GD_PROGRESS_INCREMENT(progress_bar, m_cloud->size());
 		}
 
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n", timer.getDuration());
@@ -308,7 +309,7 @@ namespace geodetection
 		for (int i = 0; i < m_cloud->points.size(); i++)
 		{
 			computeNormalAtOriginKSearch(*this, normals->points[i], k, i, m_view);
-			GD_PROGRESS_INCREMENT(progress_bar);
+			GD_PROGRESS_INCREMENT(progress_bar, m_cloud->size());
 		}
 
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n", timer.getDuration());
@@ -389,7 +390,6 @@ namespace geodetection
 		GD_CORE_TRACE(":: Updating transformation...");
 		Eigen::Matrix4d transformation_d = transformation.cast<double>(); //using doubles for more accurate arithmitic
 		m_transformation = transformation_d * m_transformation; //eigen matrix multiplication
-		m_transformation = transformation_d * m_transformation; //eigen matrix multiplication
 	}
 
 	//Transforms m_cloud and updates m_transformation
@@ -438,7 +438,7 @@ namespace geodetection
 	//Must enable AVX in Properties --> C/C++ --> Enable Enhanced Instruction Set --> /arch:AVX. 
 	//Otherwise you get heap corruption when it computes.
 	pcl::PointCloud<pcl::FPFHSignature33>::Ptr
-		Cloud::getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints)
+		Cloud::getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints, float radius)
 	{
 		GD_CORE_TRACE("Computing fast point feature histograms...");
 		Timer timer;
