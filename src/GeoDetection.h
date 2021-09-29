@@ -357,7 +357,7 @@ namespace geodetection
 		void averageAllScalarFields(float radius);
 
 /***********************************************************************************************************************************************//**
-*  Registration
+*  Transformations
 ***************************************************************************************************************************************************/
 		/**
 		* Updates the geodetection::Cloud <m_transformation> matrix, without translating the cloud.
@@ -372,6 +372,9 @@ namespace geodetection
 		*/
 		void applyTransformation(const Eigen::Matrix4f& transformation);
 
+/***********************************************************************************************************************************************//**
+*  Keypoints and fast point feature histograms
+***************************************************************************************************************************************************/
 		/**
 		* Computes intrinsic shape signature keypoints.
 		* @return shared pointer to a pcl point cloud of ISS keypoints.
@@ -384,6 +387,16 @@ namespace geodetection
 		* @return shared pointer to point cloud with fast point feature histograms.
 		*/
 		pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints, float radius);
+
+		/**
+		* Computes persistant fast point feature histograms which are unique at all scales.
+		* @param[out] keypoints: Shared pointer to a pcl point cloud containing keypoints. *Mutates.* Non-unique keypoints are removed.
+		* @param scales[in]: scales at which to compute the features, and test their uniqueness to the mean.
+		* @return: std::pair. (First) Fast point feature histogram for the keypoints, which are unique at all scales.
+		* (Second) Unique keypoints, corresonding to the fpfh's.
+		*/
+		std::pair<pcl::PointCloud<pcl::FPFHSignature33>, pcl::PointCloud<pcl::PointXYZ>::Ptr> getFPFHMultiscalePersistance
+		(const pcl::PointCloud<pcl::PointXYZ>::Ptr const keypoints, std::vector<float>& scales);
 
 /***********************************************************************************************************************************************//**
 *  ASCII Output
