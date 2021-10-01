@@ -395,7 +395,7 @@ namespace geodetection
 		* @return: std::pair. (First) Fast point feature histogram for the keypoints, which are unique at all scales.
 		* (Second) Unique keypoints, corresonding to the fpfh's.
 		*/
-		std::pair<pcl::PointCloud<pcl::FPFHSignature33>, pcl::PointCloud<pcl::PointXYZ>::Ptr> getFPFHMultiscalePersistance
+		std::pair<pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> getFPFHMultiscalePersistance
 		(const pcl::PointCloud<pcl::PointXYZ>::Ptr const keypoints, std::vector<float>& scales);
 
 /***********************************************************************************************************************************************//**
