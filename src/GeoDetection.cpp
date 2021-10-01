@@ -419,9 +419,9 @@ namespace geodetection
 		iss_detector.setSearchMethod(m_kdtree);
 
 		//Revisit parameters. Automatic selection using scale, subsample scale?
-		iss_detector.setSalientRadius(0.5);
-		iss_detector.setNonMaxRadius(1.5);
-		iss_detector.setMinNeighbors(5);
+		iss_detector.setSalientRadius(6.0f);
+		iss_detector.setNonMaxRadius(4.0f);
+		iss_detector.setMinNeighbors(10);
 
 		iss_detector.setInputCloud(m_cloud);
 
@@ -430,6 +430,7 @@ namespace geodetection
 		iss_detector.setNumberOfThreads(omp_get_num_procs());
 		iss_detector.compute(*keypoints);
 
+		GD_CORE_INFO("Number of Keypoints detected: {0}", keypoints->size());
 		GD_CORE_WARN("--> Keypoint calculation time: {0} ms\n", timer.getDuration());
 
 		return keypoints;
@@ -452,7 +453,7 @@ namespace geodetection
 		computefpfh.setInputNormals(m_normals);
 		computefpfh.setSearchSurface(m_cloud);
 		computefpfh.setSearchMethod(m_kdtree);
-		computefpfh.setRadiusSearch(3.0);
+		computefpfh.setRadiusSearch(radius);
 
 		computefpfh.compute(*fpfh);
 
@@ -461,7 +462,8 @@ namespace geodetection
 		return fpfh;
 	}
 
-	std::pair<pcl::PointCloud<pcl::FPFHSignature33>, pcl::PointCloud<pcl::PointXYZ>::Ptr>
+	//@TODO: Troubleshoot method. Segfault corrected, but it still does not work as intended.
+	std::pair<pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr>
 		Cloud::getFPFHMultiscalePersistance(const pcl::PointCloud<pcl::PointXYZ>::Ptr const keypoints, std::vector<float>& scales)
 	{
 		GD_CORE_TRACE("Computing multiscale persistant fast point feature histograms...");
@@ -469,11 +471,11 @@ namespace geodetection
 		GD_CORE_TRACE(":: Keypoints: {0}", keypoints->size());
 
 		//set up fpfh estimation object
-		pcl::FPFHEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33>::Ptr
+		pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33>::Ptr
 			fpfh_estimator(new pcl::FPFHEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33>);;
-		fpfh_estimator->setInputCloud(m_cloud);
-		fpfh_estimator->setInputNormals(m_normals);
-		fpfh_estimator->setSearchMethod(m_kdtree);
+		fpfh_estimator->setInputCloud(keypoints);
+		//fpfh_estimator->setSearchSurface(m_cloud);
+		fpfh_estimator->setInputNormals(m_normals);		
 
 		//set up feature persistance calculation object (uses the fpfh estimation object).
 		pcl::MultiscaleFeaturePersistence <pcl::PointXYZ, pcl::FPFHSignature33> feature_persistance;
@@ -484,11 +486,11 @@ namespace geodetection
 
 		// Determine persistant (unique) features, (indices subset of keypoints).
 		// A feature is considered persistent if it is 'unique' at all the scales
-		pcl::PointCloud<pcl::FPFHSignature33> output_features;
+		pcl::PointCloud<pcl::FPFHSignature33>::Ptr output_features(new pcl::PointCloud<pcl::FPFHSignature33>);
 		auto unique_keypoint_indices = pcl::make_shared<pcl::Indices>();
-		feature_persistance.determinePersistentFeatures(output_features, unique_keypoint_indices);
+		feature_persistance.determinePersistentFeatures(*output_features, unique_keypoint_indices);
 
-		GD_CORE_INFO("Persistent features size: {0]", output_features.size());
+		GD_CORE_INFO("Persistent features size: {0}", output_features->size());
 		GD_CORE_INFO("DEBUG Indices size: {0}", unique_keypoint_indices->size());
 		pcl::PointCloud <pcl::PointXYZ>::Ptr keypoints_unique(new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -499,8 +501,8 @@ namespace geodetection
 		extract_indices_filter.filter(*keypoints_unique);
 
 		//Create output pair and return
-		std::pair<pcl::PointCloud<pcl::FPFHSignature33>, pcl::PointCloud <pcl::PointXYZ>::Ptr> output_pair;
-		output_pair = std::make_pair(std::move(output_features), std::move(unique_keypoint_indices));
+		std::pair < pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud <pcl::PointXYZ>::Ptr > output_pair;
+		output_pair = std::make_pair(std::move(output_features), std::move(keypoints_unique));
 
 		return output_pair;
 	}
