@@ -19,6 +19,7 @@ namespace geodetection
 {
 	//Transforms source cloud using a global registration determined with keypoint fast point feature histogram correspondences.
 	//Default norml radius = 1.0. Not used if the cloud already has normals.
+	//@TODO: Break this function up into smaller more readable functions.
 	Eigen::Matrix4f getGlobalRegistration(geodetection::Cloud& reference,
 		geodetection::Cloud& source, float radius /* = 1.0 */)
 	{
@@ -34,12 +35,15 @@ namespace geodetection
 		//Compute ISS keypoints
 		pcl::PointCloud<pcl::PointXYZ>::Ptr ref_keypoints = reference.getKeyPoints();
 		pcl::PointCloud<pcl::PointXYZ>::Ptr src_keypoints = source.getKeyPoints();
+		
+		//auto ref_keypoints = reference.cloud();
+		//auto src_keypoints = source.cloud();
 
-		//Compute fast point feature histograms at keypoints
-		pcl::PointCloud<pcl::FPFHSignature33>::Ptr ref_fpfh = reference.getFPFH(ref_keypoints);
-		pcl::PointCloud<pcl::FPFHSignature33>::Ptr src_fpfh = source.getFPFH(src_keypoints);
+		//Compute multiscale persistant fast point feature histograms, at the keypoints. (Returned as shared_pointers)
+		auto ref_fpfh = reference.getFPFH(ref_keypoints, 10.0f);
+		auto src_fpfh = source.getFPFH(src_keypoints, 10.0f);
 
-		//Compute keypoint correspondences
+		//Compute feature correspondences
 		pcl::CorrespondencesPtr correspondences(new pcl::Correspondences);
 
 		pcl::registration::CorrespondenceEstimation<pcl::FPFHSignature33, pcl::FPFHSignature33> estimator;
@@ -56,8 +60,8 @@ namespace geodetection
 		ransac_rejector.setInputTarget(ref_keypoints);
 		ransac_rejector.setInputSource(src_keypoints);
 		ransac_rejector.setMaximumIterations(1000000);
-		ransac_rejector.setRefineModel(true);
-		ransac_rejector.setInlierThreshold(0.5);
+		ransac_rejector.setRefineModel(false);
+		ransac_rejector.setInlierThreshold(5.0f);
 
 		ransac_rejector.getRemainingCorrespondences(*correspondences, *remaining_correspondences);
 		Eigen::Matrix4f transformation = ransac_rejector.getBestTransformation();
@@ -68,10 +72,7 @@ namespace geodetection
 			"Transformation: \n" << transformation << '\n' << std::endl;
 
 		//Compute the MSE of the global registration
-		pcl::transformPointCloud(*src_keypoints, *src_keypoints, transformation);
-
 		double mse = 0;
-
 #pragma omp parallel for reduction(+: mse)
 		for (int64_t i = 0; i < remaining_correspondences->size(); i++)
 		{
@@ -88,7 +89,7 @@ namespace geodetection
 		GD_TRACE("NOTE: MSE may be higher due to a subsampled input\n");
 
 		//Apply the transformation to the source geodetection object.
-		source.applyTransformation(transformation);
+		source.applyTransformation(transformation.cast<float>());
 		return transformation;
 	}
 
@@ -96,77 +97,80 @@ namespace geodetection
 	//Default norml radius = 1.0. Not used if the cloud already has normals.
 	//This overload uses RegistrationCloud: which preserves the keypoints and fast point feature histograms,
 	//--> so that they are not recalculated in a batched registration pipeline. 
-	Eigen::Matrix4f getGlobalRegistration(geodetection::RegistrationCloud& reference,
-		geodetection::Cloud& source, float radius /* = 1.0 */)
-	{
-		GD_TITLE("Auto Registration --Global");
-		Timer timer;
+	//Eigen::Matrix4f getGlobalRegistration(geodetection::RegistrationCloud& reference,
+	//	geodetection::Cloud& source, float radius /* = 1.0 */)
+	//{
+	//	GD_TITLE("Auto Registration --Global");
+	//	Timer timer;
 
-		if (!reference.hasCloud()) { GD_ERROR("Reference does not have a cloud"); }
-		if (!reference.hasNormals()) { reference.updateNormalsRadiusSearch(radius); };
-		if (!reference.hasKeypoints()) { reference.updateKeypoints(); }
-		if (!reference.hasFPFH()) { reference.updateFPFH(); }
+	//	if (!reference.hasCloud()) { GD_ERROR("Reference does not have a cloud"); }
+	//	if (!reference.hasNormals()) { reference.updateNormalsRadiusSearch(radius); };
+	//	if (!reference.hasKeypoints()) { reference.updateKeypoints(); }
+	//	if (!reference.hasFPFH()) { reference.updateFPFH(); }
 
-		if (!source.hasCloud()) { GD_ERROR("Source does not have a cloud"); }
-		if (!source.hasNormals()) { source.updateNormalsRadiusSearch(radius); }
+	//	if (!source.hasCloud()) { GD_ERROR("Source does not have a cloud"); }
+	//	if (!source.hasNormals()) { source.updateNormalsRadiusSearch(radius); }
 
-		//Get pointers to reference global registration data
-		auto ref_keypoints = reference.keypoints();
-		auto ref_fpfh = reference.fpfh();
+	//	//Get pointers to reference global registration data
+	//	auto ref_keypoints = reference.keypoints();
+	//	auto ref_fpfh = reference.fpfh();
 
-		//Compute source registration data
-		pcl::PointCloud<pcl::PointXYZ>::Ptr src_keypoints = source.getKeyPoints();
-		pcl::PointCloud<pcl::FPFHSignature33>::Ptr src_fpfh = source.getFPFH(src_keypoints);
+	//	//Compute source registration data
+	//	pcl::PointCloud<pcl::PointXYZ>::Ptr src_keypoints = source.getKeyPoints();
+	//	pcl::PointCloud<pcl::FPFHSignature33>::Ptr src_fpfh = source.getFPFH(src_keypoints);
 
-		//Compute keypoint correspondences
-		pcl::CorrespondencesPtr correspondences(new pcl::Correspondences);
+	//	//Compute keypoint correspondences
+	//	pcl::CorrespondencesPtr correspondences(new pcl::Correspondences);
 
-		pcl::registration::CorrespondenceEstimation<pcl::FPFHSignature33, pcl::FPFHSignature33> estimator;
-		estimator.setInputTarget(ref_fpfh);
-		estimator.setInputSource(src_fpfh);
-		estimator.determineCorrespondences(*correspondences);
+	//	pcl::registration::CorrespondenceEstimation<pcl::FPFHSignature33, pcl::FPFHSignature33> estimator;
+	//	estimator.setInputTarget(ref_fpfh);
+	//	estimator.setInputSource(src_fpfh);
+	//	estimator.determineCorrespondences(*correspondences);
 
-		GD_TRACE(":: Number of initial fpfh correspondences: {0}", correspondences->size());
+	//	GD_TRACE(":: Number of initial fpfh correspondences: {0}", correspondences->size());
 
-		//Random Sample Consensus (RANSAC) -based correspondence rejection. 
-		pcl::registration::CorrespondenceRejectorSampleConsensus<pcl::PointXYZ> ransac_rejector;
-		pcl::CorrespondencesPtr remaining_correspondences(new pcl::Correspondences);
+	//	//Random Sample Consensus (RANSAC) -based correspondence rejection. 
+	//	pcl::registration::CorrespondenceRejectorSampleConsensus<pcl::PointXYZ> ransac_rejector;
+	//	pcl::CorrespondencesPtr remaining_correspondences(new pcl::Correspondences);
 
-		ransac_rejector.setInputTarget(ref_keypoints);
-		ransac_rejector.setInputSource(src_keypoints);
-		ransac_rejector.setMaximumIterations(1000000);
-		ransac_rejector.setRefineModel(true);
-		ransac_rejector.setInlierThreshold(0.5);
+	//	ransac_rejector.setInputTarget(ref_keypoints);
+	//	ransac_rejector.setInputSource(src_keypoints);
+	//	ransac_rejector.setMaximumIterations(1000000);
+	//	ransac_rejector.setRefineModel(true);
+	//	ransac_rejector.setInlierThreshold(0.5);
 
-		ransac_rejector.getRemainingCorrespondences(*correspondences, *remaining_correspondences);
-		Eigen::Matrix4f transformation = ransac_rejector.getBestTransformation();
+	//	ransac_rejector.getRemainingCorrespondences(*correspondences, *remaining_correspondences);
+	//	Eigen::Matrix4f transformation = ransac_rejector.getBestTransformation();
 
-		GD_TRACE(":: Number of inlier fpfh correpondences: {0}\n", correspondences->size());
-		GD_WARN("--> Transformation computed in: {0} ms: \n", timer.getDuration());
-		std::cout << std::setprecision(16) << std::fixed <<
-			"Transformation: \n" << transformation << '\n' << std::endl;
+	//	GD_TRACE(":: Number of inlier fpfh correpondences: {0}\n", correspondences->size());
+	//	GD_WARN("--> Transformation computed in: {0} ms: \n", timer.getDuration());
+	//	std::cout << std::setprecision(16) << std::fixed <<
+	//		"Transformation: \n" << transformation << '\n' << std::endl;
 
-		//Compute the MSE of the global registration
-		pcl::transformPointCloud(*src_keypoints, *src_keypoints, transformation);
+	//	//Compute the MSE of the global registration
+	//	pcl::transformPointCloud(*src_keypoints, *src_keypoints, transformation);
 
-		double mse = 0;
-		for (const auto& corr : *remaining_correspondences)
-		{
-			float distance = pcl::euclideanDistance(src_keypoints->at(corr.index_query),
-				ref_keypoints->at(corr.index_match));
+	//	//Compute the MSE of the global registration
+	//	pcl::transformPointCloud(*src_keypoints, *src_keypoints, transformation);
 
-			mse += distance;
-		}
+	//	double mse = 0;
+	//	for (const auto& corr : *remaining_correspondences)
+	//	{
+	//		float distance = pcl::euclideanDistance(src_keypoints->at(corr.index_query),
+	//			ref_keypoints->at(corr.index_match));
 
-		mse /= (double)(remaining_correspondences->size());
+	//		mse += distance;
+	//	}
 
-		GD_WARN("--> Mean square error: {0}", mse);
-		GD_TRACE("NOTE: MSE may be higher due to a subsample input\n");
+	//	mse /= (double)(remaining_correspondences->size());
 
-		//Apply the transformation to the source geodetection object.
-		source.applyTransformation(transformation);
-		return transformation;
-	}
+	//	GD_WARN("--> Mean square error: {0}", mse);
+	//	GD_TRACE("NOTE: MSE may be higher due to a subsample input\n");
+
+	//	//Apply the transformation to the source geodetection object.
+	//	source.applyTransformation(transformation);
+	//	return transformation;
+	//}
 
 	//Transforms source cloud using a fine generalized ICP registration (i.e. plane-to-plane).
 	Eigen::Matrix4f getICPRegistration(geodetection::Cloud& reference,
