@@ -2,29 +2,33 @@
 Tools for processing and extracting information from point clouds of natural environments. Under development, tested for Windows. 
 
 ### Current features:
-- Macro-ized logging using spdlog.
-- Fast c-style ascii import of LiDAR.
-- Command line interfacing for single and batch processing, using CLI11.
+- Macro-based logging & progress bars
+- Fast c-style ascii import of LiDAR XYZ & Scalar Fields.
+- Command line interfacing for single and batch processing.
 
 - GeoDetection Cloud objects
-  - A wrapper around the Point Cloud Library cloud: pcl::PointCloud<pcl::PointXYZ>
   - Contains core tools for point cloud operations
-  - Provides storage for frequently used pcl types (i.e KdTrees, normals)
-  - CloudCompare-esque scalar fields
+  - Provides storage for frequently used pcl types (i.e KdTree, Octree, normals)
+  - Storage of arbitrary number of scalar fields, for feature calculation etc. 
 
-- Current GeoDetection modules:
-  - Auto Registration (global and icp)
-  - Vegetation segmentation
-  - Mask classification
+### Current GeoDetection modules:**
+**Auto Registration (global feature matching and ICP)
+<img src="https://user-images.githubusercontent.com/64287741/135674654-be7a1585-3409-4641-b595-2a7715a090cc.PNG" width="1000" height="275">
+
+**Vegetation Segmentation (multiscale feature calculation)**
+<img src="https://user-images.githubusercontent.com/64287741/135675257-96e6b762-a54b-4658-861a-d77bd897a8e2.PNG" width="1000" height="500">
+
+**Point cloud classification using masks**
 
 ### To be added...
 -  _IO_: Implementing PDAL for importing .las and .laz files.
--  _IO_: Implementing RIEGL laser intruments' SDK for .rdb IO
--  _Method_: User-input with viz (i.e. selection camera position for orienting normals [m_view])
--  _Method_: Segmentation (supervoxels; region growing; object-based segmentation)
+-  _IO_: Implementing RIEGL laser intruments' SDK for .rdb IO.
 
--  _OVERALL_: Implementation of CUDA-PCL for rapid real-time processing
--  Ensuring this is cross platform at some point
+-  _Module_: PCL visualization (VTK) that supports user input (i.e. selection camera position for orienting normals, interactive auto registration).
+-  _Module_: Segmentation (supervoxels; region growing; object-based segmentation).
+
+-  _OVERALL_: CUDA for point-normal and volumetric feature calculation.
+-  _OVERALL_: Cross platform testing.
 
 ## Windows Build
 
@@ -47,7 +51,7 @@ $ git clone --recurse-submodules -j8 https://github.com/pmdifran/GeoDetection.gi
 
 5. Launch the installer, and install it into your folder (e.g. C:/Dev/PCL<version>). Copy the .pdb files into PCL/bin.
 
-6. Download PDAL using conda package manager:\
+6. *Not required yet* Download PDAL using conda package manager:\
 --> Create dependencies directory with `pdal` folder (e.g. C:/Dev/dependencies/pdal)\
 -->install pdal in this directory: `conda create --yes --channel conda-forge pdal -p C:/Dev/dependencies/pdal`
 
