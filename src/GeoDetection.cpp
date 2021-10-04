@@ -419,14 +419,14 @@ namespace geodetection
 		iss_detector.setSearchMethod(m_kdtree);
 
 		//Revisit parameters. Automatic selection using scale, subsample scale?
-		iss_detector.setSalientRadius(6.0f);
-		iss_detector.setNonMaxRadius(4.0f);
+		iss_detector.setSalientRadius(10.0f);
+		iss_detector.setNonMaxRadius(6.0f);
 		iss_detector.setMinNeighbors(10);
 
 		iss_detector.setInputCloud(m_cloud);
 
-		iss_detector.setThreshold21(0.975);
-		iss_detector.setThreshold32(0.975);
+		iss_detector.setThreshold21(0.999);
+		iss_detector.setThreshold32(0.999);
 		iss_detector.setNumberOfThreads(omp_get_num_procs());
 		iss_detector.compute(*keypoints);
 

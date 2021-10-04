@@ -75,10 +75,6 @@ namespace geodetection
 			
 			//Build the KdTree. GeoDetection Clouds use both KdTrees and Octrees. 
 			buildKdTree();
-
-			//Use KdTree to estimate the mean resolution of the cloud
-			this->getResolution();
-			buildOctree(this->getOptimalOctreeResolution());
 			
 			GD_CORE_INFO("--> GeoDetection Cloud Created\n");
 		}
