@@ -6,6 +6,10 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/common/impl/transforms.hpp> //for transformation
 
+#include <pcl/keypoints/iss_3d.h>
+#include <pcl/features/fpfh_omp.h>
+#include <pcl/features/multiscale_feature_persistence.h>
+
 namespace geodetection
 {
 /***********************************************************************************************************************************************//**
@@ -148,6 +152,115 @@ namespace geodetection
 
 		//Otherwise compute normal, first moving neighborhood to origin.
 		computeNormalAtOrigin(geodetect, normal, indices, view);
+	}
+
+/***********************************************************************************************************************************************//**
+*  Key points and Fast Point Feature Histograms
+***************************************************************************************************************************************************/
+//Calculates Intrinsic Shape Signature keypoints (uses OpenMP).
+	pcl::PointCloud<pcl::PointXYZ>::Ptr getISSKeyPoints(float salient_radius, float non_max_radius, int min_neighbors,
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, 
+		pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+		float max_eigenratio21 /* = 0.975 */, float max_eigenratio32 /* = 0.975 */)
+	{
+		GD_CORE_TRACE(":: Computing intrinsic shape signature keypoints...");
+		Timer timer;
+
+		pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints(new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::ISSKeypoint3D<pcl::PointXYZ, pcl::PointXYZ> iss_detector;
+
+		iss_detector.setSearchMethod(search_surface_tree);
+
+		iss_detector.setSalientRadius(salient_radius); // neighborhood at which we determine the largest spatial variations
+		iss_detector.setNonMaxRadius(non_max_radius); // radius for the application of the non maxima supression algorithm.
+		iss_detector.setMinNeighbors(min_neighbors);
+		
+
+		iss_detector.setInputCloud(cloud);
+		iss_detector.setSearchSurface(search_surface);
+
+		// constraint of eigenvalue ratios, to exclude frames of ambiguous axex at locally symmetric points.
+		iss_detector.setThreshold21(max_eigenratio21); // (eigen2 / eigen1) < threshold; and similar below.
+		iss_detector.setThreshold32(max_eigenratio32);
+		iss_detector.setNumberOfThreads(omp_get_num_procs());
+		iss_detector.compute(*keypoints);
+
+		GD_CORE_INFO("Number of Keypoints detected: {0}", keypoints->size());
+		GD_CORE_WARN("--> Keypoint calculation time: {0} ms\n", timer.getDuration());
+
+		return keypoints;
+	}
+
+	pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints, float radius,
+		pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+		pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals)
+	{
+		GD_CORE_TRACE("Computing fast point feature histograms...");
+		assert(search_surface->size() == search_surface_normals->size());
+		Timer timer;
+
+		pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh(new pcl::PointCloud<pcl::FPFHSignature33>);
+		pcl::FPFHEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> computefpfh;
+
+		computefpfh.setNumberOfThreads(omp_get_num_procs());
+		computefpfh.setInputCloud(keypoints);
+		computefpfh.setSearchSurface(search_surface);
+		computefpfh.setInputNormals(search_surface_normals);
+		computefpfh.setSearchMethod(search_surface_tree);
+		computefpfh.setRadiusSearch(radius);
+
+		computefpfh.compute(*fpfh);
+
+		GD_CORE_WARN("--> FPFH calculation time: {0} ms\n", timer.getDuration());
+
+		return fpfh;
+	}
+
+	std::pair<pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> 
+		getFPFHMultiscalePersistance (const pcl::PointCloud<pcl::PointXYZ>::Ptr const keypoints, std::vector<float>& scales, float alpha,
+			pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+				pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals)
+	{
+		GD_CORE_TRACE("Computing multiscale persistant fast point feature histograms...");
+		Timer timer;
+		GD_CORE_TRACE(":: Keypoints: {0}", keypoints->size());
+
+		//set up fpfh estimation object
+		pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33>::Ptr
+			fpfh_estimator(new pcl::FPFHEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33>);;
+		fpfh_estimator->setInputCloud(keypoints);
+		fpfh_estimator->setSearchSurface(search_surface);
+		fpfh_estimator->setSearchMethod(search_surface_tree);
+		fpfh_estimator->setInputNormals(search_surface_normals);
+
+		//set up feature persistance calculation object (uses the fpfh estimation object).
+		pcl::MultiscaleFeaturePersistence <pcl::PointXYZ, pcl::FPFHSignature33> feature_persistance;
+		feature_persistance.setScalesVector(scales);
+		feature_persistance.setAlpha(alpha); //factor for selecting unique points outside of (mean) +/- Alpha * std-deviation. Parameter from examples.
+		feature_persistance.setFeatureEstimator(fpfh_estimator);
+		feature_persistance.setDistanceMetric(pcl::CS); //Norm used to compute distance of feature histograms from the mean histogram. 
+
+		// Determine persistant (unique) features, (indices subset of keypoints).
+		// A feature is considered persistent if it is 'unique' at all the scales
+		pcl::PointCloud<pcl::FPFHSignature33>::Ptr output_features(new pcl::PointCloud<pcl::FPFHSignature33>);
+		auto unique_keypoint_indices = pcl::make_shared<pcl::Indices>();
+		feature_persistance.determinePersistentFeatures(*output_features, unique_keypoint_indices);
+
+		GD_CORE_INFO("Persistent features size: {0}", output_features->size());
+		GD_CORE_INFO("DEBUG Indices size: {0}", unique_keypoint_indices->size());
+		pcl::PointCloud <pcl::PointXYZ>::Ptr keypoints_unique(new pcl::PointCloud<pcl::PointXYZ>);
+
+		//Remove non-unique keypoints and store into new cloud
+		pcl::ExtractIndices<pcl::PointXYZ> extract_indices_filter;
+		extract_indices_filter.setInputCloud(keypoints);
+		extract_indices_filter.setIndices(unique_keypoint_indices);
+		extract_indices_filter.filter(*keypoints_unique);
+
+		//Create output pair and return
+		std::pair < pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud <pcl::PointXYZ>::Ptr > output_pair;
+		output_pair = std::make_pair(std::move(output_features), std::move(keypoints_unique));
+
+		return output_pair;
 	}
 
 /***********************************************************************************************************************************************//**

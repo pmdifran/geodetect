@@ -73,7 +73,7 @@ namespace geodetection
 			GD_CORE_TITLE("GeoDetection Cloud Construction");
 			GD_CORE_TRACE("Creating GeoDetection Cloud Object: '{0}' with {1} points", m_name, m_cloud->size());
 			
-			//Build the KdTree. GeoDetection Clouds use both KdTrees and Octrees. 
+			//Build the KdTree.
 			buildKdTree();
 			
 			GD_CORE_INFO("--> GeoDetection Cloud Created\n");
@@ -373,26 +373,121 @@ namespace geodetection
 ***************************************************************************************************************************************************/
 		/**
 		* Computes intrinsic shape signature keypoints.
+		* @param[in] salient radius: Spherical neighborhood (i.e. scale) at which we determine the largest point variations within.
+		* @paramin[in] non_max_radius: Radius for the application of the non maxima supression algorithm.
+		* @param[in] min_neighbors: The minimum number of neighbors that has to be found while applying the non maxima suppression algorithm
+		* @param[in] cloud: Point cloud (possible subsampled search_surface) used to compute the ISS keypoints.
+		* @param[in] search_surface: Point cloud used to compute the ISS signatures at salient_radius scales.
+		* @param[in] tree: Search tree corresponding to search_surface.
 		* @return shared pointer to a pcl point cloud of ISS keypoints.
 		*/
-		pcl::PointCloud<pcl::PointXYZ>::Ptr getKeyPoints();
+		virtual pcl::PointCloud<pcl::PointXYZ>::Ptr getISSKeyPoints(float salient_radius, float non_max_radius, int min_neighbors,
+			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface,
+			pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+			float max_eigenratio21 = 0.975f, float max_eigenratio32 = 0.975f)
+		{
+			assert(search_surface->size() == search_surface_tree->getInputCloud()->size());
+			assert(salient_radius > 0);
+			return getISSKeyPoints(salient_radius, non_max_radius, min_neighbors, cloud, search_surface, search_surface_tree, 
+										max_eigenratio21, max_eigenratio32);
+		}
+
+		/**
+		* Computes intrinsic shape signature keypoints. Uses member point cloud for search surface, tree, and normals.
+		* @param[in] cloud: subsampled cloud at which keypoint calculations are done for.
+		* @param[in] salient radius: Spherical neighborhood (i.e. scale) at which we determine the largest point variations within.
+		* @paramin[in] non_max_radius: Radius for the application of the non maxima supression algorithm.
+		* @param[in] min_neighbors: The minimum number of neighbors that has to be found while applying the non maxima suppression algorithm
+		* @return shared pointer to a pcl point cloud of ISS keypoints.
+		*/
+		virtual pcl::PointCloud<pcl::PointXYZ>::Ptr getISSKeyPoints(float salient_radius, float non_max_radius, int min_neighbors,
+			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+			float max_eigenratio21 = 0.975f, float max_eigenratio32 = 0.975f)
+		{
+			return this->getISSKeyPoints(salient_radius, non_max_radius, min_neighbors, cloud, m_cloud, m_kdtree, max_eigenratio21, max_eigenratio32);
+		}
+
+		/**
+		* Computes intrinsic shape signature keypoints. Uses member point cloud for keypoint calculations, search surface, tree, and normals.
+		* @param[in] salient radius: Spherical neighborhood (i.e. scale) at which we determine the largest point variations within.
+		* @paramin[in] non_max_radius: Radius for the application of the non maxima supression algorithm.
+		* @param[in] min_neighbors: The minimum number of neighbors that has to be found while applying the non maxima suppression algorithm
+		* @return shared pointer to a pcl point cloud of ISS keypoints.
+		*/
+		virtual pcl::PointCloud<pcl::PointXYZ>::Ptr getISSKeyPoints(float salient_radius, float non_max_radius, int min_neighbors,
+			float max_eigenratio21 = 0.975f, float max_eigenratio32 = 0.975f)
+		{
+			return this->getISSKeyPoints(salient_radius, non_max_radius, min_neighbors, m_cloud, m_cloud, m_kdtree, max_eigenratio21, max_eigenratio32);
+		}
 
 		/**
 		* Computes fast point feature histograms.
-		* @param keypoints: shared pointer to a pcl point cloud containing keypoints, at which fpf histograms are calculated for.
+		* @param keypoints: Shared pointer to a pcl point cloud containing keypoints, at which fpf histograms are calculated for.
+		* @param radius: Scale at to compute the histograms.
+		* @param search_surface: point cloud to use when computing histograms.
+		* @param search_surface_tree: kdtree for the search_surface.
+		* @param search_surface_normals: normals of search_surface point cloud (sizes must correspond)
 		* @return shared pointer to point cloud with fast point feature histograms.
 		*/
-		pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints, float radius);
+		virtual pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints, float radius,
+			pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+			pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals)
+		{
+			assert(search_surface->size() == search_surface_tree->getInputCloud()->size()
+					&& search_surface->size() == search_surface_normals->size());
+			assert(radius > 0);
+			return getFPFH(keypoints, radius, search_surface, search_surface_tree, search_surface_normals);
+		}
+
+		/**
+		* Computes fast point feature histograms. Uses member variables for cloud, search tree and normals.
+		* @param keypoints: Shared pointer to a pcl point cloud containing keypoints, at which fpf histograms are calculated for.
+		* @param radius: Scale at to compute the histograms.
+		* @return shared pointer to point cloud with fast point feature histograms.
+		*/
+		virtual pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints, float radius)
+		{
+			return this->getFPFH(keypoints, radius, m_cloud, m_kdtree, m_normals);
+		}
 
 		/**
 		* Computes persistant fast point feature histograms which are unique at all scales.
+		* Sizes of search surface, tree, and normals must be equal.
 		* @param[out] keypoints: Shared pointer to a pcl point cloud containing keypoints. *Mutates.* Non-unique keypoints are removed.
-		* @param scales[in]: scales at which to compute the features, and test their uniqueness to the mean.
+		* @param[in] scales: scales at which to compute the features, and test their uniqueness to the mean.
+		* @param[in] alpha: factor for selecting unique points outside of {mean +/- Alpha * std-deviation}. Exampes use 1.3.
+		* @param[in] search_surface: Cloud used to compute histograms, using neighbors.
+		* @param[in] search_surface_tree: Kdtree used to search the search surface.
+		* @param[in] search_surface_normals: Normals used to compute the histograms.
 		* @return: std::pair. (First) Fast point feature histogram for the keypoints, which are unique at all scales.
 		* (Second) Unique keypoints, corresonding to the fpfh's.
 		*/
-		std::pair<pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> getFPFHMultiscalePersistance
-		(const pcl::PointCloud<pcl::PointXYZ>::Ptr const keypoints, std::vector<float>& scales);
+		virtual std::pair<pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> getFPFHMultiscalePersistance
+		(const pcl::PointCloud<pcl::PointXYZ>::Ptr const keypoints, std::vector<float>& scales, float alpha,
+			pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+			pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals)
+		{
+			for (float x : scales) { assert(x > 0); }
+			assert(alpha > 0);
+			assert(search_surface->size() == search_surface_tree->getInputCloud()->size()
+				&& search_surface->size() == search_surface_normals->size());
+			assert(keypoints->size() <= search_surface->size());
+			return getFPFHMultiscalePersistance(keypoints, scales, alpha, search_surface, search_surface_tree, search_surface_normals);
+		}
+
+		/**
+		* Computes persistant fast point feature histograms which are unique at all scales. Uses member variables for search cloud, tree, and normals.
+		* @param[out] keypoints: Shared pointer to a pcl point cloud containing keypoints. *Mutates.* Non-unique keypoints are removed.
+		* @param[in] scales: scales at which to compute the features, and test their uniqueness to the mean.
+		* @param[in] alpha: factor for selecting unique points outside of {mean +/- Alpha * std-deviation}. Exampes use 1.3.
+		* @return: std::pair. (First) Fast point feature histogram for the keypoints, which are unique at all scales.
+		* (Second) Unique keypoints, corresonding to the fpfh's.
+		*/
+		virtual std::pair<pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> getFPFHMultiscalePersistance
+		(const pcl::PointCloud<pcl::PointXYZ>::Ptr const keypoints, std::vector<float>& scales, float alpha)
+		{
+			return this->getFPFHMultiscalePersistance(keypoints, scales, alpha, m_cloud, m_kdtree, m_normals);
+		}
 
 /***********************************************************************************************************************************************//**
 *  ASCII Output
