@@ -20,6 +20,21 @@ namespace geodetection
 	std::vector<size_t> sortIndicesAscending(const std::vector<T>& vec);
 
 	/**
+	* Determines the standard deviation of a vector.
+	* @param vec: Vector of arbitrary template type T.
+	* @return Standard deviation of the vector.
+	*/
+	double getStandardDeviation(const std::vector<float>& vec, double mean);
+
+	/**
+	* Determines smallest element which is not zero.
+	* @param vec: Vector of arbitrary template type T.
+	* @return Non zero minimum of the vector.
+	*/
+	template <typename T>
+	T getNonZeroMinimum(const std::vector<T>& vec);
+
+	/**
 	* Reorders a vector in place, given a mapping to the indices.
 	* @param[out] vec: Vector of arbitrary template type T. This vector is sorted in place.
 	* @param[out] sort_map: index vector of sorting indices. **This vector is also sorted in place.
