@@ -127,6 +127,8 @@ namespace geodetection
 
 			//Build the KdTree. geodetection Clouds use both KdTrees and Octrees. 
 			geodetect.buildKdTree();
+			geodetect.buildOctree();
+			geodetect.getResolution();
 
 			return geodetect;
 	}

@@ -274,9 +274,6 @@ namespace geodetection
 	{
 		GD_CORE_TRACE(":: Computing average normals with radius: {0} ...", scale);
 
-		//build optimal Octree for this operation
-		geodetect.buildOctreeDynamicOptimalParams(scale);
-
 		auto cloud = geodetect.cloud();
 		auto& octree = geodetect.octree();
 		auto normals = geodetect.normals();
@@ -333,9 +330,6 @@ namespace geodetection
 			pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints /* = nullptr */)
 	{
 		GD_CORE_TRACE(":: Computing average field with scale: {0}", scale);
-
-		//build optimal Octree for this operation
-		geodetect.buildOctreeDynamicOptimalParams(scale);
 
 		auto cloud = geodetect.cloud();
 		auto& octree = geodetect.octree();
@@ -394,9 +388,6 @@ namespace geodetection
 		getVolumetricDensities(Cloud& geodetect, float scale)
 	{
 		GD_CORE_TRACE(":: Getting volumetric densities at scale: {0} ...\n", scale);
-
-		//build optimal Octree for this operation
-		geodetect.buildOctreeDynamicOptimalParams(scale);
 
 		auto cloud = geodetect.cloud();
 		auto& octree = geodetect.octree();
@@ -459,9 +450,6 @@ namespace geodetection
 		//Sort the scales descending, and store the sorted index mapping
 		std::vector<size_t> sort_map = sortIndicesDescending(scales); //Get index mapping to sorted version of radii
 		int id_max = sort_map[0]; //mapping to the maximum search
-
-		//Build optimal Octree for the maximum scale
-		geodetect.buildOctreeDynamicOptimalParams(scales[id_max]);
 
 		//Get geodetection::Cloud data members
 		auto cloud = geodetect.cloud();
@@ -530,9 +518,6 @@ namespace geodetection
 		std::vector<size_t> sort_map = sortIndicesDescending(scales); //Get index mapping to sorted version of radii
 		int id_max = sort_map[0]; //mapping to the maximum search
 
-		//Build optimal Octree for the maximum scale
-		geodetect.buildOctreeDynamicOptimalParams(scales[id_max]);
-
 		//Get geodetection::Cloud data members
 		auto cloud = geodetect.cloud();
 		auto& octree = geodetect.octree();
@@ -594,9 +579,6 @@ namespace geodetection
 		//Sort the scales descending, and store the sorted index mapping
 		std::vector<size_t> sort_map = sortIndicesDescending(scales); //Get index mapping to sorted version of radii
 		int id_max = sort_map[0]; //mapping to the maximum search
-
-		//Build optimal Octree for the maximum scale
-		geodetect.buildOctreeDynamicOptimalParams(scales[id_max]);
 
 		//Get geodetection::Cloud data members
 		auto cloud = geodetect.cloud();

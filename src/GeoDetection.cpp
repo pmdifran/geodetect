@@ -2,6 +2,7 @@
 #include "GeoDetection.h"
 #include "features.h" //for average scalar field compute
 #include "progressbar.h"
+#include "core.h"
 
 #include <omp.h> //for Open MP
 
@@ -46,24 +47,9 @@ namespace geodetection
 	}
 
 	//Constructs octree search trees for the point cloud.
+	//Uses dynamic depth, for maximum number of points in a leaf (dynamic depth), as well as a specified minimum leaf resolution.
 	void
-		Cloud::buildOctree(float resolution)
-	{
-		GD_CORE_TRACE(":: Constructing Octree with resolution: {0}", resolution);
-		Timer timer;
-
-		m_octree.deleteTree(); //delete previous tree (Cloud only stores one octree at a time)
-		m_octree.setResolution(resolution);
-		m_octree.setInputCloud(m_cloud);
-		m_octree.addPointsFromInputCloud();
-
-		GD_CORE_WARN("--> Octree construction time: {0} ms\n", timer.getDuration());
-	}
-
-	//Constructs octree search trees for the point cloud.
-	//Uses dynamic depth, for maximum number of points in a leaf (dynamic depth), as well as a specified lead resolution.
-	void
-		Cloud::buildOctreeDynamic(float resolution, int max_leaf_population)
+		Cloud::buildOctree(float resolution /* = 0.01 */, int max_leaf_population /* = 5 */, int max_depth /* = 14 */)
 	{
 		GD_CORE_TRACE(":: Constructing Octree with:    resolution: {0}  |  max leaf population: {1} ", 
 			resolution, max_leaf_population );
@@ -72,6 +58,8 @@ namespace geodetection
 		m_octree.deleteTree(); //delete previous tree (Cloud only stores one octree at a time)
 		m_octree.setResolution(resolution);
 		m_octree.enableDynamicDepth(max_leaf_population); //setting dynamic property of the octree. 
+		m_octree.setTreeDepth(max_depth);
+
 		m_octree.setInputCloud(m_cloud);
 		m_octree.addPointsFromInputCloud();
 
@@ -118,20 +106,12 @@ namespace geodetection
 		}
 
 		avg_resolution = avg_resolution / (double)m_cloud->size();
+
 		m_resolution_avg = avg_resolution;
+		m_resolution_stdev = getStandardDeviation(resolution, avg_resolution);
 
-		GD_INFO("--> Point cloud resolution: {0} meters", m_resolution_avg);
 		GD_CORE_WARN("--> Resolution estimation time: {0} ms\n", timer.getDuration());
-
-		//Calculate standard deviation of resolution.
-		double deviation = 0.0;
-#pragma omp parallel for reduction(+: deviation)
-		for (int64_t i = 0; i < m_cloud->size(); i++)
-		{
-			deviation += pow(resolution[i] - avg_resolution, 2);
-		}
-		
-		m_resolution_stdev = sqrt(deviation / m_cloud->size());
+		GD_INFO("Point cloud resolution: {0} m    |    standard deviation: {1} m", m_resolution_avg, m_resolution_stdev);
 		return resolution;
 	}
 
@@ -173,7 +153,7 @@ namespace geodetection
 		m_cloud = corepoints;
 		this->buildKdTree();
 		this->getResolution();
-		this->buildOctreeOptimalParams();
+		this->buildOctree();
 	}
 
 	//Returns a subsampled cloud, using a minimum distance. 
@@ -228,7 +208,7 @@ namespace geodetection
 		Cloud::distanceDownSample(float distance)
 	{
 		GD_CORE_TITLE("Subsampling GeoDetection Cloud");
-		auto corepoints = this->getDistanceDownSample(distance);
+ 		auto corepoints = this->getDistanceDownSample(distance);
 
 		//Average the normals and scalar fields using the new cloud as core points.
 		if (this->hasNormals()) { this->averageNormalsSubset(distance, corepoints); }
@@ -238,7 +218,7 @@ namespace geodetection
 		m_cloud = corepoints;
 		this->buildKdTree();
 		this->getResolution();
-		this->buildOctree(this->getOptimalOctreeResolution());
+		this->buildOctree();
 	}
 
 	//Removes NaN from point cloud 
@@ -269,9 +249,6 @@ namespace geodetection
 		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
 		normals->resize(m_cloud->size());
 
-		//Create optimal octree for search:
-		this->buildOctreeDynamicOptimalParams(radius);
-
 		// Iterate through each point and compute normals from demeaned neighborhoods.
 		GD_PROGRESS(progress_bar, m_cloud->size());
 #pragma omp parallel for
@@ -297,9 +274,6 @@ namespace geodetection
 
 		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
 		normals->resize(m_cloud->size());
-
-		//Create optimal octree for search:
-		this->buildOctreeDynamicOptimalParams(k);
 
 		// Iterate through each point and compute normals from demeaned neighborhoods.
 		GD_PROGRESS(progress_bar, m_cloud->size());

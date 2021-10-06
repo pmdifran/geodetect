@@ -42,11 +42,12 @@ namespace geodetection
 
 		//Cloud properties
 		Eigen::Matrix4d m_transformation = Eigen::Matrix4d::Identity(); //transformation matrix
-		std::array<float, 3> m_view = { 0, 0, 0 }; //view for normal orientation
+		std::array<float, 3> m_view = { 0.0f, 0.0f, 0.0f }; //view for normal orientation
 
 		//Scale and resoluton
-		double m_resolution_avg = 0.0; //average resolution (i.e. point spacing) of the point cloud.
-		double m_resolution_stdev = 0.0; //standard deviation of resolution (i.e. point spacing) of the cloud.
+		double m_resolution_avg = 0.0f; //average resolution (i.e. point spacing) of the point cloud.
+		double m_resolution_min = 0.0f; //minimum non-zero resolution of the point cloud, used as the octree resolution.
+		double m_resolution_stdev = 0.0f; //standard deviation of resolution (i.e. point spacing) of the cloud.
 		double m_scale = 0.0;
 
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -130,6 +131,11 @@ namespace geodetection
 		inline bool hasNormals() const { return m_normals->size() > 0; }
 		inline bool hasScalarFields() const { return m_scalarfields.size() > 0; }
 		inline bool hasResolution() const { return m_resolution_avg > 0; }
+		inline double getMinResolution() const
+		{ 
+			if (m_resolution_min == 0) { return 0.01; }
+			return m_resolution_min; 
+		}
 
 	//METHODS
 	public:
@@ -142,52 +148,17 @@ namespace geodetection
 		*/
 		void buildKdTree();
 
-		inline float getOptimalOctreeResolution() const { return (sqrt(2.0) * m_resolution_avg) + m_resolution_stdev; }
 		inline int getOptimalOctreeLeafPopulation(float radius) const 
 		{
-			return (M_PI * pow(m_resolution_avg, 2) * (radius, 2));
+			return (M_PI  * pow(radius, 2)) * pow(m_resolution_avg, 3);
 		}
-
-		/**
-		* Constructs octree search tree for the point cloud.
-		* @param resolution: voxel size at greatest depth (i.e. smallest scale).
-		*/
-		void buildOctree(float resolution);
 
 		/**
 		* Constructs octree search tree for the point cloud.
 		* @param resolution: voxel size at greatest depth (i.e. smallest scale).
 		* @param max_leaf_population: maximum population of a voxel at the greatest depth. Used for dynamic octree structure. 
 		*/
-		void buildOctreeDynamic(float resolution, int max_leaf_population);
-
-		/**
-		* Constructs octree search tree for the point cloud. Uses resolution to determine appropriate leaf sizes \
-		* (i.e. cubic voxel dimensions)
-		*/
-		inline void buildOctreeOptimalParams() { this->buildOctree(this->getOptimalOctreeResolution()); }
-
-		/**
-		* Constructs octree search tree for the point cloud. Uses resolution to determine appropriate leaf sizes \
-		* (i.e. cubic voxel dimensions). Takes input of search radius size to determine maximum population of leaves for \
-		* the dynamic structure.
-		* @param radius: Search radius being used for the particular search application.
-		*/
-		inline void buildOctreeDynamicOptimalParams(float radius) 
-		{ 
-			this->buildOctreeDynamic(this->getOptimalOctreeResolution(), this->getOptimalOctreeLeafPopulation(radius));
-		}
-
-		/**
-		* Constructs octree search tree for the point cloud. Uses resolution to determine appropriate leaf sizes \
-		* (i.e. cubic voxel dimensions). Takes input k-nearest neighbors to determine maximum population of leaves for \
-		* the dynamic octree structure.
-		* @param k: number of nearest-neighbors for the search application.
-		*/
-		inline void buildOctreeDynamicOptimalParams(int k)
-		{
-			this->buildOctreeDynamic(this->getOptimalOctreeResolution(), k * sqrt(2.0f));
-		}
+		void buildOctree(float resolution = 0.01, int max_leaf_population = 5, int max_depth = 14);
 
 /************************************************************************************************************************************************//**
 *  Resolution, Downsampling, and Filtering
