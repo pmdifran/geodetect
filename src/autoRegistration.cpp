@@ -21,31 +21,39 @@ namespace geodetection
 	//Default norml radius = 1.0. Not used if the cloud already has normals.
 	//@TODO: Break this function up into smaller more readable functions.
 	Eigen::Matrix4f getGlobalRegistration(geodetection::Cloud& reference,
-		geodetection::Cloud& source, float radius /* = 1.0 */)
+		geodetection::Cloud& source, float normal_scale, float scale_coefficient)
 	{
 		GD_TITLE("Auto Registration --Global");
 		Timer timer;
 
-		if (!reference.hasCloud()) { GD_ERROR("Reference does not have a cloud"); }
-		if (!reference.hasNormals()) { reference.updateNormalsRadiusSearch(radius); };
+		//Compute constants based from scale coefficient
+		//Keypoints
+		float salient_radius = pow(scale_coefficient, 1.4f) + 4.0f;
+		float non_max_radius = pow(scale_coefficient, 1.3f) + 2.0f;
+		int min_nbrs = 5;
+		//Fast point feature histograms
+		float fpfh_scale = pow(salient_radius, 1.1f);
+		//RANSAC 
+		float inlier_threshold = pow(scale_coefficient, 1.1f);
 
-		if (!source.hasCloud()) { GD_ERROR("Source does not have a cloud"); }
-		if (!source.hasNormals()) { source.updateNormalsRadiusSearch(radius); }
+		//Compute normals
+		reference.updateNormalsRadiusSearch(normal_scale);
+		source.updateNormalsRadiusSearch(normal_scale);
+
+		//Compute subsampled cloud for keypoints
+		auto ref_down = reference.getVoxelDownSample(scale_coefficient);
+		auto src_down = source.getVoxelDownSample(scale_coefficient);
 
 		//Compute ISS keypoints
-		pcl::PointCloud<pcl::PointXYZ>::Ptr ref_keypoints = reference.getKeyPoints();
-		pcl::PointCloud<pcl::PointXYZ>::Ptr src_keypoints = source.getKeyPoints();
-		
-		//auto ref_keypoints = reference.cloud();
-		//auto src_keypoints = source.cloud();
+		auto ref_keypoints = reference.getISSKeyPoints(salient_radius, non_max_radius, min_nbrs, ref_down, 0.975f, 0.975f);
+		auto src_keypoints = source.getISSKeyPoints(salient_radius, non_max_radius, min_nbrs, src_down, 0.975f, 0.975f);
 
-		//Compute multiscale persistant fast point feature histograms, at the keypoints. (Returned as shared_pointers)
-		auto ref_fpfh = reference.getFPFH(ref_keypoints, 10.0f);
-		auto src_fpfh = source.getFPFH(src_keypoints, 10.0f);
+		//Compute fast point feature histograms.
+		auto ref_fpfh = reference.getFPFH(ref_keypoints, fpfh_scale);
+		auto src_fpfh = source.getFPFH(src_keypoints, fpfh_scale);
 
 		//Compute feature correspondences
 		pcl::CorrespondencesPtr correspondences(new pcl::Correspondences);
-
 		pcl::registration::CorrespondenceEstimation<pcl::FPFHSignature33, pcl::FPFHSignature33> estimator;
 		estimator.setInputTarget(ref_fpfh);
 		estimator.setInputSource(src_fpfh);
@@ -61,7 +69,7 @@ namespace geodetection
 		ransac_rejector.setInputSource(src_keypoints);
 		ransac_rejector.setMaximumIterations(1000000);
 		ransac_rejector.setRefineModel(false);
-		ransac_rejector.setInlierThreshold(5.0f);
+		ransac_rejector.setInlierThreshold(inlier_threshold);
 
 		ransac_rejector.getRemainingCorrespondences(*correspondences, *remaining_correspondences);
 		Eigen::Matrix4f transformation = ransac_rejector.getBestTransformation();
@@ -213,6 +221,11 @@ namespace geodetection
 		GD_TRACE("NOTE: MSE may be higher due to a subsample input\n");
 
 		return transformation;
+	}
+
+	void computeAutoRegistration(Cloud source, Cloud reference, float subsample_scale)
+	{
+		//Subsample for calculating 
 	}
 
 }
