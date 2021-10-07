@@ -16,7 +16,7 @@ Tools for processing and extracting information from point clouds of natural env
 <img src="https://user-images.githubusercontent.com/64287741/135674654-be7a1585-3409-4641-b595-2a7715a090cc.PNG" width="1000" height="275">
 
 **Vegetation Segmentation (multiscale feature calculation)**
-<img src="https://user-images.githubusercontent.com/64287741/135675257-96e6b762-a54b-4658-861a-d77bd897a8e2.PNG" width="1000" height="500">
+<img src="https://user-images.githubusercontent.com/64287741/135675257-96e6b762-a54b-4658-861a-d77bd897a8e2.PNG" width="1000" height="525">
 
 **Point cloud classification using masks**
 
@@ -38,11 +38,9 @@ Tools for processing and extracting information from point clouds of natural env
 
 1. Make a folder (e.g. C:/Dev)
 
-2. Clone the GeoDetection repository into your folder (cloned into a "GeoDetection" folder).
-```
-$ cd C:/Dev
-$ git clone --recurse-submodules -j8 https://github.com/pmdifran/GeoDetection.git
-```
+2. Clone the GeoDetection repository into your folder (cloned into a "GeoDetection" folder).\
+`$ cd C:/Dev`\
+`$ git clone --recurse-submodules -j8 https://github.com/pmdifran/GeoDetection.git`
 
 3. Download the PCL-AllInOne installer from the PCL releases on github (i.e. `PCL-1.12.0-AllInOne-msvc2019-win64.exe`).
 
