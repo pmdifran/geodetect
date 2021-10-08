@@ -1,4 +1,5 @@
 #include "autoRegistration.h"
+#include "features.h"
 
 #include <iomanip>
 
@@ -14,6 +15,28 @@
 #include <pcl/surface/organized_fast_mesh.h>
 #include <pcl/registration/gicp.h>
 #include <pcl/features/from_meshes.h>
+
+#include <pcl/keypoints/iss_3d.h>
+
+double getMeanSquareError(pcl::CorrespondencesPtr remaining_correspondences, pcl::PointCloud<pcl::PointXYZ>::Ptr src_keypoints,
+	pcl::PointCloud<pcl::PointXYZ>::Ptr ref_keypoints)
+{
+	//Compute the MSE of the global registration
+	double mse = 0;
+#pragma omp parallel for reduction(+: mse)
+	for (int64_t i = 0; i < remaining_correspondences->size(); i++)
+	{
+		pcl::Correspondence& corr = (*remaining_correspondences)[i];
+		float distance = pcl::euclideanDistance(src_keypoints->at(corr.index_query),
+			ref_keypoints->at(corr.index_match));
+
+		mse += distance;
+	}
+
+	mse /= (double)(remaining_correspondences->size());
+
+	return mse;
+}
 
 namespace geodetection
 {
@@ -40,9 +63,14 @@ namespace geodetection
 		reference.updateNormalsRadiusSearch(normal_scale);
 		source.updateNormalsRadiusSearch(normal_scale);
 
+		//Currently fixing a bug in PCL which allows us to use a subset of points to compute. 
 		//Compute subsampled cloud for keypoints
-		auto ref_down = reference.getVoxelDownSample(scale_coefficient);
-		auto src_down = source.getVoxelDownSample(scale_coefficient);
+		auto ref_down = reference.cloud();
+		auto src_down = source.cloud();
+
+		//Replace with this after.
+		//auto ref_down = reference.getVoxelDownSample(scale_coefficient);
+		//auto src_down = source.getVoxelDownSample(scale_coefficient);
 
 		//Compute ISS keypoints
 		auto ref_keypoints = reference.getISSKeyPoints(salient_radius, non_max_radius, min_nbrs, ref_down, 0.975f, 0.975f);
@@ -76,28 +104,14 @@ namespace geodetection
 
 		GD_TRACE(":: Number of inlier fpfh correpondences: {0}\n", correspondences->size());
 		GD_WARN("--> Transformation computed in: {0} ms: \n", timer.getDuration());
-		std::cout << std::setprecision(16) << std::fixed <<
-			"Transformation: \n" << transformation << '\n' << std::endl;
-
-		//Compute the MSE of the global registration
-		double mse = 0;
-#pragma omp parallel for reduction(+: mse)
-		for (int64_t i = 0; i < remaining_correspondences->size(); i++)
-		{
-			pcl::Correspondence& corr = (*remaining_correspondences)[i];
-			float distance = pcl::euclideanDistance(src_keypoints->at(corr.index_query),
-				ref_keypoints->at(corr.index_match));
-
-			mse += distance;
-		}
-
-		mse /= (double)(remaining_correspondences->size());
-
-		GD_WARN("--> Mean square error: {0}", mse);
-		GD_TRACE("NOTE: MSE may be higher due to a subsampled input\n");
-
+		
 		//Apply the transformation to the source geodetection object.
 		source.applyTransformation(transformation.cast<float>());
+		source.printTransformation();
+
+		GD_WARN("--> Mean square error: {0}", getMeanSquareError(remaining_correspondences, src_keypoints, ref_keypoints));
+		GD_TRACE("NOTE: MSE may be higher due to a subsampled input\n");
+
 		return transformation;
 	}
 
