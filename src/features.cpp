@@ -159,7 +159,7 @@ namespace geodetection
 ***************************************************************************************************************************************************/
 //Calculates Intrinsic Shape Signature keypoints (uses OpenMP).
 	pcl::PointCloud<pcl::PointXYZ>::Ptr getISSKeyPoints(float salient_radius, float non_max_radius, int min_neighbors,
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, 
+		pcl::PointCloud<pcl::PointXYZ>::Ptr corepoints, pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, 
 		pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
 		float max_eigenratio21 /* = 0.975 */, float max_eigenratio32 /* = 0.975 */)
 	{
@@ -169,16 +169,14 @@ namespace geodetection
 		pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints(new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::ISSKeypoint3D<pcl::PointXYZ, pcl::PointXYZ> iss_detector;
 
+		iss_detector.setInputCloud(corepoints);
+		iss_detector.setSearchSurface(search_surface);
 		iss_detector.setSearchMethod(search_surface_tree);
 
 		iss_detector.setSalientRadius(salient_radius); // neighborhood at which we determine the largest spatial variations
 		iss_detector.setNonMaxRadius(non_max_radius); // radius for the application of the non maxima supression algorithm.
 		iss_detector.setMinNeighbors(min_neighbors);
 		
-
-		iss_detector.setInputCloud(cloud);
-		iss_detector.setSearchSurface(search_surface);
-
 		// constraint of eigenvalue ratios, to exclude frames of ambiguous axex at locally symmetric points.
 		iss_detector.setThreshold21(max_eigenratio21); // (eigen2 / eigen1) < threshold; and similar below.
 		iss_detector.setThreshold32(max_eigenratio32);
