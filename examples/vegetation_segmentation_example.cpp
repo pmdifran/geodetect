@@ -1,10 +1,16 @@
-
 //#define LOG_ALL_OFF
-//GeoDetection includes
+//#define PROGRESS_OFF
+
+
+//Console functionality 
+#include "log.h"
+#include "progressbar.h"
+
+
 #include "readascii.h"
 #include "GeoDetection.h"
 #include "segmentVegetation.h"
-#include "log.h"
+
 
 //stdlib includes
 #include <iomanip> //for set_precision.
@@ -14,14 +20,23 @@
 #include "CLI/Formatter.hpp"
 #include "CLI/Config.hpp"
 
+//Allow unicode strings
+#include <Windows.h>
+
 //File handling 
 #include <filesystem>
 
+//pcl testing
+//Octree
+#include <pcl/octree/octree_search.h>
+
 int main(int argc, char* argv[])
 {
+	geodetection::Timer timer;
+
 	//Initialize logger and start timer.
-	GeoDetection::Log::Init();
-	auto start = GeoDetection::Time::getStart();
+	geodetection::Log::Init();
+	SetConsoleOutputCP(CP_UTF8); //so we can print unicode (needed for progress bars)	
 
 	// COMMAND LINE INTERFACING.....................................................................................
 	if (argc == 1) { GD_ERROR("No arguments passed. Use argument -h or --help for instructions."); return 0; }
@@ -46,7 +61,7 @@ int main(int argc, char* argv[])
 	GD_TITLE("GeoDetection");
 
 	//Construct AsciiReader
-	GeoDetection::AsciiReader reader;
+	geodetection::AsciiReader reader;
 
 	//If batch file mode is on, batch process!
 	if (*batch_opt)
@@ -72,10 +87,10 @@ int main(int argc, char* argv[])
 
 			//Import source file and distance downsample
 			reader.setFilename(file_string);
-			GeoDetection::Cloud source = reader.import();
+			geodetection::Cloud source = reader.import();
 
 			//Segment vegetation
-			GeoDetection::segmentVegetationSimplified(source);
+			geodetection::segmentVegetation(source);
 
 			//Export                              
 			source.writeAsASCII(out_filename);
@@ -91,20 +106,18 @@ int main(int argc, char* argv[])
 		std::string file_name_string = source_path.stem().string();
 		std::string ext_string = source_path.extension().string();
 
-		//Import files and downsample
-		reader.setFilename(reference_filename);
-		GeoDetection::Cloud reference = reader.import();
-
 		reader.setFilename(source_filename);
-		GeoDetection::Cloud source = reader.import();
+		geodetection::Cloud source = reader.import();
+
+		source.distanceDownSample(0.07);
 
 		//Segment Vegetation
-		GeoDetection::segmentVegetationSimplified(source);
+		geodetection::segmentVegetation(source);
 
 		//Output file
-		std::string out_filename = file_name_string + "_vegetationSegmented" + ext_string;
+		std::string out_filename = file_name_string + "_vegetation_segmented" + ext_string;
 		source.writeAsASCII(out_filename);
 	}
 
-	GD_WARN("Total time: {0} s \n", (GeoDetection::Time::getDuration(start) / 1000));
+	GD_WARN("Total time: {0} s \n", timer.getDuration() / 1000);
 }

@@ -1,16 +1,10 @@
+
 //#define LOG_ALL_OFF
-//#define PROGRESS_OFF
-
-
-//Console functionality 
-#include "log.h"
-#include "progressbar.h"
-
-
+//GeoDetection includes
 #include "readascii.h"
 #include "GeoDetection.h"
-#include "segmentVegetation.h"
-
+#include "autoRegistration.h"
+#include "log.h"
 
 //stdlib includes
 #include <iomanip> //for set_precision.
@@ -20,23 +14,19 @@
 #include "CLI/Formatter.hpp"
 #include "CLI/Config.hpp"
 
-//Allow unicode strings
-#include <Windows.h>
-
 //File handling 
 #include <filesystem>
 
-//pcl testing
-//Octree
-#include <pcl/octree/octree_search.h>
+#define SUBSAMPLE_DISTANCE 0.75f
+#define NORMAL_SCALE 2.0f
+#define SCALE_COEFFICIENT 10.0f
 
 int main(int argc, char* argv[])
-{				
-	geodetection::Timer timer;
-
+{
 	//Initialize logger and start timer.
 	geodetection::Log::Init();
 	SetConsoleOutputCP(CP_UTF8); //so we can print unicode (needed for progress bars)	
+	geodetection::Timer timer;
 
 	// COMMAND LINE INTERFACING.....................................................................................
 	if (argc == 1) { GD_ERROR("No arguments passed. Use argument -h or --help for instructions."); return 0; }
@@ -49,15 +39,18 @@ int main(int argc, char* argv[])
 
 	//Add options (CLI::Option*)
 	auto input_opt = app.add_option("-i,--input", source_filename, "Input source cloud filename.");
+	auto mask_opt = app.add_option("-r,--reference", reference_filename, "Input reference file (stays constant in batch mode).");
 	auto batch_opt = app.add_option("-b,--batch", batch_directory,
 		"Input directory containing *only* input source files (ascii) for batch processing. "
 		"Ignores -i if set. Use '-b .' for current directory, or '-b ..' for parent directory.");
 
 	//Set option requirements
+	mask_opt->required();
 	input_opt->excludes(batch_opt); //input option ignored if a batch location is provided. 
+
 	CLI11_PARSE(app, argc, argv);
 
-	// PROCESSING.. .................................................................................................
+	// GEODETECTION .................................................................................................
 	GD_TITLE("GeoDetection");
 
 	//Construct AsciiReader
@@ -66,6 +59,13 @@ int main(int argc, char* argv[])
 	//If batch file mode is on, batch process!
 	if (*batch_opt)
 	{
+		//Import reference as a Registration Cloud and downsample
+		GD_TRACE("Reference file name: {0}", reference_filename);
+		reader.setFilename(reference_filename);
+
+		geodetection::Cloud reference = reader.import();
+		reference.distanceDownSample(SUBSAMPLE_DISTANCE);
+
 		//Get list of files in directory. 
 		const std::filesystem::path dir(batch_directory);
 
@@ -83,18 +83,25 @@ int main(int argc, char* argv[])
 			if ((file_name_string + ext_string) == reference_filename) { continue; }
 
 			//set output file name
-			std::string out_filename = file_name_string + "_vegetationSegmented" + ext_string;
+			std::string out_filename = file_name_string + "_Registered" + ext_string;
+			std::string out_transformation_filename = file_name_string + "_transformationMAT" + ".DAT";
 
 			//Import source file and distance downsample
 			reader.setFilename(file_string);
 			geodetection::Cloud source = reader.import();
+			source.distanceDownSample(SUBSAMPLE_DISTANCE);
 
-			//Segment vegetation
-			geodetection::segmentVegetation(source);
+			//Auto Register
+			geodetection::getGlobalRegistration(reference, source, NORMAL_SCALE, SCALE_COEFFICIENT);
+			geodetection::getICPRegistration(reference, source);
 
-			//Export                              
-			source.writeAsASCII(out_filename);
+			//Export                              //remember - the cloud is subsampled. 
+			source.writeAsASCII(out_filename); // If you want to check alignment quality with full res, 
+												// --> apply tranformation matrix to full resolution cloud in CloudCompare/ RiSCAN 
 
+			source.writeTransformation(out_transformation_filename);
+			GD_INFO("Final Transformation:");
+			source.printTransformation();
 		}
 	}
 
@@ -106,18 +113,26 @@ int main(int argc, char* argv[])
 		std::string file_name_string = source_path.stem().string();
 		std::string ext_string = source_path.extension().string();
 
+		//Import files and downsample
+		reader.setFilename(reference_filename);
+		geodetection::Cloud reference = reader.import();
+		reference.distanceDownSample(SUBSAMPLE_DISTANCE);
+
 		reader.setFilename(source_filename);
 		geodetection::Cloud source = reader.import();
+		source.distanceDownSample(SUBSAMPLE_DISTANCE);
 
-		source.distanceDownSample(0.07);
-
-		//Segment Vegetation
-		geodetection::segmentVegetation(source);
+		//Auto Register
+		geodetection::getGlobalRegistration(reference, source, NORMAL_SCALE, SCALE_COEFFICIENT);
+		geodetection::getICPRegistration(reference, source);
 
 		//Output file
-		std::string out_filename = file_name_string + "_vegetation_segmented" + ext_string;
+		std::string out_filename = file_name_string + "_Classified" + ext_string;
 		source.writeAsASCII(out_filename);
+
+		GD_INFO("Final Transformation:\n");
+		source.printTransformation();
 	}
 
-	GD_WARN("Total time: {0} s \n",  timer.getDuration() / 1000);
+	GD_WARN("Total time: {0} s \n", timer.getDuration()/1000);
 }

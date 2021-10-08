@@ -2,6 +2,7 @@
 #include "GeoDetection.h"
 #include "features.h" //for average scalar field compute
 #include "progressbar.h"
+#include "core.h"
 
 #include <omp.h> //for Open MP
 
@@ -16,18 +17,16 @@
 
 //feature estimation
 #include <pcl/features/fpfh_omp.h>
+#include <pcl/features/multiscale_feature_persistence.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/normal_3d_omp.h>
-#include <pcl/keypoints/iss_3d.h>
 #include <pcl/features/principal_curvatures.h>
+#include <pcl/keypoints/iss_3d.h>
 
 //filters
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/radius_outlier_removal.h>
-
-//IO
-#include <pcl/io/pcd_io.h>
 
 namespace geodetection
 {
@@ -48,31 +47,19 @@ namespace geodetection
 	}
 
 	//Constructs octree search trees for the point cloud.
+	//Uses dynamic depth, for maximum number of points in a leaf (dynamic depth), as well as a specified minimum leaf resolution.
 	void
-		Cloud::buildOctree(float resolution)
+		Cloud::buildOctree(float resolution /* = 0.01 */, int max_leaf_population /* = 5 */, int max_depth /* = 14 */)
 	{
-		GD_CORE_TRACE(":: Constructing octrees");
-		Timer timer;
-
-		m_octree.deleteTree(); //delete previous tree (Cloud only stores one octree at a time)
-		m_octree.setResolution(resolution);
-		m_octree.setInputCloud(m_cloud);
-		m_octree.addPointsFromInputCloud();
-
-		GD_CORE_WARN("--> Octree construction time: {0} ms\n", timer.getDuration());
-	}
-
-	//Constructs octree search trees for the point cloud.
-	//Uses dynamic depth, for maximum number of points in a leaf (dynamic depth), as well as a specified lead resolution.
-	void
-		Cloud::buildOctreeDynamic(float resolution, int max_leaf_population)
-	{
-		GD_CORE_TRACE(":: Constructing octrees");
+		GD_CORE_TRACE(":: Constructing Octree with:    resolution: {0}  |  max leaf population: {1} ", 
+			resolution, max_leaf_population );
 		Timer timer;
 
 		m_octree.deleteTree(); //delete previous tree (Cloud only stores one octree at a time)
 		m_octree.setResolution(resolution);
 		m_octree.enableDynamicDepth(max_leaf_population); //setting dynamic property of the octree. 
+		m_octree.setTreeDepth(max_depth);
+
 		m_octree.setInputCloud(m_cloud);
 		m_octree.addPointsFromInputCloud();
 
@@ -115,24 +102,16 @@ namespace geodetection
 			resolution[i] = local_resolution;
 			avg_resolution += local_resolution; //thread-safe with omp reduction
 
-			GD_PROGRESS_INCREMENT(progress_bar);
+			GD_PROGRESS_INCREMENT(progress_bar, m_cloud->size());
 		}
 
 		avg_resolution = avg_resolution / (double)m_cloud->size();
+
 		m_resolution_avg = avg_resolution;
+		m_resolution_stdev = getStandardDeviation(resolution, avg_resolution);
 
-		GD_INFO("--> Point cloud resolution: {0} meters", m_resolution_avg);
 		GD_CORE_WARN("--> Resolution estimation time: {0} ms\n", timer.getDuration());
-
-		//Calculate standard deviation of resolution.
-		double deviation = 0.0;
-#pragma omp parallel for reduction(+: deviation)
-		for (int64_t i = 0; i < m_cloud->size(); i++)
-		{
-			deviation += pow(resolution[i] - avg_resolution, 2);
-		}
-		
-		m_resolution_stdev = sqrt(deviation / m_cloud->size());
+		GD_INFO("Point cloud resolution: {0} m    |    standard deviation: {1} m", m_resolution_avg, m_resolution_stdev);
 		return resolution;
 	}
 
@@ -174,7 +153,7 @@ namespace geodetection
 		m_cloud = corepoints;
 		this->buildKdTree();
 		this->getResolution();
-		this->buildOctreeOptimalParams();
+		this->buildOctree();
 	}
 
 	//Returns a subsampled cloud, using a minimum distance. 
@@ -229,7 +208,7 @@ namespace geodetection
 		Cloud::distanceDownSample(float distance)
 	{
 		GD_CORE_TITLE("Subsampling GeoDetection Cloud");
-		auto corepoints = this->getDistanceDownSample(distance);
+ 		auto corepoints = this->getDistanceDownSample(distance);
 
 		//Average the normals and scalar fields using the new cloud as core points.
 		if (this->hasNormals()) { this->averageNormalsSubset(distance, corepoints); }
@@ -239,7 +218,7 @@ namespace geodetection
 		m_cloud = corepoints;
 		this->buildKdTree();
 		this->getResolution();
-		this->buildOctree(this->getOptimalOctreeResolution());
+		this->buildOctree();
 	}
 
 	//Removes NaN from point cloud 
@@ -270,16 +249,13 @@ namespace geodetection
 		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
 		normals->resize(m_cloud->size());
 
-		//Create optimal octree for search:
-		this->buildOctreeDynamicOptimalParams(radius);
-
 		// Iterate through each point and compute normals from demeaned neighborhoods.
 		GD_PROGRESS(progress_bar, m_cloud->size());
 #pragma omp parallel for
 		for (int i = 0; i < m_cloud->size(); i++)
 		{
 			computeNormalAtOriginRadiusSearch(*this, normals->points[i], radius, i,  m_view);
-			GD_PROGRESS_INCREMENT(progress_bar);
+			GD_PROGRESS_INCREMENT(progress_bar, m_cloud->size());
 		}
 
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n", timer.getDuration());
@@ -299,16 +275,13 @@ namespace geodetection
 		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
 		normals->resize(m_cloud->size());
 
-		//Create optimal octree for search:
-		this->buildOctreeDynamicOptimalParams(k);
-
 		// Iterate through each point and compute normals from demeaned neighborhoods.
 		GD_PROGRESS(progress_bar, m_cloud->size());
 #pragma omp parallel for
 		for (int i = 0; i < m_cloud->points.size(); i++)
 		{
 			computeNormalAtOriginKSearch(*this, normals->points[i], k, i, m_view);
-			GD_PROGRESS_INCREMENT(progress_bar);
+			GD_PROGRESS_INCREMENT(progress_bar, m_cloud->size());
 		}
 
 		GD_CORE_WARN("--> Normal calculation time: {0} ms\n", timer.getDuration());
@@ -380,7 +353,7 @@ namespace geodetection
 	}
 
 /***********************************************************************************************************************************************//**
-*  Registration
+*  Transformation
 ***************************************************************************************************************************************************/
 	//Updates m_transformation, with matrix multiplication of an input transformation matrix.
 	void
@@ -388,7 +361,6 @@ namespace geodetection
 	{
 		GD_CORE_TRACE(":: Updating transformation...");
 		Eigen::Matrix4d transformation_d = transformation.cast<double>(); //using doubles for more accurate arithmitic
-		m_transformation = transformation_d * m_transformation; //eigen matrix multiplication
 		m_transformation = transformation_d * m_transformation; //eigen matrix multiplication
 	}
 
@@ -405,59 +377,58 @@ namespace geodetection
 		GD_CORE_WARN("--> Transformation time: {0} ms\n", timer.getDuration());
 	}
 
-	//Calculates Intrinsic Shape Signature keypoints (uses OpenMP).
-	pcl::PointCloud<pcl::PointXYZ>::Ptr
-		Cloud::getKeyPoints()
+/***********************************************************************************************************************************************//**
+*  Keypoints and fast point feature histograms
+***************************************************************************************************************************************************/
+	//Computes intrinsic shape signature keypoints. 
+	//Calls getISSKeyPoints from the features scope (features.h).
+	//@TODO: Add features namespace.
+	pcl::PointCloud<pcl::PointXYZ>::Ptr 
+		Cloud::getISSKeyPoints(float salient_radius, float non_max_radius, int min_neighbors,
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface,
+		pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+		float max_eigenratio21 /* = 0.975f */, float max_eigenratio32 /* = 0.975f */)
 	{
-		GD_CORE_TRACE(":: Computing intrinsic shape signature keypoints...");
-		Timer timer;
+		size_t search_surface_size = search_surface->size();
+		size_t search_surface_tree_size = search_surface_tree->getInputCloud()->size();
 
-		pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints(new pcl::PointCloud<pcl::PointXYZ>);
-		pcl::ISSKeypoint3D<pcl::PointXYZ, pcl::PointXYZ> iss_detector;
+		assert(search_surface->size() == search_surface_tree->getInputCloud()->size());
+		assert(salient_radius > 0);
 
-		iss_detector.setSearchMethod(m_kdtree);
-
-		//Revisit parameters. Automatic selection using scale, subsample scale?
-		iss_detector.setSalientRadius(0.5);
-		iss_detector.setNonMaxRadius(1.5);
-		iss_detector.setMinNeighbors(5);
-
-		iss_detector.setInputCloud(m_cloud);
-
-		iss_detector.setThreshold21(0.975);
-		iss_detector.setThreshold32(0.975);
-		iss_detector.setNumberOfThreads(omp_get_num_procs());
-		iss_detector.compute(*keypoints);
-
-		GD_CORE_WARN("--> Keypoint calculation time: {0} ms\n", timer.getDuration());
-
-		return keypoints;
+		return geodetection::getISSKeyPoints(salient_radius, non_max_radius, min_neighbors, cloud, search_surface, search_surface_tree,
+			max_eigenratio21, max_eigenratio32);
 	}
 
-	//Compute fast point feature histograms. Uses OpenMP.
-	//Must enable AVX in Properties --> C/C++ --> Enable Enhanced Instruction Set --> /arch:AVX. 
-	//Otherwise you get heap corruption when it computes.
-	pcl::PointCloud<pcl::FPFHSignature33>::Ptr
-		Cloud::getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints)
+	//Computes fast point feature histograms.
+	//Calls getFPFH from the global scope(features.h)
+	//@TODO: Add features namespace
+	pcl::PointCloud<pcl::FPFHSignature33>::Ptr 
+		Cloud::getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints, float radius,
+		pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+		pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals)
 	{
-		GD_CORE_TRACE("Computing fast point feature histograms...");
-		Timer timer;
+		assert(search_surface->size() == search_surface_tree->getInputCloud()->size()
+			&& search_surface->size() == search_surface_normals->size());
+		assert(radius > 0);
 
-		pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh(new pcl::PointCloud<pcl::FPFHSignature33>);
-		pcl::FPFHEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> computefpfh;
+		return geodetection::getFPFH(keypoints, radius, search_surface, search_surface_tree, search_surface_normals);
+	}
 
-		computefpfh.setNumberOfThreads(omp_get_num_procs());
-		computefpfh.setInputCloud(keypoints);
-		computefpfh.setInputNormals(m_normals);
-		computefpfh.setSearchSurface(m_cloud);
-		computefpfh.setSearchMethod(m_kdtree);
-		computefpfh.setRadiusSearch(3.0);
+	//Computes persistant fast point feature histograms which are unique at all scales.
+	//Sizes of search surface, tree, and normals must be equal.
+	std::pair<pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> 
+		Cloud::getFPFHMultiscalePersistance
+	(const pcl::PointCloud<pcl::PointXYZ>::Ptr const keypoints, std::vector<float>& scales, float alpha,
+		pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+		pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals)
+	{
+		for (float x : scales) { assert(x > 0); }
+		assert(alpha > 0);
+		assert(search_surface->size() == search_surface_tree->getInputCloud()->size()
+			&& search_surface->size() == search_surface_normals->size());
+		assert(keypoints->size() <= search_surface->size());
 
-		computefpfh.compute(*fpfh);
-
-		GD_CORE_WARN("--> FPFH calculation time: {0} ms\n", timer.getDuration());
-
-		return fpfh;
+		return geodetection::getFPFHMultiscalePersistance(keypoints, scales, alpha, search_surface, search_surface_tree, search_surface_normals);
 	}
 
 /***********************************************************************************************************************************************//**

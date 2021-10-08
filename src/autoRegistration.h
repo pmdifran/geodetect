@@ -12,17 +12,7 @@ namespace geodetection
 	* @param[in] radius: normal radius to compute features at. Default = 1.0. Not used if the cloud already has normals.
 	*/
 	Eigen::Matrix4f getGlobalRegistration(geodetection::Cloud& reference,
-		geodetection::Cloud& source, float radius = 1.0);
-
-	/**
-	* Transforms source cloud using a global registration determined with keypoints' fast point feature histogram correspondences.
-	* Registration cloud is used in this overload, which reuses keypoints and their computed fpfh's, if they have been computed
-	* @param[in] reference: target geodetection::RegistrationCloud (i.e. which we are aligning to)
-	* @param[out] source: geodetection::Cloud that we are aligning
-	* @param[in] radius: normal radius to compute features at. Default = 1.0. Not used if the cloud already has normals.
-	*/
-	Eigen::Matrix4f getGlobalRegistration(geodetection::RegistrationCloud& reference,
-		geodetection::Cloud& source, float radius = 1.0);
+		geodetection::Cloud& source, float normal_scale, float scale_coefficient);
 
 	/**
 	* Transforms source cloud using a fine generalized ICP registration (i.e. plane-to-plane).

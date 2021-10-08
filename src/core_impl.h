@@ -31,6 +31,22 @@ namespace geodetection
 		return idx;
 	}
 
+	//Determines smallest element which is not zero.
+	template <typename T>
+	T getNonZeroMinimum(const std::vector<T>& vec)
+	{
+		assert(vec.size() > 0);
+		auto min = vec[0];
+
+		for (auto x : vec)
+		{
+			if (x == 0) { continue; }
+			if (x < min) { min = x; }
+		}
+
+		return min;
+	}
+
 	//Returns a reordered vector, given a mapping to the indices.
 	//Specifically useful to reorder sqdistances and indices following an octree neighborhood query, since they are not ordered.
 	//--> Must input std::vector<size_t> from sortIndicesDescending or sortIndicesAscending

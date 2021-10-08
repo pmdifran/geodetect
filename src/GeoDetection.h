@@ -42,11 +42,12 @@ namespace geodetection
 
 		//Cloud properties
 		Eigen::Matrix4d m_transformation = Eigen::Matrix4d::Identity(); //transformation matrix
-		std::array<float, 3> m_view = { 0, 0, 0 }; //view for normal orientation
+		std::array<float, 3> m_view = { 0.0f, 0.0f, 0.0f }; //view for normal orientation
 
 		//Scale and resoluton
-		double m_resolution_avg = 0.0; //average resolution (i.e. point spacing) of the point cloud.
-		double m_resolution_stdev = 0.0; //standard deviation of resolution (i.e. point spacing) of the cloud.
+		double m_resolution_avg = 0.0f; //average resolution (i.e. point spacing) of the point cloud.
+		double m_resolution_min = 0.0f; //minimum non-zero resolution of the point cloud, used as the octree resolution.
+		double m_resolution_stdev = 0.0f; //standard deviation of resolution (i.e. point spacing) of the cloud.
 		double m_scale = 0.0;
 
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -73,12 +74,8 @@ namespace geodetection
 			GD_CORE_TITLE("GeoDetection Cloud Construction");
 			GD_CORE_TRACE("Creating GeoDetection Cloud Object: '{0}' with {1} points", m_name, m_cloud->size());
 			
-			//Build the KdTree. GeoDetection Clouds use both KdTrees and Octrees. 
+			//Build the KdTree.
 			buildKdTree();
-
-			//Use KdTree to estimate the mean resolution of the cloud
-			this->getResolution();
-			buildOctree(this->getOptimalOctreeResolution());
 			
 			GD_CORE_INFO("--> GeoDetection Cloud Created\n");
 		}
@@ -107,6 +104,7 @@ namespace geodetection
 
 		//Cloud properties
 		inline Eigen::Matrix4d transformation() const { return m_transformation; }
+		inline void printTransformation() const { std::cout << std::setprecision(16) << std::fixed << m_transformation << '\n' << std::endl; }
 		inline std::array<float, 3> view() const { return m_view; }
 
 		inline double resolution() const { return m_resolution_avg; }
@@ -133,6 +131,11 @@ namespace geodetection
 		inline bool hasNormals() const { return m_normals->size() > 0; }
 		inline bool hasScalarFields() const { return m_scalarfields.size() > 0; }
 		inline bool hasResolution() const { return m_resolution_avg > 0; }
+		inline double getMinResolution() const
+		{ 
+			if (m_resolution_min == 0) { return 0.01; }
+			return m_resolution_min; 
+		}
 
 	//METHODS
 	public:
@@ -145,52 +148,17 @@ namespace geodetection
 		*/
 		void buildKdTree();
 
-		inline float getOptimalOctreeResolution() const { return (sqrt(2.0) * m_resolution_avg) + m_resolution_stdev; }
 		inline int getOptimalOctreeLeafPopulation(float radius) const 
 		{
-			return (M_PI * pow(m_resolution_avg, 2) * (radius, 2));
+			return (M_PI  * pow(radius, 2)) * pow(m_resolution_avg, 3);
 		}
-
-		/**
-		* Constructs octree search tree for the point cloud.
-		* @param resolution: voxel size at greatest depth (i.e. smallest scale).
-		*/
-		void buildOctree(float resolution);
 
 		/**
 		* Constructs octree search tree for the point cloud.
 		* @param resolution: voxel size at greatest depth (i.e. smallest scale).
 		* @param max_leaf_population: maximum population of a voxel at the greatest depth. Used for dynamic octree structure. 
 		*/
-		void buildOctreeDynamic(float resolution, int max_leaf_population);
-
-		/**
-		* Constructs octree search tree for the point cloud. Uses resolution to determine appropriate leaf sizes \
-		* (i.e. cubic voxel dimensions)
-		*/
-		inline void buildOctreeOptimalParams() { this->buildOctree(this->getOptimalOctreeResolution()); }
-
-		/**
-		* Constructs octree search tree for the point cloud. Uses resolution to determine appropriate leaf sizes \
-		* (i.e. cubic voxel dimensions). Takes input of search radius size to determine maximum population of leaves for \
-		* the dynamic structure.
-		* @param radius: Search radius being used for the particular search application.
-		*/
-		inline void buildOctreeDynamicOptimalParams(float radius) 
-		{ 
-			this->buildOctreeDynamic(this->getOptimalOctreeResolution(), this->getOptimalOctreeLeafPopulation(radius));
-		}
-
-		/**
-		* Constructs octree search tree for the point cloud. Uses resolution to determine appropriate leaf sizes \
-		* (i.e. cubic voxel dimensions). Takes input k-nearest neighbors to determine maximum population of leaves for \
-		* the dynamic octree structure.
-		* @param k: number of nearest-neighbors for the search application.
-		*/
-		inline void buildOctreeDynamicOptimalParams(int k)
-		{
-			this->buildOctreeDynamic(this->getOptimalOctreeResolution(), k * sqrt(2.0f));
-		}
+		void buildOctree(float resolution = 0.01, int max_leaf_population = 5, int max_depth = 14);
 
 /************************************************************************************************************************************************//**
 *  Resolution, Downsampling, and Filtering
@@ -356,7 +324,7 @@ namespace geodetection
 		void averageAllScalarFields(float radius);
 
 /***********************************************************************************************************************************************//**
-*  Registration
+*  Transformations
 ***************************************************************************************************************************************************/
 		/**
 		* Updates the geodetection::Cloud <m_transformation> matrix, without translating the cloud.
@@ -371,18 +339,106 @@ namespace geodetection
 		*/
 		void applyTransformation(const Eigen::Matrix4f& transformation);
 
+/***********************************************************************************************************************************************//**
+*  Keypoints and fast point feature histograms
+***************************************************************************************************************************************************/
 		/**
 		* Computes intrinsic shape signature keypoints.
+		* @param[in] salient radius: Spherical neighborhood (i.e. scale) at which we determine the largest point variations within.
+		* @paramin[in] non_max_radius: Radius for the application of the non maxima supression algorithm.
+		* @param[in] min_neighbors: The minimum number of neighbors that has to be found while applying the non maxima suppression algorithm
+		* @param[in] cloud: Point cloud (possible subsampled search_surface) used to compute the ISS keypoints.
+		* @param[in] search_surface: Point cloud used to compute the ISS signatures at salient_radius scales.
+		* @param[in] tree: Search tree corresponding to search_surface.
 		* @return shared pointer to a pcl point cloud of ISS keypoints.
 		*/
-		pcl::PointCloud<pcl::PointXYZ>::Ptr getKeyPoints();
+		virtual pcl::PointCloud<pcl::PointXYZ>::Ptr getISSKeyPoints(float salient_radius, float non_max_radius, int min_neighbors,
+			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface,
+			pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+			float max_eigenratio21 = 0.975f, float max_eigenratio32 = 0.975f);
+
+		/**
+		* Computes intrinsic shape signature keypoints. Uses member point cloud for search surface, tree, and normals.
+		* @param[in] cloud: subsampled cloud at which keypoint calculations are done for.
+		* @param[in] salient radius: Spherical neighborhood (i.e. scale) at which we determine the largest point variations within.
+		* @paramin[in] non_max_radius: Radius for the application of the non maxima supression algorithm.
+		* @param[in] min_neighbors: The minimum number of neighbors that has to be found while applying the non maxima suppression algorithm
+		* @return shared pointer to a pcl point cloud of ISS keypoints.
+		*/
+		virtual pcl::PointCloud<pcl::PointXYZ>::Ptr getISSKeyPoints(float salient_radius, float non_max_radius, int min_neighbors,
+			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+			float max_eigenratio21 = 0.975f, float max_eigenratio32 = 0.975f)
+		{
+			return this->getISSKeyPoints(salient_radius, non_max_radius, min_neighbors, cloud, m_cloud, m_kdtree, max_eigenratio21, max_eigenratio32);
+		}
+
+		/**
+		* Computes intrinsic shape signature keypoints. Uses member point cloud for keypoint calculations, search surface, tree, and normals.
+		* @param[in] salient radius: Spherical neighborhood (i.e. scale) at which we determine the largest point variations within.
+		* @paramin[in] non_max_radius: Radius for the application of the non maxima supression algorithm.
+		* @param[in] min_neighbors: The minimum number of neighbors that has to be found while applying the non maxima suppression algorithm
+		* @return shared pointer to a pcl point cloud of ISS keypoints.
+		*/
+		virtual pcl::PointCloud<pcl::PointXYZ>::Ptr getISSKeyPoints(float salient_radius, float non_max_radius, int min_neighbors,
+			float max_eigenratio21 = 0.975f, float max_eigenratio32 = 0.975f)
+		{
+			return this->getISSKeyPoints(salient_radius, non_max_radius, min_neighbors, m_cloud, m_cloud, m_kdtree, max_eigenratio21, max_eigenratio32);
+		}
 
 		/**
 		* Computes fast point feature histograms.
-		* @param keypoints: shared pointer to a pcl point cloud containing keypoints, at which fpf histograms are calculated for.
+		* @param keypoints: Shared pointer to a pcl point cloud containing keypoints, at which fpf histograms are calculated for.
+		* @param radius: Scale at to compute the histograms.
+		* @param search_surface: point cloud to use when computing histograms.
+		* @param search_surface_tree: kdtree for the search_surface.
+		* @param search_surface_normals: normals of search_surface point cloud (sizes must correspond)
 		* @return shared pointer to point cloud with fast point feature histograms.
 		*/
-		pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints);
+		virtual pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints, float radius,
+			pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+			pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals);
+
+		/**
+		* Computes fast point feature histograms. Uses member variables for cloud, search tree and normals.
+		* @param keypoints: Shared pointer to a pcl point cloud containing keypoints, at which fpf histograms are calculated for.
+		* @param radius: Scale at to compute the histograms.
+		* @return shared pointer to point cloud with fast point feature histograms.
+		*/
+		virtual pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints, float radius)
+		{
+			return this->getFPFH(keypoints, radius, m_cloud, m_kdtree, m_normals);
+		}
+
+		/**
+		* Computes persistant fast point feature histograms which are unique at all scales.
+		* Sizes of search surface, tree, and normals must be equal.
+		* @param[out] keypoints: Shared pointer to a pcl point cloud containing keypoints. *Mutates.* Non-unique keypoints are removed.
+		* @param[in] scales: scales at which to compute the features, and test their uniqueness to the mean.
+		* @param[in] alpha: factor for selecting unique points outside of {mean +/- Alpha * std-deviation}. Exampes use 1.3.
+		* @param[in] search_surface: Cloud used to compute histograms, using neighbors.
+		* @param[in] search_surface_tree: Kdtree used to search the search surface.
+		* @param[in] search_surface_normals: Normals used to compute the histograms.
+		* @return: std::pair. (First) Fast point feature histogram for the keypoints, which are unique at all scales.
+		* (Second) Unique keypoints, corresonding to the fpfh's.
+		*/
+		virtual std::pair<pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> getFPFHMultiscalePersistance
+		(const pcl::PointCloud<pcl::PointXYZ>::Ptr const keypoints, std::vector<float>& scales, float alpha,
+			pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+			pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals);
+
+		/**
+		* Computes persistant fast point feature histograms which are unique at all scales. Uses member variables for search cloud, tree, and normals.
+		* @param[out] keypoints: Shared pointer to a pcl point cloud containing keypoints. *Mutates.* Non-unique keypoints are removed.
+		* @param[in] scales: scales at which to compute the features, and test their uniqueness to the mean.
+		* @param[in] alpha: factor for selecting unique points outside of {mean +/- Alpha * std-deviation}. Exampes use 1.3.
+		* @return: std::pair. (First) Fast point feature histogram for the keypoints, which are unique at all scales.
+		* (Second) Unique keypoints, corresonding to the fpfh's.
+		*/
+		virtual std::pair<pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> getFPFHMultiscalePersistance
+		(const pcl::PointCloud<pcl::PointXYZ>::Ptr const keypoints, std::vector<float>& scales, float alpha)
+		{
+			return this->getFPFHMultiscalePersistance(keypoints, scales, alpha, m_cloud, m_kdtree, m_normals);
+		}
 
 /***********************************************************************************************************************************************//**
 *  ASCII Output

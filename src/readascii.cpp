@@ -21,9 +21,6 @@ namespace geodetection
 		cloud->points.reserve(num_points);
 		normals->points.reserve(num_points);
 
-		std::vector<std::vector<float>> myvec;
-		myvec.emplace_back().reserve(1000);
-
 		// reserve space for all the scalar fields
 		for (size_t i = 0; i < num_fields; i++) 
 		{ 
@@ -130,10 +127,9 @@ namespace geodetection
 
 			//Build the KdTree. geodetection Clouds use both KdTrees and Octrees. 
 			geodetect.buildKdTree();
-
-			//Use KdTree to estimate the mean resolution of the cloud
+			geodetect.buildOctree();
 			geodetect.getResolution();
-			geodetect.buildOctree(geodetect.getOptimalOctreeResolution());
+
 			return geodetect;
 	}
 
