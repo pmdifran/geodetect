@@ -17,8 +17,9 @@
 //File handling 
 #include <filesystem>
 
-#define SUBSAMPLE_DISTANCE 0.2f
-#define NORMAL_RADIUS 1.5f
+#define SUBSAMPLE_DISTANCE 0.75f
+#define NORMAL_SCALE 2.0f
+#define SCALE_COEFFICIENT 10.0f
 
 int main(int argc, char* argv[])
 {
@@ -91,7 +92,7 @@ int main(int argc, char* argv[])
 			source.distanceDownSample(SUBSAMPLE_DISTANCE);
 
 			//Auto Register
-			geodetection::getGlobalRegistration(reference, source, NORMAL_RADIUS);
+			geodetection::getGlobalRegistration(reference, source, NORMAL_SCALE, SCALE_COEFFICIENT);
 			geodetection::getICPRegistration(reference, source);
 
 			//Export                              //remember - the cloud is subsampled. 
@@ -122,7 +123,7 @@ int main(int argc, char* argv[])
 		source.distanceDownSample(SUBSAMPLE_DISTANCE);
 
 		//Auto Register
-		geodetection::getGlobalRegistration(reference, source, NORMAL_RADIUS);
+		geodetection::getGlobalRegistration(reference, source, NORMAL_SCALE, SCALE_COEFFICIENT);
 		geodetection::getICPRegistration(reference, source);
 
 		//Output file
