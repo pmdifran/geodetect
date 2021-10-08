@@ -12,7 +12,7 @@ namespace geodetection
 	* @param[in] radius: normal radius to compute features at. Default = 1.0. Not used if the cloud already has normals.
 	*/
 	Eigen::Matrix4f getGlobalRegistration(geodetection::Cloud& reference,
-		geodetection::Cloud& source, float radius = 1.0);
+		geodetection::Cloud& source, float normal_scale, float scale_coefficient);
 
 	/**
 	* Transforms source cloud using a global registration determined with keypoints' fast point feature histogram correspondences.
