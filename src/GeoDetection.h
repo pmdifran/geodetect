@@ -355,13 +355,7 @@ namespace geodetection
 		virtual pcl::PointCloud<pcl::PointXYZ>::Ptr getISSKeyPoints(float salient_radius, float non_max_radius, int min_neighbors,
 			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface,
 			pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
-			float max_eigenratio21 = 0.975f, float max_eigenratio32 = 0.975f)
-		{
-			assert(search_surface->size() == search_surface_tree->getInputCloud()->size());
-			assert(salient_radius > 0);
-			return getISSKeyPoints(salient_radius, non_max_radius, min_neighbors, cloud, search_surface, search_surface_tree, 
-										max_eigenratio21, max_eigenratio32);
-		}
+			float max_eigenratio21 = 0.975f, float max_eigenratio32 = 0.975f);
 
 		/**
 		* Computes intrinsic shape signature keypoints. Uses member point cloud for search surface, tree, and normals.
@@ -402,13 +396,7 @@ namespace geodetection
 		*/
 		virtual pcl::PointCloud<pcl::FPFHSignature33>::Ptr getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints, float radius,
 			pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
-			pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals)
-		{
-			assert(search_surface->size() == search_surface_tree->getInputCloud()->size()
-					&& search_surface->size() == search_surface_normals->size());
-			assert(radius > 0);
-			return getFPFH(keypoints, radius, search_surface, search_surface_tree, search_surface_normals);
-		}
+			pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals);
 
 		/**
 		* Computes fast point feature histograms. Uses member variables for cloud, search tree and normals.
@@ -436,15 +424,7 @@ namespace geodetection
 		virtual std::pair<pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> getFPFHMultiscalePersistance
 		(const pcl::PointCloud<pcl::PointXYZ>::Ptr const keypoints, std::vector<float>& scales, float alpha,
 			pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
-			pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals)
-		{
-			for (float x : scales) { assert(x > 0); }
-			assert(alpha > 0);
-			assert(search_surface->size() == search_surface_tree->getInputCloud()->size()
-				&& search_surface->size() == search_surface_normals->size());
-			assert(keypoints->size() <= search_surface->size());
-			return getFPFHMultiscalePersistance(keypoints, scales, alpha, search_surface, search_surface_tree, search_surface_normals);
-		}
+			pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals);
 
 		/**
 		* Computes persistant fast point feature histograms which are unique at all scales. Uses member variables for search cloud, tree, and normals.
