@@ -378,6 +378,60 @@ namespace geodetection
 	}
 
 /***********************************************************************************************************************************************//**
+*  Keypoints and fast point feature histograms
+***************************************************************************************************************************************************/
+	//Computes intrinsic shape signature keypoints. 
+	//Calls getISSKeyPoints from the features scope (features.h).
+	//@TODO: Add features namespace.
+	pcl::PointCloud<pcl::PointXYZ>::Ptr 
+		Cloud::getISSKeyPoints(float salient_radius, float non_max_radius, int min_neighbors,
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface,
+		pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+		float max_eigenratio21 /* = 0.975f */, float max_eigenratio32 /* = 0.975f */)
+	{
+		size_t search_surface_size = search_surface->size();
+		size_t search_surface_tree_size = search_surface_tree->getInputCloud()->size();
+
+		assert(search_surface->size() == search_surface_tree->getInputCloud()->size());
+		assert(salient_radius > 0);
+
+		return geodetection::getISSKeyPoints(salient_radius, non_max_radius, min_neighbors, cloud, search_surface, search_surface_tree,
+			max_eigenratio21, max_eigenratio32);
+	}
+
+	//Computes fast point feature histograms.
+	//Calls getFPFH from the global scope(features.h)
+	//@TODO: Add features namespace
+	pcl::PointCloud<pcl::FPFHSignature33>::Ptr 
+		Cloud::getFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints, float radius,
+		pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+		pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals)
+	{
+		assert(search_surface->size() == search_surface_tree->getInputCloud()->size()
+			&& search_surface->size() == search_surface_normals->size());
+		assert(radius > 0);
+
+		return geodetection::getFPFH(keypoints, radius, search_surface, search_surface_tree, search_surface_normals);
+	}
+
+	//Computes persistant fast point feature histograms which are unique at all scales.
+	//Sizes of search surface, tree, and normals must be equal.
+	std::pair<pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> 
+		Cloud::getFPFHMultiscalePersistance
+	(const pcl::PointCloud<pcl::PointXYZ>::Ptr const keypoints, std::vector<float>& scales, float alpha,
+		pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
+		pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals)
+	{
+		for (float x : scales) { assert(x > 0); }
+		assert(alpha > 0);
+		assert(search_surface->size() == search_surface_tree->getInputCloud()->size()
+			&& search_surface->size() == search_surface_normals->size());
+		assert(keypoints->size() <= search_surface->size());
+
+		return geodetection::getFPFHMultiscalePersistance(keypoints, scales, alpha, search_surface, search_surface_tree, search_surface_normals);
+	}
+
+/***********************************************************************************************************************************************//**
 *  ASCII Output
 ***************************************************************************************************************************************************/
 
