@@ -160,6 +160,7 @@ namespace geodetection
 		return transformation;
 	}
 
+	//@TODO: easier function that calls global and ICP.
 	void computeAutoRegistration(Cloud source, Cloud reference, float subsample_scale)
 	{
 		//Subsample for calculating 
