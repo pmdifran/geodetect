@@ -1,4 +1,3 @@
-
 //#define LOG_ALL_OFF
 //GeoDetection includes
 #include "readascii.h"
@@ -17,9 +16,9 @@
 //File handling 
 #include <filesystem>
 
-#define SUBSAMPLE_DISTANCE 0.75f
-#define NORMAL_SCALE 2.0f
-#define SCALE_COEFFICIENT 10.0f
+#define SUBSAMPLE_DISTANCE 0.005f
+#define NORMAL_SCALE 0.1f
+#define SCALE_COEFFICIENT 5.0f
 
 int main(int argc, char* argv[])
 {
