@@ -18,6 +18,7 @@
 #include <array>
 #include <cmath>
 #include <chrono>
+#include <iomanip>
 
 // \brief  Point Cloud containing tools for Tools for processing and extracting information from natural environments. 
 //  Built around PCL.
