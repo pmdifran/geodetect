@@ -423,7 +423,7 @@ namespace geodetection
 		* (Second) Unique keypoints, corresonding to the fpfh's.
 		*/
 		virtual std::pair<pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> getFPFHMultiscalePersistance
-		(const pcl::PointCloud<pcl::PointXYZ>::Ptr const keypoints, std::vector<float>& scales, float alpha,
+		(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints, std::vector<float>& scales, float alpha,
 			pcl::PointCloud<pcl::PointXYZ>::Ptr search_surface, pcl::search::KdTree<pcl::PointXYZ>::Ptr search_surface_tree,
 			pcl::PointCloud<pcl::Normal>::Ptr search_surface_normals);
 
@@ -436,7 +436,7 @@ namespace geodetection
 		* (Second) Unique keypoints, corresonding to the fpfh's.
 		*/
 		virtual std::pair<pcl::PointCloud<pcl::FPFHSignature33>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> getFPFHMultiscalePersistance
-		(const pcl::PointCloud<pcl::PointXYZ>::Ptr const keypoints, std::vector<float>& scales, float alpha)
+		(const pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints, std::vector<float>& scales, float alpha)
 		{
 			return this->getFPFHMultiscalePersistance(keypoints, scales, alpha, m_cloud, m_kdtree, m_normals);
 		}
