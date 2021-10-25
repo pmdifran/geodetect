@@ -65,12 +65,12 @@ namespace geodetection
 
 		//Currently fixing a bug in PCL which allows us to use a subset of points to compute. 
 		//Compute subsampled cloud for keypoints
-		auto ref_down = reference.cloud();
-		auto src_down = source.cloud();
+		//auto ref_down = reference.cloud();
+		//auto src_down = source.cloud();
 
 		//Replace with this after.
-		//auto ref_down = reference.getVoxelDownSample(scale_coefficient);
-		//auto src_down = source.getVoxelDownSample(scale_coefficient);
+		auto ref_down = reference.getVoxelDownSample(scale_coefficient);
+		auto src_down = source.getVoxelDownSample(scale_coefficient);
 
 		//Compute ISS keypoints
 		auto ref_keypoints = reference.getISSKeyPoints(salient_radius, non_max_radius, min_nbrs, ref_down, 0.975f, 0.975f);

@@ -49,16 +49,16 @@ namespace geodetection
 #define GD_ERROR(...)          ::geodetection::Log::getClientLogger()->error(__VA_ARGS__)
 #define GD_FATAL(...)          ::geodetection::Log::getClientLogger()->critical(__VA_ARGS__)
 
-#define GD_TITLE(...)	{																	\
-							int num_dashes = 75;											\
-							std::cout << '\n' << std::endl;									\
-							GD_WARN(std::string(num_dashes,'-'));							\
-							std::string s = std::string(__VA_ARGS__);						\
-							std::string substr = s.substr(0, s.find(','));					\
-							int length = substr.length();									\
-							auto new_s = std::string((num_dashes-length)/2,' ') + s;		\
-							GD_WARN(new_s);													\
-							GD_WARN(std::string(num_dashes,'-'));							\
+#define GD_TITLE(...)	{                                                                   \
+							int num_dashes = 75;                                            \
+							std::cout << '\n' << std::endl;                                 \
+							GD_WARN(std::string(num_dashes,'-'));                           \
+							std::string s = std::string(__VA_ARGS__);                       \
+							std::string substr = s.substr(0, s.find(','));                  \
+							int length = substr.length();                                   \
+							auto new_s = std::string((num_dashes-length)/2,' ') + s;        \
+							GD_WARN(new_s);                                                 \
+							GD_WARN(std::string(num_dashes,'-'));                           \
 						} 
 
 #else
@@ -76,16 +76,16 @@ namespace geodetection
 #define GD_CORE_ERROR(...)     ::geodetection::Log::getCoreLogger()->error(__VA_ARGS__)
 #define GD_CORE_FATAL(...)     ::geodetection::Log::getCoreLogger()->critical(__VA_ARGS__)
 
-#define GD_CORE_TITLE(...)	{																\
-							int num_dashes = 75;											\
-							std::cout << '\n' << std::endl;									\
-							GD_CORE_WARN(std::string(num_dashes,'-'));						\
-							std::string s = std::string(__VA_ARGS__);						\
-							std::string substr = s.substr(0, s.find(','));					\
-							int length = substr.length();									\
-							auto new_s = std::string((num_dashes-length)/2,' ') + s;		\
-							GD_CORE_WARN(new_s);											\
-							GD_CORE_WARN(std::string(num_dashes,'-'));						\
+#define GD_CORE_TITLE(...)	{                                                               \
+							int num_dashes = 75;                                            \
+							std::cout << '\n' << std::endl;                                 \
+							GD_CORE_WARN(std::string(num_dashes,'-'));                      \
+							std::string s = std::string(__VA_ARGS__);                       \
+							std::string substr = s.substr(0, s.find(','));                  \
+							int length = substr.length();                                   \
+							auto new_s = std::string((num_dashes-length)/2,' ') + s;        \
+							GD_CORE_WARN(new_s);                                            \
+							GD_CORE_WARN(std::string(num_dashes,'-'));                      \
 						} 
 
 #else

@@ -1,4 +1,6 @@
 test_data/*
 !test_date/test_source.txt
 !test_date/test_reference.txt
-Octree_Parameter_Selection.txt
+CMakeCache.txt
+CMakeFiles/
+build/
