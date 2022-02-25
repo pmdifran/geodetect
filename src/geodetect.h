@@ -22,7 +22,7 @@
 
 // \brief  Point Cloud containing tools for Tools for processing and extracting information from natural environments. 
 //  Built around PCL.
-namespace geodetection
+namespace geodetect
 {
 	class Cloud
 	{
@@ -62,7 +62,7 @@ namespace geodetection
 			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
 			m_octree(1.0f) //resolution here doesn't matter. Import methods will call build anyways. 
 		{
-			GD_CORE_TRACE(":: Constructing empty GeoDetection Cloud...");
+			GD_CORE_TRACE(":: Constructing empty geodetect Cloud...");
 		}
 
 		Cloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string name = "Cloud Default")
@@ -72,13 +72,13 @@ namespace geodetection
 			m_kdtree(new pcl::search::KdTree<pcl::PointXYZ>),
 			m_octree(0.1f) ////resolution here doesn't matter. Constructor will alter it anyways.
 		{
-			GD_CORE_TITLE("GeoDetection Cloud Construction");
-			GD_CORE_TRACE("Creating GeoDetection Cloud Object: '{0}' with {1} points", m_name, m_cloud->size());
+			GD_CORE_TITLE("geodetect Cloud Construction");
+			GD_CORE_TRACE("Creating geodetect Cloud Object: '{0}' with {1} points", m_name, m_cloud->size());
 			
 			//Build the KdTree.
 			buildKdTree();
 			
-			GD_CORE_INFO("--> GeoDetection Cloud Created\n");
+			GD_CORE_INFO("--> geodetect Cloud Created\n");
 		}
 
 		Cloud(const Cloud&) = default;
@@ -328,14 +328,14 @@ namespace geodetection
 *  Transformations
 ***************************************************************************************************************************************************/
 		/**
-		* Updates the geodetection::Cloud <m_transformation> matrix, without translating the cloud.
+		* Updates the geodetect::Cloud <m_transformation> matrix, without translating the cloud.
 		* Should be called if a function has transformed the cloud without updating the matrix (i.e. pcl::GeneralizedIterativeClosestPoint)
 		* @param transformation: Eigen affine transformation matrix.
 		*/
 		void updateTransformation(const Eigen::Matrix4f& transformation);
 
 		/**
-		* Transforms the geodetection::Cloud and updates <m_transformation> matrix.
+		* Transforms the geodetect::Cloud and updates <m_transformation> matrix.
 		* @param transformation: Eigen affine transformation matrix.
 		*/
 		void applyTransformation(const Eigen::Matrix4f& transformation);
@@ -451,7 +451,7 @@ namespace geodetection
 		void writeTransformation(std::string& filename);
 
 		/**
-		* Writes the geodetection::Cloud to an ASCII file (c-style)
+		* Writes the geodetect::Cloud to an ASCII file (c-style)
 		* @param filename: Output file path/name.
 		* @param write_normals: Whether to write normals Nx, Ny, Nz (default=true)
 		* @param write_scalarfields: Whether to write scalar fields (default=true)

@@ -1,5 +1,5 @@
-//geodetection
-#include "GeoDetection.h"
+//geodetect
+#include "geodetect.h"
 #include "features.h" //for average scalar field compute
 #include "progressbar.h"
 #include "core.h"
@@ -28,7 +28,7 @@
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/radius_outlier_removal.h>
 
-namespace geodetection
+namespace geodetect
 {
 /************************************************************************************************************************************************//**
 *  Search Tree Construction
@@ -207,7 +207,7 @@ namespace geodetection
 	void
 		Cloud::distanceDownSample(float distance)
 	{
-		GD_CORE_TITLE("Subsampling GeoDetection Cloud");
+		GD_CORE_TITLE("Subsampling geodetect Cloud");
  		auto corepoints = this->getDistanceDownSample(distance);
 
 		//Average the normals and scalar fields using the new cloud as core points.
@@ -321,7 +321,7 @@ namespace geodetection
 		}
 
 		GD_CORE_TRACE(":: Averaging scalar field index: {0} with name: {1}", field_index, m_scalarfields[field_index].name);
-		geodetection::ScalarField averaged_fields;
+		geodetect::ScalarField averaged_fields;
 		averaged_fields = computeAverageField(*this, m_scalarfields[field_index], radius, corepoints);
 
 		m_scalarfields[field_index] = std::move(averaged_fields);
@@ -395,7 +395,7 @@ namespace geodetection
 		assert(search_surface->size() == search_surface_tree->getInputCloud()->size());
 		assert(salient_radius > 0);
 
-		return geodetection::getISSKeyPoints(salient_radius, non_max_radius, min_neighbors, cloud, search_surface, search_surface_tree,
+		return geodetect::getISSKeyPoints(salient_radius, non_max_radius, min_neighbors, cloud, search_surface, search_surface_tree,
 			max_eigenratio21, max_eigenratio32);
 	}
 
@@ -411,7 +411,7 @@ namespace geodetection
 			&& search_surface->size() == search_surface_normals->size());
 		assert(radius > 0);
 
-		return geodetection::getFPFH(keypoints, radius, search_surface, search_surface_tree, search_surface_normals);
+		return geodetect::getFPFH(keypoints, radius, search_surface, search_surface_tree, search_surface_normals);
 	}
 
 	//Computes persistant fast point feature histograms which are unique at all scales.
@@ -428,7 +428,7 @@ namespace geodetection
 			&& search_surface->size() == search_surface_normals->size());
 		assert(keypoints->size() <= search_surface->size());
 
-		return geodetection::getFPFHMultiscalePersistance(keypoints, scales, alpha, search_surface, search_surface_tree, search_surface_normals);
+		return geodetect::getFPFHMultiscalePersistance(keypoints, scales, alpha, search_surface, search_surface_tree, search_surface_normals);
 	}
 
 /***********************************************************************************************************************************************//**
@@ -447,12 +447,12 @@ namespace geodetection
 		ofs.close();
 	}
 
-	//Output the geodetection Cloud into an ASCII file.
+	//Output the geodetect Cloud into an ASCII file.
 	//Option for whether to output normals and scalar fields.
 	//@TODO: add option for outputing specific scalar fields.
 	void Cloud::writeAsASCII(const std::string& filename_str, bool write_normals /* = true */, bool write_scalarfields /* = true */)
 	{
-		GD_TITLE("Exporting GeoDetection Cloud");
+		GD_TITLE("Exporting geodetect Cloud");
 		GD_TRACE(":: File: {}", filename_str);
 		Timer timer;
 

@@ -1,7 +1,7 @@
 //#define LOG_ALL_OFF
-//GeoDetection includes
+//geodetect includes
 #include "readascii.h"
-#include "GeoDetection.h"
+#include "geodetect.h"
 #include "autoRegistration.h"
 #include "log.h"
 
@@ -23,9 +23,9 @@
 int main(int argc, char* argv[])
 {
 	//Initialize logger and start timer.
-	geodetection::Log::Init();
+	geodetect::Log::Init();
 	SetConsoleOutputCP(CP_UTF8); //so we can print unicode (needed for progress bars)	
-	geodetection::Timer timer;
+	geodetect::Timer timer;
 
 	// COMMAND LINE INTERFACING.....................................................................................
 	if (argc == 1) { GD_ERROR("No arguments passed. Use argument -h or --help for instructions."); return 0; }
@@ -49,11 +49,11 @@ int main(int argc, char* argv[])
 
 	CLI11_PARSE(app, argc, argv);
 
-	// GEODETECTION .................................................................................................
-	GD_TITLE("GeoDetection");
+	// geodetect .................................................................................................
+	GD_TITLE("geodetect");
 
 	//Construct AsciiReader
-	geodetection::AsciiReader reader;
+	geodetect::AsciiReader reader;
 
 	//If batch file mode is on, batch process!
 	if (*batch_opt)
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 		GD_TRACE("Reference file name: {0}", reference_filename);
 		reader.setFilename(reference_filename);
 
-		geodetection::Cloud reference = reader.import();
+		geodetect::Cloud reference = reader.import();
 		reference.distanceDownSample(SUBSAMPLE_DISTANCE);
 
 		//Get list of files in directory. 
@@ -87,12 +87,12 @@ int main(int argc, char* argv[])
 
 			//Import source file and distance downsample
 			reader.setFilename(file_string);
-			geodetection::Cloud source = reader.import();
+			geodetect::Cloud source = reader.import();
 			source.distanceDownSample(SUBSAMPLE_DISTANCE);
 
 			//Auto Register
-			geodetection::getGlobalRegistration(reference, source, NORMAL_SCALE, SCALE_COEFFICIENT);
-			geodetection::getICPRegistration(reference, source);
+			geodetect::getGlobalRegistration(reference, source, NORMAL_SCALE, SCALE_COEFFICIENT);
+			geodetect::getICPRegistration(reference, source);
 
 			//Export                              //remember - the cloud is subsampled. 
 			source.writeAsASCII(out_filename); // If you want to check alignment quality with full res, 
@@ -114,16 +114,16 @@ int main(int argc, char* argv[])
 
 		//Import files and downsample
 		reader.setFilename(reference_filename);
-		geodetection::Cloud reference = reader.import();
+		geodetect::Cloud reference = reader.import();
 		reference.distanceDownSample(SUBSAMPLE_DISTANCE);
 
 		reader.setFilename(source_filename);
-		geodetection::Cloud source = reader.import();
+		geodetect::Cloud source = reader.import();
 		source.distanceDownSample(SUBSAMPLE_DISTANCE);
 
 		//Auto Register
-		geodetection::getGlobalRegistration(reference, source, NORMAL_SCALE, SCALE_COEFFICIENT);
-		geodetection::getICPRegistration(reference, source);
+		geodetect::getGlobalRegistration(reference, source, NORMAL_SCALE, SCALE_COEFFICIENT);
+		geodetect::getICPRegistration(reference, source);
 
 		//Output file
 		std::string out_filename = file_name_string + "_Classified" + ext_string;

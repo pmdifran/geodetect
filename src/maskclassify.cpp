@@ -2,7 +2,7 @@
 #include "features.h" 
 #include "core.h"
 
-namespace geodetection
+namespace geodetect
 {
 	//Classifies points with respect to a mask.
 	//Classifies based on the mode of a local neighborhood (odd #) of nearest neighbors.
@@ -45,7 +45,7 @@ namespace geodetection
 	//Classifies based on the mode of a local neighborhood (odd #) of nearest neighbors.
 	//@TODO: Add option to specify location of mask classifications. 
 	//Assumes clusters are sorted (i.e. 1111, 2222, 33, 44444)
-	//@TODO: Write a GeoDetection method which:
+	//@TODO: Write a geodetect method which:
 											//sorts all fields, points, normals, based on the entries of a single scalarfield (i.e. for cluster #). 
 	void classifyClusters(Cloud& mask, Cloud& source, int num_neighbors)
 	{

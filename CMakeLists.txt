@@ -1,60 +1,60 @@
 cmake_minimum_required( VERSION 3.0 )
 
-set(GeoDetection_source ${CMAKE_CURRENT_SOURCE_DIR}/src)
-set(GeoDetection_vendor ${CMAKE_CURRENT_SOURCE_DIR}/vendor) 
+set(GEODETECT_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(GEODETECT_VENDOR ${CMAKE_CURRENT_SOURCE_DIR}/vendor) 
 set(CMAKE_CXX_STANDARD 23)
 
 # Create Project
-project( GeoDetection LANGUAGES CXX)
+project( geodetect LANGUAGES CXX)
 
-#Set Geodetecton source files
+#Set geodetect source files
 set(SOURCE
     ${SOURCE}
-    ${GeoDetection_source}/main.cpp
-    ${GeoDetection_source}/autoRegistration.cpp
-    ${GeoDetection_source}/GeoDetection.cpp
-    ${GeoDetection_source}/log.cpp
-    ${GeoDetection_source}/segmentVegetation.cpp
-    ${GeoDetection_source}/ScalarField.cpp
-    ${GeoDetection_source}/features.cpp
-    ${GeoDetection_source}/readascii_core.cpp
-    ${GeoDetection_source}/readascii.cpp
-    ${GeoDetection_source}/maskclassify.cpp
-    ${GeoDetection_source}/core.cpp
+    ${GEODETECT_SOURCE}/main.cpp
+    ${GEODETECT_SOURCE}/autoRegistration.cpp
+    ${GEODETECT_SOURCE}/geodetect.cpp
+    ${GEODETECT_SOURCE}/log.cpp
+    ${GEODETECT_SOURCE}/segmentVegetation.cpp
+    ${GEODETECT_SOURCE}/ScalarField.cpp
+    ${GEODETECT_SOURCE}/features.cpp
+    ${GEODETECT_SOURCE}/readascii_core.cpp
+    ${GEODETECT_SOURCE}/readascii.cpp
+    ${GEODETECT_SOURCE}/maskclassify.cpp
+    ${GEODETECT_SOURCE}/core.cpp
 )
 
 set(HEADERS
     ${HEADERS}
-    ${GeoDetection_source}/autoRegistration.h
-    ${GeoDetection_source}/GeoDetection.h
-    ${GeoDetection_source}/log.h
-    ${GeoDetection_source}/progressbar.h
-    ${GeoDetection_source}/segmentVegetation.h
-    ${GeoDetection_source}/ScalarField.h
-    ${GeoDetection_source}/features.h
-    ${GeoDetection_source}/readascii_core.h
-    ${GeoDetection_source}/readascii.h
-    ${GeoDetection_source}/maskclassify.h
-    ${GeoDetection_source}/core.h
-    ${GeoDetection_source}/core_impl.h
-    ${GeoDetection_source}/registration_cloud.h
+    ${GEODETECT_SOURCE}/autoRegistration.h
+    ${GEODETECT_SOURCE}/geodetect.h
+    ${GEODETECT_SOURCE}/log.h
+    ${GEODETECT_SOURCE}/progressbar.h
+    ${GEODETECT_SOURCE}/segmentVegetation.h
+    ${GEODETECT_SOURCE}/ScalarField.h
+    ${GEODETECT_SOURCE}/features.h
+    ${GEODETECT_SOURCE}/readascii_core.h
+    ${GEODETECT_SOURCE}/readascii.h
+    ${GEODETECT_SOURCE}/maskclassify.h
+    ${GEODETECT_SOURCE}/core.h
+    ${GEODETECT_SOURCE}/core_impl.h
+    ${GEODETECT_SOURCE}/registration_cloud.h
 )
 
 #Create target
-add_executable( GeoDetection ${SOURCE} ${HEADERS} )
-include_directories(${GeoDetection_source})
+add_executable( geodetect ${SOURCE} ${HEADERS} )
+include_directories(${GEODETECT_SOURCE})
 
 #Append 'd' to debug builds.
-set_target_properties(GeoDetection PROPERTIES DEBUG_POSTFIX d)
+set_target_properties(geodetect PROPERTIES DEBUG_POSTFIX d)
 
 # Set StartUp Project (Option)
-set_property( DIRECTORY PROPERTY VS_STARTUP_PROJECT "GeoDetection" )
+set_property( DIRECTORY PROPERTY VS_STARTUP_PROJECT "geodetect" )
 
 #Set OpenMP
 find_package(OpenMP REQUIRED)
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(GeoDetection PUBLIC "${OpenMP_CXX_FLAGS}")
-    target_compile_options(GeoDetection PUBLIC "${OpenMP_CXX_FLAGS}")
+    target_link_libraries(geodetect PUBLIC "${OpenMP_CXX_FLAGS}")
+    target_compile_options(geodetect PUBLIC "${OpenMP_CXX_FLAGS}")
 endif()
 
 #PDAL
@@ -75,7 +75,7 @@ if (PDAL_FOUND)
 ##This flag is not compatible with AVX, so FPFH will be prone to heap corruption... Hopefully pdal works without
 endif()
 
-target_link_libraries( GeoDetection PRIVATE ${PDAL_LIBRARIES})
+target_link_libraries( geodetect PRIVATE ${PDAL_LIBRARIES})
 
 #PCL
 #######################################################################################
@@ -96,46 +96,46 @@ if( PCL_FOUND )
   link_directories( ${PCL_LIBRARY_DIRS} )
 
   # [Linker]>[Input]>[Additional Dependencies]
-  target_link_libraries( GeoDetection PUBLIC ${PCL_LIBRARIES} )
+  target_link_libraries( geodetect PUBLIC ${PCL_LIBRARIES} )
 endif()
 
-#Include GeoDetection 3rdPartys (via git submodules)
+#Include geodetect 3rdPartys (via git submodules)
 #######################################################################################
 #spdlog
-include_directories(${GeoDetection_vendor}/spdlog/include)
+include_directories(${GEODETECT_VENDOR}/spdlog/include)
 
 #fast_float
-include_directories(${GeoDetection_vendor}/fast_float/include)
+include_directories(${GEODETECT_VENDOR}/fast_float/include)
 
 #CLI11
-include_directories(${GeoDetection_vendor}/CLI11/include)
+include_directories(${GEODETECT_VENDOR}/CLI11/include)
 
 #indicators (for progress bar)
-include_directories(${GeoDetection_vendor}/indicators/include)
+include_directories(${GEODETECT_VENDOR}/indicators/include)
 
 #MSVS output directories
 #######################################################################################
 #Set output directories (to coincide with PCL libraries and binaries - i.e. "../PCL 1.12/bin/")
 if ( MSVC )
     message([STATUS] "MSVS Detected... Setting output directories...")
-    set_target_properties( GeoDetection PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PCL_DIR}/../lib)
-    set_target_properties( GeoDetection PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG ${PCL_DIR}/../lib)
-    set_target_properties( GeoDetection PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELEASE ${PCL_DIR}/../lib)
+    set_target_properties( geodetect PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PCL_DIR}/../lib)
+    set_target_properties( geodetect PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG ${PCL_DIR}/../lib)
+    set_target_properties( geodetect PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELEASE ${PCL_DIR}/../lib)
 
-    set_target_properties( GeoDetection PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PCL_DIR}/../lib)
-    set_target_properties( GeoDetection PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${PCL_DIR}/../lib)
-    set_target_properties( GeoDetection PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${PCL_DIR}/../lib)
+    set_target_properties( geodetect PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PCL_DIR}/../lib)
+    set_target_properties( geodetect PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${PCL_DIR}/../lib)
+    set_target_properties( geodetect PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${PCL_DIR}/../lib)
 
-    set_target_properties( GeoDetection PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PCL_DIR}/../bin)
-    set_target_properties( GeoDetection PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${PCL_DIR}/../bin)
-    set_target_properties( GeoDetection PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${PCL_DIR}/../bin)
+    set_target_properties( geodetect PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PCL_DIR}/../bin)
+    set_target_properties( geodetect PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${PCL_DIR}/../bin)
+    set_target_properties( geodetect PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${PCL_DIR}/../bin)
 	
     #set directory to where test_data is. 
-    set_property(TARGET GeoDetection PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test_data)
+    set_property(TARGET geodetect PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test_data)
 
 endif ( MSVC )
 
-#Enable Advanced Vector Extensions (AVX) (otherwise some PCL features might cause heap corruption)
+#Enable Advanced Vector Extensions (AVX)
 #######################################################################################
 
 include(CheckCXXCompilerFlag)
