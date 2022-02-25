@@ -1,7 +1,7 @@
 #pragma once
 #include "log.h"
 #include "readascii_core.h"
-#include "GeoDetection.h"
+#include "geodetect.h"
 #include "ScalarField.h"
 
 #include <string>
@@ -10,7 +10,7 @@
 #include <pcl\point_types.h>
 #include <pcl\point_cloud.h>
 
-namespace geodetection
+namespace geodetect
 {
 	class AsciiReader
 	{
@@ -27,7 +27,7 @@ namespace geodetection
 		/**
 		* Import ASCII data at m_filename, using c-style file reading.
 		*/
-		geodetection::Cloud import() const;
+		geodetect::Cloud import() const;
 	};
 
 }

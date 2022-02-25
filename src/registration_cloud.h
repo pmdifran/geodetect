@@ -1,7 +1,7 @@
 #pragma once
-#include "GeoDetection.h"
+#include "geodetect.h"
 
-namespace geodetection
+namespace geodetect
 {
 	//Registration cloud for storing the features computed in auto registration
 	//Typically a reference cloud which is used numerous times for registration in a batch processing
@@ -16,7 +16,7 @@ namespace geodetection
 			m_keypoints (new pcl::PointCloud<pcl::PointXYZ>),
 			m_fpfh (new pcl::PointCloud<pcl::FPFHSignature33>)
 		{
-			GD_CORE_TRACE("--> Registration members added to empty GeoDetection Cloud");
+			GD_CORE_TRACE("--> Registration members added to empty geodetect Cloud");
 		}
 
 		inline pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints() { return m_keypoints; }

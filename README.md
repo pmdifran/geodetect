@@ -1,4 +1,4 @@
-# GeoDetection
+# geodetect
 Tools for processing and extracting information from point clouds of natural environments. Under development, tested for Windows. 
 
 ### Current features:
@@ -6,12 +6,12 @@ Tools for processing and extracting information from point clouds of natural env
 - Fast c-style ascii import of LiDAR XYZ & Scalar Fields.
 - Command line interfacing for single and batch processing.
 
-- GeoDetection Cloud objects
+- geodetect Cloud objects
   - Contains core tools for point cloud operations
   - Provides storage for frequently used pcl types (i.e KdTree, Octree, normals)
   - Storage of arbitrary number of scalar fields, for feature calculation etc. 
 
-### Current GeoDetection modules:**
+### Current geodetect modules:**
 **Auto Registration (global feature matching and ICP)
 <img src="https://user-images.githubusercontent.com/64287741/135674654-be7a1585-3409-4641-b595-2a7715a090cc.PNG" width="1000" height="275">
 
@@ -36,32 +36,30 @@ Tools for processing and extracting information from point clouds of natural env
 - Git
 - CMake
 
-1. Make a folder (e.g. C:/Dev)
-
-2. Clone the GeoDetection repository into your folder (cloned into a "GeoDetection" folder).\
+1. Clone the geodetect repository into your dev folder
 `$ cd C:/Dev`\
-`$ git clone --recurse-submodules -j8 https://github.com/pmdifran/GeoDetection.git`
+`$ git clone --recurse-submodules -j8 https://github.com/pmdifran/geodetect.git`
 
-3. Download the PCL-AllInOne installer from the PCL releases on github (i.e. `PCL-1.12.0-AllInOne-msvc2019-win64.exe`).
+2. Download the PCL-AllInOne installer from the PCL releases on github (i.e. `PCL-1.12.0-AllInOne-msvc2019-win64.exe`).
 
-4. Download the PDB files from PCL releases (i.e. `pcl-1.12.0-rc1-pdb-msvc2019-win64.zip`).\
+3. Download the PDB files from PCL releases (i.e. `pcl-1.12.0-rc1-pdb-msvc2019-win64.zip`).\
 --> Allows you to debug inside the PCL libraries.
 
-5. Launch the installer, and install it into your folder (e.g. C:/Dev/PCL<version>). Copy the .pdb files into PCL/bin.
+4. Launch the installer, and install it into your folder (e.g. C:/Dev/PCL<version>). Copy the .pdb files into PCL/bin.
 
-6. *Not required yet* Download PDAL using conda package manager:\
+5. *Not required yet* Download PDAL using conda package manager:\
 --> Create dependencies directory with `pdal` folder (e.g. C:/Dev/dependencies/pdal)\
 -->install pdal in this directory: `conda create --yes --channel conda-forge pdal -p C:/Dev/dependencies/pdal`
 
-7. Build the project with CMake from the command line.
+6. Build the project with CMake from the command line.
 ```
 cd C:/Dev
 mkdir build
 cd build
-cmake -Ddependencies_DIR=C:/Dev/dependencies ../GeoDetection
+cmake ..
 ```
 
-8. Open the build file created for MSVS (i.e. `C:/Dev/Build/GeoDetection.sln`)
+7. Open the .sln file and build it.
 
 ## Linux; MacOS; Windows (custom)
 

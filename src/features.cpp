@@ -10,7 +10,7 @@
 #include <pcl/features/fpfh_omp.h>
 #include <pcl/features/multiscale_feature_persistence.h>
 
-namespace geodetection
+namespace geodetect
 {
 /***********************************************************************************************************************************************//**
 *  Helpers
@@ -449,7 +449,7 @@ namespace geodetection
 		std::vector<size_t> sort_map = sortIndicesDescending(scales); //Get index mapping to sorted version of radii
 		int id_max = sort_map[0]; //mapping to the maximum search
 
-		//Get geodetection::Cloud data members
+		//Get geodetect::Cloud data members
 		auto cloud = geodetect.cloud();
 		auto& octree = geodetect.octree();
 		auto normals = geodetect.normals();
@@ -516,7 +516,7 @@ namespace geodetection
 		std::vector<size_t> sort_map = sortIndicesDescending(scales); //Get index mapping to sorted version of radii
 		int id_max = sort_map[0]; //mapping to the maximum search
 
-		//Get geodetection::Cloud data members
+		//Get geodetect::Cloud data members
 		auto cloud = geodetect.cloud();
 		auto& octree = geodetect.octree();
 		auto normals = geodetect.normals();
@@ -578,7 +578,7 @@ namespace geodetection
 		std::vector<size_t> sort_map = sortIndicesDescending(scales); //Get index mapping to sorted version of radii
 		int id_max = sort_map[0]; //mapping to the maximum search
 
-		//Get geodetection::Cloud data members
+		//Get geodetect::Cloud data members
 		auto cloud = geodetect.cloud();
 		auto& octree = geodetect.octree();
 		int64_t size = cloud->size();

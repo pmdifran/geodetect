@@ -38,13 +38,13 @@ double getMeanSquareError(pcl::CorrespondencesPtr remaining_correspondences, pcl
 	return mse;
 }
 
-namespace geodetection
+namespace geodetect
 {
 	//Transforms source cloud using a global registration determined with keypoint fast point feature histogram correspondences.
 	//Default norml radius = 1.0. Not used if the cloud already has normals.
 	//@TODO: Break this function up into smaller more readable functions.
-	Eigen::Matrix4f getGlobalRegistration(geodetection::Cloud& reference,
-		geodetection::Cloud& source, float normal_scale, float scale_coefficient)
+	Eigen::Matrix4f getGlobalRegistration(geodetect::Cloud& reference,
+		geodetect::Cloud& source, float normal_scale, float scale_coefficient)
 	{
 		GD_TITLE("Auto Registration --Global");
 		Timer timer;
@@ -105,7 +105,7 @@ namespace geodetection
 		GD_TRACE(":: Number of inlier fpfh correpondences: {0}\n", correspondences->size());
 		GD_WARN("--> Transformation computed in: {0} ms: \n", timer.getDuration());
 		
-		//Apply the transformation to the source geodetection object.
+		//Apply the transformation to the source geodetect object.
 		source.applyTransformation(transformation);
 		source.printTransformation();
 
@@ -118,8 +118,8 @@ namespace geodetection
 	}
 
 	//Transforms source cloud using a fine generalized ICP registration (i.e. plane-to-plane).
-	Eigen::Matrix4f getICPRegistration(geodetection::Cloud& reference,
-		geodetection::Cloud& source, float radius /* = 1.0 */)
+	Eigen::Matrix4f getICPRegistration(geodetect::Cloud& reference,
+		geodetect::Cloud& source, float radius /* = 1.0 */)
 	{
 		GD_TITLE("Auto Registration --ICP");
 		Timer timer;

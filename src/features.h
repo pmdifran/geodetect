@@ -1,7 +1,7 @@
 #pragma once
-#include "GeoDetection.h"
+#include "geodetect.h"
 
-namespace geodetection
+namespace geodetect
 {
 /***********************************************************************************************************************************************//**
 *  Normal calculation
@@ -17,7 +17,7 @@ namespace geodetection
 
 	/**
 	* Computes the normal vector for a neighborhood of points, by transforming the neighborhood to the origin prior to demeaning.
-	* @param[in] geodetect: geodetection::Cloud object.
+	* @param[in] geodetect: geodetect::Cloud object.
 	* @param[in] indices: Neighborhood indices, corresponding to geodetect.cloud().
 	* @param[in] view: viewpoint used to orient the resulting normal.
 	*/
@@ -25,9 +25,9 @@ namespace geodetection
 
 	/**
 	* Computes the normal vector for a point using a radius search, with transformation of the neighborhood to the origin prior to demeaning.
-	* @param[in] geodetect: geodetection::Cloud object.
+	* @param[in] geodetect: geodetect::Cloud object.
 	* @param[in] radius: Scale of neighborhood search.
-	* @param[in] point_index: Current point index, corresponding to the geodetection::Cloud.
+	* @param[in] point_index: Current point index, corresponding to the geodetect::Cloud.
 	* @param[out] normal: Normal that is filled by the calculation.
 	* @param[in] view: viewpoint used to orient the resulting normal.
 	*/
@@ -35,9 +35,9 @@ namespace geodetection
 
 	/**
 	* Computes the normal vector for a point using a radius search, with transformation of the neighborhood to the origin prior to demeaning.
-	* @param[in] geodetect: geodetection::Cloud object.
+	* @param[in] geodetect: geodetect::Cloud object.
 	* @param[in] k: K-nearest neighbors used for neighborhood search.
-	* @param[in] point_index: Current point index, corresponding to the geodetection::Cloud.
+	* @param[in] point_index: Current point index, corresponding to the geodetect::Cloud.
 	* @param[out] normal: Normal that is filled by the calculation.
 	* @param[in] view: viewpoint used to orient the resulting normal.
 	*/
@@ -95,7 +95,7 @@ namespace geodetection
 ***************************************************************************************************************************************************/
 	/**
 	* Average-out normals around a given scale of core points. Entire cloud used by default.
-	* @param geodetect: geodetection::Cloud object.
+	* @param geodetect: geodetect::Cloud object.
 	* @param scale: Spatial averaging scale (radius).
 	* @param corepoints: Subcloud used for computing the average normals. (Full resolution is used by default).
 	* @return Shared pointer to averaged normals.
@@ -105,7 +105,7 @@ namespace geodetection
 
 	/**
 	* Average-out scalar field around a given scale of core points. Entire cloud used by default.
-	* @param geodetect: geodetection::Cloud object.
+	* @param geodetect: geodetect::Cloud object.
 	* @param scale: Spatial averaging scale (radius).
 	* @param corepoints: Subcloud used for computing the average scalar fields. (Full resolution is used by default).
 	* @return Shared pointer to averaged normals.
@@ -125,7 +125,7 @@ namespace geodetection
 
 	/**
 	* Returns a ScalarField of volumetric densities, determined at a particular scale (i.e. radius).
-	* @param geodetect: geodetection::Cloud object.
+	* @param geodetect: geodetect::Cloud object.
 	* @param scale: nearest neighbor radius.
 	* @return ScalarField of volumetric densities.
 	*/
@@ -146,7 +146,7 @@ namespace geodetection
 ***************************************************************************************************************************************************/
 	/**
 	* Get multiscale curvatures given input of scales.
-	* @param geodetect: geodetection::Cloud object.
+	* @param geodetect: geodetect::Cloud object.
 	* @param scales: Vector of scales (radii).
 	* @return Vector of ScalarFields (i.e. curvatures).
 	*/
@@ -154,7 +154,7 @@ namespace geodetection
 
 	/**
 	* Get multiscale volumetric densities given input of scales.
-	* @param geodetect: geodetection::Cloud object.
+	* @param geodetect: geodetect::Cloud object.
 	* @param scales: Vector of scales (radii).
 	* @return Vector of ScalarFields (i.e. volumetric densities).
 	*/
@@ -166,10 +166,10 @@ namespace geodetection
 	
 	/**
 	* Averages-out scalar fields around a given scale of core points, at numerous scales.
-	* @param geodetect: geodetection::Cloud object.
-	* @param field: The particular geodetection::ScalarField being averaged.
+	* @param geodetect: geodetect::Cloud object.
+	* @param field: The particular geodetect::ScalarField being averaged.
 	* @param scales: Vector of numerous scales for averaging.
-	* @param corepoints: Subset of geodetection::Cloud at which the average fields are computed at. Full cloud is used by default.
+	* @param corepoints: Subset of geodetect::Cloud at which the average fields are computed at. Full cloud is used by default.
 	* @result Vector of ScalarFields (i.e. 2D vector), with each column being a particular averaged scale.
 	*/
 //

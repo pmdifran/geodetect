@@ -1,6 +1,6 @@
 #include "core_impl.h"
 
-namespace geodetection
+namespace geodetect
 {
 	//Core template implementations
 	template std::vector<size_t> sortIndicesDescending(const std::vector<int>& vec);

@@ -2,7 +2,7 @@
 #include <vector>
 #include <memory>
 
-namespace geodetection
+namespace geodetect
 {
 	//Scalar field class (wrapper of std::vector<float> with name)
 	class ScalarField

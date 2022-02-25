@@ -2,12 +2,12 @@
 #include "features.h"
 #include <omp.h>
 
-namespace geodetection
+namespace geodetect
 {
 	//Segments vegetation using weighted differences of multiscale volumetric densities and curvatures.
 	//Largest scale queries are reused to reduce the search times. 
 	void 
-		segmentVegetation(geodetection::Cloud& geodetect)
+		segmentVegetation(geodetect::Cloud& geodetect)
 	{
 		int64_t cloud_size = geodetect.cloud()->size();
 
@@ -27,8 +27,8 @@ namespace geodetection
 		}
 
 		//Calculate volumetric densities for all scales and store in a 2D vector.
-		std::vector<geodetection::ScalarField> densities_multiscale = getVolumetricDensitiesMultiscale(geodetect, density_scales);
-		std::vector<geodetection::ScalarField> curvatures_multiscale = getCurvaturesMultiscale(geodetect, curve_scales);
+		std::vector<geodetect::ScalarField> densities_multiscale = getVolumetricDensitiesMultiscale(geodetect, density_scales);
+		std::vector<geodetect::ScalarField> curvatures_multiscale = getCurvaturesMultiscale(geodetect, curve_scales);
 
 		for (int i = 0; i < weights.size(); i++)
 		{
@@ -36,13 +36,13 @@ namespace geodetection
 			getVegetationScore(vegetation_scores, weights[i], curvatures_multiscale[i], densities_multiscale[i]);
 		}
 
-		//Push geodetection::ScalarField to geodetection::Cloud::m_scalarfields.
+		//Push geodetect::ScalarField to geodetect::Cloud::m_scalarfields.
 		geodetect.addScalarField(std::move(vegetation_scores));
 	}
 
 	//Segments vegetation using weighted differences of volumetric densities and curvatures, averaged at multiple scales.
 	//Largest scale queries are reused to reduce the search times. 
-	void segmentVegetationSimplified(geodetection::Cloud& geodetect)
+	void segmentVegetationSimplified(geodetect::Cloud& geodetect)
 	{
 		GD_TITLE("Vegetation Segmentation - simplified");
 		int64_t cloud_size = geodetect.cloud()->size();
@@ -63,11 +63,11 @@ namespace geodetection
 		}
 
 		//Calculate volumetric densities for all scales and store in a 2D vector.
-		std::vector<geodetection::ScalarField> densities_multiscale = getVolumetricDensitiesMultiscale(geodetect, density_scales);
+		std::vector<geodetect::ScalarField> densities_multiscale = getVolumetricDensitiesMultiscale(geodetect, density_scales);
 
 		//Determine curvature at a small enough scale 
 		pcl::PointCloud<pcl::Normal>::Ptr normals = geodetect.getNormalsKSearch(12);
-		geodetection::ScalarField curvatures = NormalsToCurvature(normals);
+		geodetect::ScalarField curvatures = NormalsToCurvature(normals);
 		normals = nullptr;
 
 		//Calculate multiscale averaged curvatures
@@ -79,7 +79,7 @@ namespace geodetection
 			getVegetationScore(vegetation_scores, weights[i], curvatures_multiscale[i], densities_multiscale[i]);
 		}
 
-		//Push geodetection::ScalarField to geodetection::Cloud::m_scalarfields.
+		//Push geodetect::ScalarField to geodetect::Cloud::m_scalarfields.
 		geodetect.addScalarField(std::move(vegetation_scores));
 	}
 
